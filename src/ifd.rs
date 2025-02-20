@@ -22,7 +22,7 @@ const DOCUMENT_NAME: u16 = 269;
 /// A collection of all the IFD
 // TODO: maybe separate out the primary/first image IFD out of the vec, as that one should have
 // geospatial metadata?
-pub(crate) struct ImageFileDirectories {
+pub struct ImageFileDirectories {
     /// There's always at least one IFD in a TIFF. We store this separately
     ifds: Vec<ImageFileDirectory>,
     // Is it guaranteed that if masks exist that there will be one per image IFD? Or could there be
@@ -59,7 +59,7 @@ impl ImageFileDirectories {
 // The ordering of these tags matches the sorted order in TIFF spec Appendix A
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub(crate) struct ImageFileDirectory {
+pub struct ImageFileDirectory {
     pub(crate) new_subfile_type: Option<u32>,
 
     /// The number of columns in the image, i.e., the number of pixels per row.

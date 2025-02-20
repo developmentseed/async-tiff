@@ -5,6 +5,9 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum AiocogeoError {
+    #[error("End of File: expected to read {0} bytes, got {1}")]
+    EndOfFile(usize, usize),
+
     /// General error.
     #[error("General error: {0}")]
     General(String),
