@@ -14,9 +14,9 @@ pub(crate) fn decode_tile(
     compression_method: CompressionMethod,
     // compressed_length: u64,
     jpeg_tables: Option<&Vec<u8>>,
-) -> Result<Vec<u8>> {
+) -> Result<Bytes> {
     match compression_method {
-        CompressionMethod::None => Ok(buf.to_vec()),
+        CompressionMethod::None => Ok(buf),
         CompressionMethod::LZW => decode_lzw(buf),
         CompressionMethod::Deflate | CompressionMethod::OldDeflate => decode_deflate(buf),
         CompressionMethod::ModernJPEG => {
@@ -29,18 +29,18 @@ pub(crate) fn decode_tile(
     }
 }
 
-fn decode_lzw(buf: Bytes) -> Result<Vec<u8>> {
+fn decode_lzw(buf: Bytes) -> Result<Bytes> {
     // https://github.com/image-rs/image-tiff/blob/90ae5b8e54356a35e266fb24e969aafbcb26e990/src/decoder/stream.rs#L147
     let mut decoder = weezl::decode::Decoder::with_tiff_size_switch(weezl::BitOrder::Msb, 8);
     let decoded = decoder.decode(&buf).expect("failed to decode LZW data");
-    Ok(decoded)
+    Ok(decoded.into())
 }
 
-fn decode_deflate(buf: Bytes) -> Result<Vec<u8>> {
+fn decode_deflate(buf: Bytes) -> Result<Bytes> {
     let mut decoder = ZlibDecoder::new(Cursor::new(buf));
     let mut buf = Vec::new();
     decoder.read_to_end(&mut buf)?;
-    Ok(buf)
+    Ok(buf.into())
 }
 
 // https://github.com/image-rs/image-tiff/blob/3bfb43e83e31b0da476832067ada68a82b378b7b/src/decoder/image.rs#L389-L450
@@ -48,7 +48,7 @@ fn decode_modern_jpeg(
     buf: Bytes,
     photometric_interpretation: PhotometricInterpretation,
     jpeg_tables: Option<&Vec<u8>>,
-) -> Result<Vec<u8>> {
+) -> Result<Bytes> {
     // Construct new jpeg_reader wrapping a SmartReader.
     //
     // JPEG compression in TIFF allows saving quantization and/or huffman tables in one central
@@ -98,53 +98,5 @@ fn decode_modern_jpeg(
     }
 
     let data = decoder.decode()?;
-    Ok(data)
-}
-
-trait Decode {
-    // TODO: should this return an ndarray?
-    fn decompress(&self, tile: Vec<u8>) -> Vec<u8>;
-}
-
-pub(crate) struct ModernJPEGDecoder {
-    tile: Vec<u8>,
-    jpeg_tables: Vec<u8>,
-}
-
-impl Decode for ModernJPEGDecoder {
-    fn decompress(&self, tile: Vec<u8>) -> Vec<u8> {
-        todo!()
-    }
-}
-
-pub(crate) struct LZWDecompressor {}
-
-impl Decode for LZWDecompressor {
-    fn decompress(&self, tile: Vec<u8>) -> Vec<u8> {
-        todo!()
-    }
-}
-
-pub(crate) struct WebPDecompressor {}
-
-impl Decode for WebPDecompressor {
-    fn decompress(&self, tile: Vec<u8>) -> Vec<u8> {
-        todo!()
-    }
-}
-
-pub(crate) struct DeflateDecompressor {}
-
-impl Decode for DeflateDecompressor {
-    fn decompress(&self, tile: Vec<u8>) -> Vec<u8> {
-        todo!()
-    }
-}
-
-pub(crate) struct PackbitsDecompressor {}
-
-impl Decode for PackbitsDecompressor {
-    fn decompress(&self, tile: Vec<u8>) -> Vec<u8> {
-        todo!()
-    }
+    Ok(data.into())
 }

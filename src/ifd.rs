@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::{Cursor, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
-use bytes::Buf;
+use bytes::{Buf, Bytes};
 use num_enum::TryFromPrimitive;
 use tiff::decoder::ifd::Value;
 use tiff::tags::{
@@ -533,12 +533,7 @@ impl ImageFileDirectory {
         }
     }
 
-    pub async fn get_tile(
-        &self,
-        x: usize,
-        y: usize,
-        cursor: &ObjectStoreCursor,
-    ) -> Result<Vec<u8>> {
+    pub async fn get_tile(&self, x: usize, y: usize, cursor: &ObjectStoreCursor) -> Result<Bytes> {
         let idx = (y * self.tile_count().0) + x;
         let offset = self.tile_offsets[idx] as usize;
         // TODO: aiocogeo has a -1 here, but I think that was in error
