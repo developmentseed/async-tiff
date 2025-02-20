@@ -103,7 +103,7 @@ impl ObjectStoreCursor {
         &self,
         range: Range<usize>,
     ) -> Result<Bytes, object_store::Error> {
-        Ok(self.store.get_range(&self.path, range).await?)
+        self.store.get_range(&self.path, range).await
     }
 
     /// Advance cursor position by a set amount
