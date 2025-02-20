@@ -59,8 +59,11 @@ impl COGReader {
 
 #[cfg(test)]
 mod test {
+    use std::io::BufReader;
+
     use super::*;
     use object_store::local::LocalFileSystem;
+    use tiff::decoder::{DecodingResult, Limits};
 
     #[tokio::test]
     async fn tmp() {
@@ -71,8 +74,25 @@ mod test {
             .await
             .unwrap();
         let cursor = ObjectStoreCursor::new(store.clone(), path.clone());
-        let ifd = &reader.ifds.as_ref()[0];
+        let ifd = &reader.ifds.as_ref()[4];
+        dbg!(ifd.compression);
         let tile = ifd.get_tile(0, 0, &cursor).await.unwrap();
-        dbg!(tile.len());
+        std::fs::write("img.buf", tile).unwrap();
+        // dbg!(tile.len());
+    }
+
+    #[test]
+    fn tmp_tiff_example() {
+        let path =
+            "/Users/kyle/github/developmentseed/aiocogeo-rs/m_4007307_sw_18_060_20220803.tif";
+        let reader = std::fs::File::open(path).unwrap();
+        let mut decoder = tiff::decoder::Decoder::new(BufReader::new(reader))
+            .unwrap()
+            .with_limits(Limits::unlimited());
+        let result = decoder.read_image().unwrap();
+        match result {
+            DecodingResult::U8(content) => std::fs::write("img_from_tiff.buf", content).unwrap(),
+            _ => todo!(),
+        }
     }
 }

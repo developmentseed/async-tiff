@@ -1,11 +1,13 @@
 use std::io::{Cursor, Read};
 
 use bytes::Bytes;
+use flate2::bufread::ZlibDecoder;
 use tiff::tags::{CompressionMethod, PhotometricInterpretation};
 use tiff::{TiffError, TiffUnsupportedError};
 
 use crate::error::Result;
 
+// https://github.com/image-rs/image-tiff/blob/3bfb43e83e31b0da476832067ada68a82b378b7b/src/decoder/image.rs#L370
 pub(crate) fn decode_tile(
     buf: Bytes,
     photometric_interpretation: PhotometricInterpretation,
@@ -15,18 +17,33 @@ pub(crate) fn decode_tile(
 ) -> Result<Vec<u8>> {
     match compression_method {
         CompressionMethod::None => Ok(buf.to_vec()),
-        CompressionMethod::Deflate | CompressionMethod::OldDeflate => {
-            let mut decoder = flate2::read::ZlibDecoder::new(Cursor::new(buf));
-            Box::new(DeflateReader::new(reader))
-        }
-
+        CompressionMethod::LZW => decode_lzw(buf),
+        CompressionMethod::Deflate | CompressionMethod::OldDeflate => decode_deflate(buf),
         CompressionMethod::ModernJPEG => {
             decode_modern_jpeg(buf, photometric_interpretation, jpeg_tables)
         }
-        _ => todo!(),
+        method => Err(TiffError::UnsupportedError(
+            TiffUnsupportedError::UnsupportedCompressionMethod(method),
+        )
+        .into()),
     }
 }
 
+fn decode_lzw(buf: Bytes) -> Result<Vec<u8>> {
+    // https://github.com/image-rs/image-tiff/blob/90ae5b8e54356a35e266fb24e969aafbcb26e990/src/decoder/stream.rs#L147
+    let mut decoder = weezl::decode::Decoder::with_tiff_size_switch(weezl::BitOrder::Msb, 8);
+    let decoded = decoder.decode(&buf).expect("failed to decode LZW data");
+    Ok(decoded)
+}
+
+fn decode_deflate(buf: Bytes) -> Result<Vec<u8>> {
+    let mut decoder = ZlibDecoder::new(Cursor::new(buf));
+    let mut buf = Vec::new();
+    decoder.read_to_end(&mut buf)?;
+    Ok(buf)
+}
+
+// https://github.com/image-rs/image-tiff/blob/3bfb43e83e31b0da476832067ada68a82b378b7b/src/decoder/image.rs#L389-L450
 fn decode_modern_jpeg(
     buf: Bytes,
     photometric_interpretation: PhotometricInterpretation,
