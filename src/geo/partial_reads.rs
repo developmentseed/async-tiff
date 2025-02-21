@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 struct TileMetadata {
     /// top left corner of the partial read
     tlx: f64,
