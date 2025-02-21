@@ -60,7 +60,7 @@ impl ObjectStoreCursor {
 
     /// Read a u8 from the cursor
     pub(crate) async fn read_u8(&mut self) -> u8 {
-        let buf = self.read(u8::BITS as usize / 8).await;
+        let buf = self.read(1).await;
         Cursor::new(buf).read_u8().unwrap()
     }
 

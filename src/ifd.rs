@@ -11,11 +11,10 @@ use tiff::tags::{
 };
 use tiff::{TiffError, TiffResult};
 
-use crate::affine::AffineTransform;
 use crate::cursor::ObjectStoreCursor;
 use crate::decoder::decode_tile;
 use crate::error::Result;
-use crate::geo_key_directory::{GeoKeyDirectory, GeoKeyTag};
+use crate::geo::{AffineTransform, GeoKeyDirectory, GeoKeyTag};
 use crate::AsyncFileReader;
 
 const DOCUMENT_NAME: u16 = 269;
@@ -189,8 +188,6 @@ impl ImageFileDirectory {
         cursor.seek(offset);
 
         let tag_count = cursor.read_u16().await;
-        // dbg!(tag_count);
-
         let mut tags = HashMap::with_capacity(tag_count as usize);
         for _ in 0..tag_count {
             let (tag_name, tag_value) = read_tag(cursor).await?;
