@@ -205,10 +205,6 @@ impl AsyncCursor {
         &self.reader
     }
 
-    pub(crate) async fn get_range(&mut self, range: Range<usize>) -> Result<Bytes> {
-        self.reader.get_bytes(range).await
-    }
-
     /// Advance cursor position by a set amount
     pub(crate) fn advance(&mut self, amount: usize) {
         self.offset += amount;
