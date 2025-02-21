@@ -1,22 +1,19 @@
-use std::sync::Arc;
-
 use bytes::Bytes;
-use object_store::path::Path;
-use object_store::ObjectStore;
 
 use crate::cursor::{Endianness, ObjectStoreCursor};
 use crate::error::Result;
 use crate::ifd::ImageFileDirectories;
+use crate::AsyncFileReader;
 
 pub struct COGReader {
-    store: Arc<dyn ObjectStore>,
-    path: Path,
+    #[allow(dead_code)]
+    reader: Box<dyn AsyncFileReader>,
     ifds: ImageFileDirectories,
 }
 
 impl COGReader {
-    pub async fn try_open(store: Arc<dyn ObjectStore>, path: Path) -> Result<Self> {
-        let mut cursor = ObjectStoreCursor::new(store, path);
+    pub async fn try_open(reader: Box<dyn AsyncFileReader>) -> Result<Self> {
+        let mut cursor = ObjectStoreCursor::new(reader);
         let magic_bytes = cursor.read(2).await;
         // Should be b"II" for little endian or b"MM" for big endian
         if magic_bytes == Bytes::from_static(b"II") {
@@ -38,8 +35,8 @@ impl COGReader {
             .await
             .unwrap();
 
-        let (store, path) = cursor.into_inner();
-        Ok(Self { store, path, ifds })
+        let reader = cursor.into_inner();
+        Ok(Self { reader, ifds })
     }
 
     /// Return the EPSG code representing the crs of the image
@@ -60,6 +57,9 @@ impl COGReader {
 #[cfg(test)]
 mod test {
     use std::io::BufReader;
+    use std::sync::Arc;
+
+    use crate::ObjectReader;
 
     use super::*;
     use object_store::local::LocalFileSystem;
@@ -68,15 +68,13 @@ mod test {
     #[tokio::test]
     async fn tmp() {
         let folder = "/Users/kyle/github/developmentseed/aiocogeo-rs/";
-        let path = Path::parse("m_4007307_sw_18_060_20220803.tif").unwrap();
+        let path = object_store::path::Path::parse("m_4007307_sw_18_060_20220803.tif").unwrap();
         let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
-        let reader = COGReader::try_open(store.clone(), path.clone())
-            .await
-            .unwrap();
-        let cursor = ObjectStoreCursor::new(store.clone(), path.clone());
-        let ifd = &reader.ifds.as_ref()[4];
+        let reader = ObjectReader::new(store, path);
+        let cog_reader = COGReader::try_open(Box::new(reader.clone())).await.unwrap();
+        let ifd = &cog_reader.ifds.as_ref()[4];
         dbg!(ifd.compression);
-        let tile = ifd.get_tile(0, 0, &cursor).await.unwrap();
+        let tile = ifd.get_tile(0, 0, Box::new(reader)).await.unwrap();
         std::fs::write("img.buf", tile).unwrap();
         // dbg!(tile.len());
     }

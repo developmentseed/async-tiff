@@ -1,11 +1,11 @@
 use std::io::Cursor;
 use std::ops::Range;
-use std::sync::Arc;
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use bytes::Bytes;
-use object_store::path::Path;
-use object_store::ObjectStore;
+
+use crate::error::AiocogeoError;
+use crate::AsyncFileReader;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum Endianness {
@@ -17,8 +17,7 @@ pub enum Endianness {
 /// A wrapper around an [ObjectStore] that provides a seek-oriented interface
 // TODO: in the future add buffering to this
 pub(crate) struct ObjectStoreCursor {
-    store: Arc<dyn ObjectStore>,
-    path: Path,
+    reader: Box<dyn AsyncFileReader>,
     offset: usize,
     endianness: Endianness,
 }
@@ -37,10 +36,9 @@ macro_rules! impl_read_byteorder {
 }
 
 impl ObjectStoreCursor {
-    pub(crate) fn new(store: Arc<dyn ObjectStore>, path: Path) -> Self {
+    pub(crate) fn new(reader: Box<dyn AsyncFileReader>) -> Self {
         Self {
-            store,
-            path,
+            reader,
             offset: 0,
             endianness: Default::default(),
         }
@@ -50,14 +48,14 @@ impl ObjectStoreCursor {
         self.endianness = endianness;
     }
 
-    pub(crate) fn into_inner(self) -> (Arc<dyn ObjectStore>, Path) {
-        (self.store, self.path)
+    pub(crate) fn into_inner(self) -> Box<dyn AsyncFileReader> {
+        self.reader
     }
 
     pub(crate) async fn read(&mut self, length: usize) -> Bytes {
         let range = self.offset..self.offset + length;
         self.offset += length;
-        self.store.get_range(&self.path, range).await.unwrap()
+        self.reader.get_bytes(range).await.unwrap()
     }
 
     /// Read a u8 from the cursor
@@ -95,15 +93,13 @@ impl ObjectStoreCursor {
         }
     }
 
-    pub(crate) fn store(&self) -> &Arc<dyn ObjectStore> {
-        &self.store
+    #[allow(dead_code)]
+    pub(crate) fn reader(&self) -> &dyn AsyncFileReader {
+        &self.reader
     }
 
-    pub(crate) async fn get_range(
-        &self,
-        range: Range<usize>,
-    ) -> Result<Bytes, object_store::Error> {
-        self.store.get_range(&self.path, range).await
+    pub(crate) async fn get_range(&mut self, range: Range<usize>) -> Result<Bytes, AiocogeoError> {
+        self.reader.get_bytes(range).await
     }
 
     /// Advance cursor position by a set amount

@@ -16,6 +16,7 @@ use crate::cursor::ObjectStoreCursor;
 use crate::decoder::decode_tile;
 use crate::error::Result;
 use crate::geo_key_directory::{GeoKeyDirectory, GeoKeyTag};
+use crate::AsyncFileReader;
 
 const DOCUMENT_NAME: u16 = 269;
 
@@ -533,7 +534,14 @@ impl ImageFileDirectory {
         }
     }
 
-    pub async fn get_tile(&self, x: usize, y: usize, cursor: &ObjectStoreCursor) -> Result<Bytes> {
+    pub async fn get_tile(
+        &self,
+        x: usize,
+        y: usize,
+        reader: Box<dyn AsyncFileReader>,
+    ) -> Result<Bytes> {
+        let mut cursor = ObjectStoreCursor::new(reader);
+
         let idx = (y * self.tile_count().0) + x;
         let offset = self.tile_offsets[idx] as usize;
         // TODO: aiocogeo has a -1 here, but I think that was in error
