@@ -27,10 +27,10 @@ use crate::error::{AiocogeoError, Result};
 /// [`tokio::fs::File`]: https://docs.rs/tokio/latest/tokio/fs/struct.File.html
 pub trait AsyncFileReader: Send {
     /// Retrieve the bytes in `range`
-    fn get_bytes(&mut self, range: Range<usize>) -> BoxFuture<'_, Result<Bytes>>;
+    fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, Result<Bytes>>;
 
     /// Retrieve multiple byte ranges. The default implementation will call `get_bytes` sequentially
-    fn get_byte_ranges(&mut self, ranges: Vec<Range<usize>>) -> BoxFuture<'_, Result<Vec<Bytes>>> {
+    fn get_byte_ranges(&mut self, ranges: Vec<Range<u64>>) -> BoxFuture<'_, Result<Vec<Bytes>>> {
         async move {
             let mut result = Vec::with_capacity(ranges.len());
 
@@ -47,24 +47,24 @@ pub trait AsyncFileReader: Send {
 
 /// This allows Box<dyn AsyncFileReader + '_> to be used as an AsyncFileReader,
 impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
-    fn get_bytes(&mut self, range: Range<usize>) -> BoxFuture<'_, Result<Bytes>> {
+    fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, Result<Bytes>> {
         self.as_mut().get_bytes(range)
     }
 
-    fn get_byte_ranges(&mut self, ranges: Vec<Range<usize>>) -> BoxFuture<'_, Result<Vec<Bytes>>> {
+    fn get_byte_ranges(&mut self, ranges: Vec<Range<u64>>) -> BoxFuture<'_, Result<Vec<Bytes>>> {
         self.as_mut().get_byte_ranges(ranges)
     }
 }
 
 #[cfg(feature = "tokio")]
 impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send> AsyncFileReader for T {
-    fn get_bytes(&mut self, range: Range<usize>) -> BoxFuture<'_, Result<Bytes>> {
+    fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, Result<Bytes>> {
         use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
         async move {
-            self.seek(SeekFrom::Start(range.start as u64)).await?;
+            self.seek(SeekFrom::Start(range.start)).await?;
 
-            let to_read = range.end - range.start;
+            let to_read = (range.end - range.start).try_into().unwrap();
             let mut buffer = Vec::with_capacity(to_read);
             let read = self.take(to_read as u64).read_to_end(&mut buffer).await?;
             if read != to_read {
@@ -93,14 +93,14 @@ impl ObjectReader {
 }
 
 impl AsyncFileReader for ObjectReader {
-    fn get_bytes(&mut self, range: Range<usize>) -> BoxFuture<'_, Result<Bytes>> {
+    fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, Result<Bytes>> {
         self.store
             .get_range(&self.path, range)
             .map_err(|e| e.into())
             .boxed()
     }
 
-    fn get_byte_ranges(&mut self, ranges: Vec<Range<usize>>) -> BoxFuture<'_, Result<Vec<Bytes>>>
+    fn get_byte_ranges(&mut self, ranges: Vec<Range<u64>>) -> BoxFuture<'_, Result<Vec<Bytes>>>
     where
         Self: Send,
     {
@@ -160,7 +160,7 @@ impl AsyncCursor {
     }
 
     pub(crate) async fn read(&mut self, length: usize) -> Bytes {
-        let range = self.offset..self.offset + length;
+        let range = self.offset as _..(self.offset + length) as _;
         self.offset += length;
         self.reader.get_bytes(range).await.unwrap()
     }

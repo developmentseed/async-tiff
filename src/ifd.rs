@@ -529,12 +529,12 @@ impl ImageFileDirectory {
         }
     }
 
-    fn get_tile_byte_range(&self, x: usize, y: usize) -> Range<usize> {
+    fn get_tile_byte_range(&self, x: usize, y: usize) -> Range<u64> {
         let idx = (y * self.tile_count().0) + x;
         let offset = self.tile_offsets[idx] as usize;
         // TODO: aiocogeo has a -1 here, but I think that was in error
         let byte_count = self.tile_byte_counts[idx] as usize;
-        offset..offset + byte_count
+        offset as _..(offset + byte_count) as _
     }
 
     pub async fn get_tile(
