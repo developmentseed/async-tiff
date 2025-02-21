@@ -1,6 +1,5 @@
 mod async_reader;
 mod cog;
-mod cursor;
 mod decoder;
 pub mod error;
 pub mod geo;

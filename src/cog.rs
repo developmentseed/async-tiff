@@ -1,6 +1,6 @@
 use bytes::Bytes;
 
-use crate::cursor::{Endianness, ObjectStoreCursor};
+use crate::async_reader::{AsyncCursor, Endianness};
 use crate::error::Result;
 use crate::ifd::ImageFileDirectories;
 use crate::AsyncFileReader;
@@ -13,7 +13,7 @@ pub struct COGReader {
 
 impl COGReader {
     pub async fn try_open(reader: Box<dyn AsyncFileReader>) -> Result<Self> {
-        let mut cursor = ObjectStoreCursor::new(reader);
+        let mut cursor = AsyncCursor::new(reader);
         let magic_bytes = cursor.read(2).await;
         // Should be b"II" for little endian or b"MM" for big endian
         if magic_bytes == Bytes::from_static(b"II") {

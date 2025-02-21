@@ -11,7 +11,7 @@ use tiff::tags::{
 };
 use tiff::{TiffError, TiffResult};
 
-use crate::cursor::ObjectStoreCursor;
+use crate::async_reader::AsyncCursor;
 use crate::decoder::decode_tile;
 use crate::error::Result;
 use crate::geo::{AffineTransform, GeoKeyDirectory, GeoKeyTag};
@@ -37,10 +37,7 @@ impl AsRef<[ImageFileDirectory]> for ImageFileDirectories {
 }
 
 impl ImageFileDirectories {
-    pub(crate) async fn open(
-        cursor: &mut ObjectStoreCursor,
-        ifd_offset: usize,
-    ) -> TiffResult<Self> {
+    pub(crate) async fn open(cursor: &mut AsyncCursor, ifd_offset: usize) -> TiffResult<Self> {
         let mut next_ifd_offset = Some(ifd_offset);
 
         let mut ifds = vec![];
@@ -183,7 +180,7 @@ pub struct ImageFileDirectory {
 }
 
 impl ImageFileDirectory {
-    async fn read(cursor: &mut ObjectStoreCursor, offset: usize) -> TiffResult<Self> {
+    async fn read(cursor: &mut AsyncCursor, offset: usize) -> TiffResult<Self> {
         let ifd_start = offset;
         cursor.seek(offset);
 
@@ -537,7 +534,7 @@ impl ImageFileDirectory {
         y: usize,
         reader: Box<dyn AsyncFileReader>,
     ) -> Result<Bytes> {
-        let mut cursor = ObjectStoreCursor::new(reader);
+        let mut cursor = AsyncCursor::new(reader);
 
         let idx = (y * self.tile_count().0) + x;
         let offset = self.tile_offsets[idx] as usize;
@@ -596,7 +593,7 @@ impl ImageFileDirectory {
 }
 
 /// Read a single tag from the cursor
-async fn read_tag(cursor: &mut ObjectStoreCursor) -> TiffResult<(Tag, Value)> {
+async fn read_tag(cursor: &mut AsyncCursor) -> TiffResult<(Tag, Value)> {
     let code = cursor.read_u16().await;
     let tag_name = Tag::from_u16_exhaustive(code);
     // dbg!(&tag_name);
@@ -620,7 +617,7 @@ async fn read_tag(cursor: &mut ObjectStoreCursor) -> TiffResult<(Tag, Value)> {
 // This is derived from the upstream tiff crate:
 // https://github.com/image-rs/image-tiff/blob/6dc7a266d30291db1e706c8133357931f9e2a053/src/decoder/ifd.rs#L369-L639
 async fn read_tag_value(
-    cursor: &mut ObjectStoreCursor,
+    cursor: &mut AsyncCursor,
     tag_type: Type,
     count: usize,
     // length: usize,
