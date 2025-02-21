@@ -559,6 +559,8 @@ impl ImageFileDirectory {
         y: &[usize],
         mut reader: Box<dyn AsyncFileReader>,
     ) -> Result<Vec<Bytes>> {
+        assert_eq!(x.len(), y.len(), "x and y should have same len");
+
         // 1: Get all the byte ranges for all tiles
         let byte_ranges: Vec<_> = x
             .iter()
