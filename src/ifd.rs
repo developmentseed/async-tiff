@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::{Cursor, Read};
+use std::ops::Range;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use bytes::{Buf, Bytes};
@@ -528,26 +529,58 @@ impl ImageFileDirectory {
         }
     }
 
-    pub async fn get_tile(
-        &self,
-        x: usize,
-        y: usize,
-        reader: Box<dyn AsyncFileReader>,
-    ) -> Result<Bytes> {
-        let mut cursor = AsyncCursor::new(reader);
-
+    fn get_tile_byte_range(&self, x: usize, y: usize) -> Range<usize> {
         let idx = (y * self.tile_count().0) + x;
         let offset = self.tile_offsets[idx] as usize;
         // TODO: aiocogeo has a -1 here, but I think that was in error
         let byte_count = self.tile_byte_counts[idx] as usize;
-        let range = offset..offset + byte_count;
-        let buf = cursor.get_range(range).await?;
+        offset..offset + byte_count
+    }
+
+    pub async fn get_tile(
+        &self,
+        x: usize,
+        y: usize,
+        mut reader: Box<dyn AsyncFileReader>,
+    ) -> Result<Bytes> {
+        let range = self.get_tile_byte_range(x, y);
+        let buf = reader.get_bytes(range).await?;
         decode_tile(
             buf,
             self.photometric_interpretation,
             self.compression,
             self.jpeg_tables.as_ref(),
         )
+    }
+
+    pub async fn get_tiles(
+        &self,
+        x: &[usize],
+        y: &[usize],
+        mut reader: Box<dyn AsyncFileReader>,
+    ) -> Result<Vec<Bytes>> {
+        // 1: Get all the byte ranges for all tiles
+        let byte_ranges: Vec<_> = x
+            .iter()
+            .zip(y)
+            .map(|(x, y)| self.get_tile_byte_range(*x, *y))
+            .collect();
+
+        // 2: Fetch using `get_ranges
+        let buffers = reader.get_byte_ranges(byte_ranges).await?;
+
+        // 3: Decode tiles (in the future, separate API)
+        let mut decoded_tiles = vec![];
+        for buf in buffers {
+            let decoded = decode_tile(
+                buf,
+                self.photometric_interpretation,
+                self.compression,
+                self.jpeg_tables.as_ref(),
+            )?;
+            decoded_tiles.push(decoded);
+        }
+        Ok(decoded_tiles)
     }
 
     /// Return the number of x/y tiles in the IFD

@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct AffineTransform(f64, f64, f64, f64, f64, f64);
 
 impl AffineTransform {
