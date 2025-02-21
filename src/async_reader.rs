@@ -82,7 +82,7 @@ pub struct ObjectReader {
 }
 
 impl ObjectReader {
-    /// Creates a new [`ParquetObjectReader`] for the provided [`ObjectStore`] and [`ObjectMeta`]
+    /// Creates a new [`ObjectReader`] for the provided [`ObjectStore`] and path
     ///
     /// [`ObjectMeta`] can be obtained using [`ObjectStore::list`] or [`ObjectStore::head`]
     pub fn new(store: Arc<dyn ObjectStore>, path: object_store::path::Path) -> Self {
