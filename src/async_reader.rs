@@ -11,8 +11,8 @@ use crate::error::{AiocogeoError, Result};
 
 /// The asynchronous interface used to read COG files
 ///
-/// This was derived from the Parquet `AsyncFileReader`:
-/// https://docs.rs/parquet/latest/parquet/arrow/async_reader/trait.AsyncFileReader.html
+/// This was derived from the Parquet
+/// [`AsyncFileReader`](https://docs.rs/parquet/latest/parquet/arrow/async_reader/trait.AsyncFileReader.html)
 ///
 /// Notes:
 ///
@@ -143,22 +143,41 @@ macro_rules! impl_read_byteorder {
 }
 
 impl AsyncCursor {
-    pub(crate) fn new(reader: Box<dyn AsyncFileReader>) -> Self {
+    /// Create a new AsyncCursor from a reader and endianness.
+    pub(crate) fn new(reader: Box<dyn AsyncFileReader>, endianness: Endianness) -> Self {
         Self {
             reader,
             offset: 0,
-            endianness: Default::default(),
+            endianness,
         }
     }
 
-    pub(crate) fn set_endianness(&mut self, endianness: Endianness) {
-        self.endianness = endianness;
+    /// Create a new AsyncCursor for a TIFF file, automatically inferring endianness from the first
+    /// two bytes.
+    pub(crate) async fn try_open_tiff(reader: Box<dyn AsyncFileReader>) -> Result<Self> {
+        // Initialize with default endianness and then set later
+        let mut cursor = Self::new(reader, Default::default());
+        let magic_bytes = cursor.read(2).await;
+        // Should be b"II" for little endian or b"MM" for big endian
+        if magic_bytes == Bytes::from_static(b"II") {
+            cursor.endianness = Endianness::LittleEndian;
+        } else if magic_bytes == Bytes::from_static(b"MM") {
+            cursor.endianness = Endianness::BigEndian;
+        } else {
+            return Err(AiocogeoError::General(format!(
+                "unexpected magic bytes {magic_bytes:?}"
+            )));
+        };
+
+        Ok(cursor)
     }
 
+    /// Consume self and return the underlying [`AsyncFileReader`].
     pub(crate) fn into_inner(self) -> Box<dyn AsyncFileReader> {
         self.reader
     }
 
+    /// Read the given number of bytes, advancing the internal cursor state by the same amount.
     pub(crate) async fn read(&mut self, length: usize) -> Bytes {
         let range = self.offset as _..(self.offset + length) as _;
         self.offset += length;

@@ -1,3 +1,5 @@
+//! Support for GeoTIFF files.
+
 mod affine;
 mod geo_key_directory;
 mod partial_reads;

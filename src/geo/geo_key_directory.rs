@@ -6,6 +6,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use tiff::decoder::ifd::Value;
 use tiff::{TiffError, TiffResult};
 
+/// Geospatial TIFF tag variants
 #[derive(Clone, Copy, Debug, PartialEq, TryFromPrimitive, IntoPrimitive, Eq, Hash)]
 #[repr(u16)]
 pub enum GeoKeyTag {
@@ -63,60 +64,75 @@ pub enum GeoKeyTag {
     VerticalUnits = 4099,
 }
 
-/// http://docs.opengeospatial.org/is/19-008r4/19-008r4.html#_requirements_class_geokeydirectorytag
+/// Metadata defined by the GeoTIFF standard.
+///
+/// <http://docs.opengeospatial.org/is/19-008r4/19-008r4.html#_requirements_class_geokeydirectorytag>
 #[derive(Debug, Clone)]
 pub struct GeoKeyDirectory {
-    model_type: Option<u16>,
-    raster_type: Option<u16>,
-    citation: Option<String>,
+    pub model_type: Option<u16>,
+    pub raster_type: Option<u16>,
+    pub citation: Option<String>,
 
-    geographic_type: Option<u16>,
-    geog_citation: Option<String>,
-    geog_geodetic_datum: Option<u16>,
-    geog_prime_meridian: Option<u16>,
-    geog_linear_units: Option<u16>,
-    geog_linear_unit_size: Option<f64>,
-    geog_angular_units: Option<u16>,
-    geog_angular_unit_size: Option<f64>,
-    geog_ellipsoid: Option<u16>,
-    geog_semi_major_axis: Option<f64>,
-    geog_semi_minor_axis: Option<f64>,
-    geog_inv_flattening: Option<f64>,
-    geog_azimuth_units: Option<u16>,
-    geog_prime_meridian_long: Option<f64>,
+    pub geographic_type: Option<u16>,
+    pub geog_citation: Option<String>,
+    pub geog_geodetic_datum: Option<u16>,
 
-    projected_type: Option<u16>,
-    proj_citation: Option<String>,
-    projection: Option<u16>,
-    proj_coord_trans: Option<u16>,
-    proj_linear_units: Option<u16>,
-    proj_linear_unit_size: Option<f64>,
-    proj_std_parallel1: Option<f64>,
-    proj_std_parallel2: Option<f64>,
-    proj_nat_origin_long: Option<f64>,
-    proj_nat_origin_lat: Option<f64>,
-    proj_false_easting: Option<f64>,
-    proj_false_northing: Option<f64>,
-    proj_false_origin_long: Option<f64>,
-    proj_false_origin_lat: Option<f64>,
-    proj_false_origin_easting: Option<f64>,
-    proj_false_origin_northing: Option<f64>,
-    proj_center_long: Option<f64>,
-    proj_center_lat: Option<f64>,
-    proj_center_easting: Option<f64>,
-    proj_center_northing: Option<f64>,
-    proj_scale_at_nat_origin: Option<f64>,
-    proj_scale_at_center: Option<f64>,
-    proj_azimuth_angle: Option<f64>,
-    proj_straight_vert_pole_long: Option<f64>,
+    /// This key is used to specify a Prime Meridian from the GeoTIFF CRS register or to indicate
+    /// that the Prime Meridian is user-defined. The default is Greenwich, England.
+    /// <https://docs.ogc.org/is/19-008r4/19-008r4.html#_requirements_class_primemeridiangeokey>
+    pub geog_prime_meridian: Option<u16>,
 
-    vertical: Option<u16>,
-    vertical_citation: Option<String>,
-    vertical_datum: Option<u16>,
-    vertical_units: Option<u16>,
+    pub geog_linear_units: Option<u16>,
+    pub geog_linear_unit_size: Option<f64>,
+    pub geog_angular_units: Option<u16>,
+    pub geog_angular_unit_size: Option<f64>,
+
+    /// This key is provided to specify an ellipsoid (or sphere) from the GeoTIFF CRS register or
+    /// to indicate that the ellipsoid (or sphere) is user-defined.
+    pub geog_ellipsoid: Option<u16>,
+    pub geog_semi_major_axis: Option<f64>,
+    pub geog_semi_minor_axis: Option<f64>,
+    pub geog_inv_flattening: Option<f64>,
+    pub geog_azimuth_units: Option<u16>,
+
+    /// This key allows definition of a user-defined Prime Meridian, the location of which is
+    /// defined by its longitude relative to the international reference meridian (for the earth
+    /// this is Greenwich).
+    pub geog_prime_meridian_long: Option<f64>,
+
+    pub projected_type: Option<u16>,
+    pub proj_citation: Option<String>,
+    pub projection: Option<u16>,
+    pub proj_coord_trans: Option<u16>,
+    pub proj_linear_units: Option<u16>,
+    pub proj_linear_unit_size: Option<f64>,
+    pub proj_std_parallel1: Option<f64>,
+    pub proj_std_parallel2: Option<f64>,
+    pub proj_nat_origin_long: Option<f64>,
+    pub proj_nat_origin_lat: Option<f64>,
+    pub proj_false_easting: Option<f64>,
+    pub proj_false_northing: Option<f64>,
+    pub proj_false_origin_long: Option<f64>,
+    pub proj_false_origin_lat: Option<f64>,
+    pub proj_false_origin_easting: Option<f64>,
+    pub proj_false_origin_northing: Option<f64>,
+    pub proj_center_long: Option<f64>,
+    pub proj_center_lat: Option<f64>,
+    pub proj_center_easting: Option<f64>,
+    pub proj_center_northing: Option<f64>,
+    pub proj_scale_at_nat_origin: Option<f64>,
+    pub proj_scale_at_center: Option<f64>,
+    pub proj_azimuth_angle: Option<f64>,
+    pub proj_straight_vert_pole_long: Option<f64>,
+
+    pub vertical: Option<u16>,
+    pub vertical_citation: Option<String>,
+    pub vertical_datum: Option<u16>,
+    pub vertical_units: Option<u16>,
 }
 
 impl GeoKeyDirectory {
+    /// Construct a new [`GeoKeyDirectory`] from tag values.
     pub(crate) fn from_tags(mut tag_data: HashMap<GeoKeyTag, Value>) -> TiffResult<Self> {
         let mut model_type = None;
         let mut raster_type = None;
@@ -281,6 +297,9 @@ impl GeoKeyDirectory {
     }
 
     /// Return the EPSG code representing the crs of the image
+    ///
+    /// This will return either [`GeoKeyDirectory::projected_type`] or
+    /// [`GeoKeyDirectory::geographic_type`].
     pub fn epsg_code(&self) -> Option<u16> {
         if let Some(projected_type) = self.projected_type {
             Some(projected_type)

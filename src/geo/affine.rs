@@ -1,3 +1,4 @@
+/// Affine transformation values.
 #[derive(Debug)]
 pub struct AffineTransform(f64, f64, f64, f64, f64, f64);
 

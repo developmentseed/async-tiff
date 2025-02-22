@@ -1,6 +1,4 @@
-use bytes::Bytes;
-
-use crate::async_reader::{AsyncCursor, Endianness};
+use crate::async_reader::AsyncCursor;
 use crate::error::Result;
 use crate::ifd::ImageFileDirectories;
 use crate::AsyncFileReader;
@@ -13,17 +11,7 @@ pub struct COGReader {
 
 impl COGReader {
     pub async fn try_open(reader: Box<dyn AsyncFileReader>) -> Result<Self> {
-        let mut cursor = AsyncCursor::new(reader);
-        let magic_bytes = cursor.read(2).await;
-        // Should be b"II" for little endian or b"MM" for big endian
-        if magic_bytes == Bytes::from_static(b"II") {
-            cursor.set_endianness(Endianness::LittleEndian);
-        } else if magic_bytes == Bytes::from_static(b"MM") {
-            cursor.set_endianness(Endianness::BigEndian);
-        } else {
-            panic!("unexpected magic bytes {magic_bytes:?}");
-        }
-
+        let mut cursor = AsyncCursor::try_open_tiff(reader).await?;
         let version = cursor.read_u16().await;
 
         // Assert it's a standard non-big tiff
@@ -72,9 +60,12 @@ mod test {
         let path = object_store::path::Path::parse("m_4007307_sw_18_060_20220803.tif").unwrap();
         let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
         let reader = ObjectReader::new(store, path);
+
         let cog_reader = COGReader::try_open(Box::new(reader.clone())).await.unwrap();
-        let ifd = &cog_reader.ifds.as_ref()[4];
-        dbg!(ifd.compression);
+
+        let ifd = &cog_reader.ifds.as_ref()[1];
+        // dbg!(ifd.geotransform());
+        dbg!(ifd);
         let tile = ifd.get_tile(0, 0, Box::new(reader)).await.unwrap();
         std::fs::write("img.buf", tile).unwrap();
         // dbg!(tile.len());
