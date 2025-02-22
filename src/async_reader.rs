@@ -158,6 +158,7 @@ impl AsyncCursor {
         // Initialize with default endianness and then set later
         let mut cursor = Self::new(reader, Default::default());
         let magic_bytes = cursor.read(2).await;
+
         // Should be b"II" for little endian or b"MM" for big endian
         if magic_bytes == Bytes::from_static(b"II") {
             cursor.endianness = Endianness::LittleEndian;
