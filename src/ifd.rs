@@ -10,11 +10,11 @@ use tiff::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat, Tag, Type,
 };
-use tiff::{TiffError, TiffResult};
+use tiff::TiffError;
 
 use crate::async_reader::AsyncCursor;
 use crate::decoder::decode_tile;
-use crate::error::Result;
+use crate::error::{AiocogeoError, Result};
 use crate::geo::{AffineTransform, GeoKeyDirectory, GeoKeyTag};
 use crate::AsyncFileReader;
 
@@ -38,7 +38,7 @@ impl AsRef<[ImageFileDirectory]> for ImageFileDirectories {
 }
 
 impl ImageFileDirectories {
-    pub(crate) async fn open(cursor: &mut AsyncCursor, ifd_offset: usize) -> TiffResult<Self> {
+    pub(crate) async fn open(cursor: &mut AsyncCursor, ifd_offset: usize) -> Result<Self> {
         let mut next_ifd_offset = Some(ifd_offset);
 
         let mut ifds = vec![];
@@ -181,11 +181,11 @@ pub struct ImageFileDirectory {
 }
 
 impl ImageFileDirectory {
-    async fn read(cursor: &mut AsyncCursor, offset: usize) -> TiffResult<Self> {
+    async fn read(cursor: &mut AsyncCursor, offset: usize) -> Result<Self> {
         let ifd_start = offset;
         cursor.seek(offset);
 
-        let tag_count = cursor.read_u16().await;
+        let tag_count = cursor.read_u16().await?;
         let mut tags = HashMap::with_capacity(tag_count as usize);
         for _ in 0..tag_count {
             let (tag_name, tag_value) = read_tag(cursor).await?;
@@ -194,7 +194,7 @@ impl ImageFileDirectory {
 
         cursor.seek(ifd_start + (12 * tag_count as usize) + 2);
 
-        let next_ifd_offset = cursor.read_u32().await;
+        let next_ifd_offset = cursor.read_u32().await?;
         let next_ifd_offset = if next_ifd_offset == 0 {
             None
         } else {
@@ -211,7 +211,7 @@ impl ImageFileDirectory {
     fn from_tags(
         mut tag_data: HashMap<Tag, Value>,
         next_ifd_offset: Option<usize>,
-    ) -> TiffResult<Self> {
+    ) -> Result<Self> {
         let mut new_subfile_type = None;
         let mut image_width = None;
         let mut image_height = None;
@@ -256,51 +256,43 @@ impl ImageFileDirectory {
         tag_data.drain().try_for_each(|(tag, value)| {
             match tag {
                 Tag::NewSubfileType => new_subfile_type = Some(value.into_u32()?),
-                Tag::ImageWidth => {
-                    image_width = Some(value.into_u32()?);
-                }
-                Tag::ImageLength => {
-                    image_height = Some(value.into_u32()?);
-                }
-                Tag::BitsPerSample => {
-                    bits_per_sample = Some(value.into_u16_vec()?);
-                }
+                Tag::ImageWidth => image_width = Some(value.into_u32()?),
+                Tag::ImageLength => image_height = Some(value.into_u32()?),
+                Tag::BitsPerSample => bits_per_sample = Some(value.into_u16_vec()?),
                 Tag::Compression => {
-                    compression = Some(CompressionMethod::from_u16_exhaustive(
-                        value.into_u16().unwrap(),
-                    ))
+                    compression = Some(CompressionMethod::from_u16_exhaustive(value.into_u16()?))
                 }
                 Tag::PhotometricInterpretation => {
                     photometric_interpretation =
-                        PhotometricInterpretation::from_u16(value.into_u16().unwrap())
+                        PhotometricInterpretation::from_u16(value.into_u16()?)
                 }
                 Tag::ImageDescription => image_description = Some(value.into_string()?),
                 Tag::StripOffsets => strip_offsets = Some(value.into_u32_vec()?),
-                Tag::Orientation => orientation = Some(value.into_u16().unwrap()),
-                Tag::SamplesPerPixel => samples_per_pixel = Some(value.into_u16().unwrap()),
+                Tag::Orientation => orientation = Some(value.into_u16()?),
+                Tag::SamplesPerPixel => samples_per_pixel = Some(value.into_u16()?),
                 Tag::RowsPerStrip => rows_per_strip = Some(value.into_u32()?),
                 Tag::StripByteCounts => strip_byte_counts = Some(value.into_u32_vec()?),
                 Tag::MinSampleValue => min_sample_value = Some(value.into_u16_vec()?),
                 Tag::MaxSampleValue => max_sample_value = Some(value.into_u16_vec()?),
                 Tag::XResolution => match value {
                     Value::Rational(n, d) => x_resolution = Some(n as f64 / d as f64),
-                    _ => unreachable!(),
+                    _ => unreachable!("Expected rational type for XResolution."),
                 },
                 Tag::YResolution => match value {
                     Value::Rational(n, d) => y_resolution = Some(n as f64 / d as f64),
-                    _ => unreachable!(),
+                    _ => unreachable!("Expected rational type for YResolution."),
                 },
                 Tag::PlanarConfiguration => {
-                    planar_configuration = PlanarConfiguration::from_u16(value.into_u16().unwrap())
+                    planar_configuration = PlanarConfiguration::from_u16(value.into_u16()?)
                 }
                 Tag::ResolutionUnit => {
-                    resolution_unit = ResolutionUnit::from_u16(value.into_u16().unwrap())
+                    resolution_unit = ResolutionUnit::from_u16(value.into_u16()?)
                 }
                 Tag::Software => software = Some(value.into_string()?),
                 Tag::DateTime => date_time = Some(value.into_string()?),
                 Tag::Artist => artist = Some(value.into_string()?),
                 Tag::HostComputer => host_computer = Some(value.into_string()?),
-                Tag::Predictor => predictor = Predictor::from_u16(value.into_u16().unwrap()),
+                Tag::Predictor => predictor = Predictor::from_u16(value.into_u16()?),
                 Tag::ColorMap => color_map = Some(value.into_u16_vec()?),
                 Tag::TileWidth => tile_width = Some(value.into_u32()?),
                 Tag::TileLength => tile_height = Some(value.into_u32()?),
@@ -315,26 +307,17 @@ impl ImageFileDirectory {
                             .map(SampleFormat::from_u16_exhaustive)
                             .collect(),
                     );
-                    // sample_format = SampleFormat::from_u16(value.into_u16_vec().unwrap())
                 }
                 Tag::JPEGTables => jpeg_tables = Some(value.into_u8_vec()?),
                 Tag::Copyright => copyright = Some(value.into_string()?),
 
                 // Geospatial tags
-                Tag::GeoKeyDirectoryTag => {
-                    // http://geotiff.maptools.org/spec/geotiff2.4.html
-                    geo_key_directory_data = Some(value.into_u16_vec()?);
-                }
+                // http://geotiff.maptools.org/spec/geotiff2.4.html
+                Tag::GeoKeyDirectoryTag => geo_key_directory_data = Some(value.into_u16_vec()?),
                 Tag::ModelPixelScaleTag => model_pixel_scale = Some(value.into_f64_vec()?),
                 Tag::ModelTiepointTag => model_tiepoint = Some(value.into_f64_vec()?),
-                Tag::GeoAsciiParamsTag => {
-                    geo_ascii_params = Some(value.into_string()?);
-                    // let s = value.into_string()?;
-                    // geo_ascii_params = Some(s.split('|').map(|s| s.to_string()).collect())
-                }
-                Tag::GeoDoubleParamsTag => {
-                    geo_double_params = Some(value.into_f64_vec()?);
-                }
+                Tag::GeoAsciiParamsTag => geo_ascii_params = Some(value.into_string()?),
+                Tag::GeoDoubleParamsTag => geo_double_params = Some(value.into_f64_vec()?),
                 // Tag::GdalNodata
                 // Tags for which the tiff crate doesn't have a hard-coded enum variant
                 Tag::Unknown(DOCUMENT_NAME) => document_name = Some(value.into_string()?),
@@ -352,7 +335,9 @@ impl ImageFileDirectory {
         if let Some(data) = geo_key_directory_data {
             let mut chunks = data.chunks(4);
 
-            let header = chunks.next().unwrap();
+            let header = chunks
+                .next()
+                .expect("If the geo key directory exists, a header should exist.");
             let key_directory_version = header[0];
             assert_eq!(key_directory_version, 1);
 
@@ -364,10 +349,13 @@ impl ImageFileDirectory {
 
             let mut tags = HashMap::with_capacity(number_of_keys as usize);
             for _ in 0..number_of_keys {
-                let chunk = chunks.next().unwrap();
+                let chunk = chunks
+                    .next()
+                    .expect("There should be a chunk for each key.");
 
                 let key_id = chunk[0];
-                let tag_name = GeoKeyTag::try_from_primitive(key_id).unwrap();
+                let tag_name =
+                    GeoKeyTag::try_from_primitive(key_id).expect("Unknown GeoKeyTag id: {key_id}");
 
                 let tag_location = chunk[1];
                 let count = chunk[2];
@@ -379,7 +367,9 @@ impl ImageFileDirectory {
                     // If the tag_location points to the value of Tag::GeoAsciiParamsTag, then we
                     // need to extract a subslice from GeoAsciiParamsTag
 
-                    let geo_ascii_params = geo_ascii_params.as_ref().unwrap();
+                    let geo_ascii_params = geo_ascii_params
+                        .as_ref()
+                        .expect("GeoAsciiParamsTag exists but geo_ascii_params does not.");
                     let value_offset = value_offset as usize;
                     let mut s = &geo_ascii_params[value_offset..value_offset + count as usize];
 
@@ -394,7 +384,9 @@ impl ImageFileDirectory {
                     // If the tag_location points to the value of Tag::GeoDoubleParamsTag, then we
                     // need to extract a subslice from GeoDoubleParamsTag
 
-                    let geo_double_params = geo_double_params.as_ref().unwrap();
+                    let geo_double_params = geo_double_params
+                        .as_ref()
+                        .expect("GeoDoubleParamsTag exists but geo_double_params does not.");
                     let value_offset = value_offset as usize;
                     let value = if count == 1 {
                         Value::Double(geo_double_params[value_offset])
@@ -413,23 +405,24 @@ impl ImageFileDirectory {
 
         Ok(Self {
             new_subfile_type,
-            image_width: image_width.unwrap(),
-            image_height: image_height.unwrap(),
-            bits_per_sample: bits_per_sample.unwrap(),
-            compression: compression.unwrap(),
-            photometric_interpretation: photometric_interpretation.unwrap(),
+            image_width: image_width.expect("image_width not found"),
+            image_height: image_height.expect("image_height not found"),
+            bits_per_sample: bits_per_sample.expect("bits per sample not found"),
+            compression: compression.expect("compression not found"),
+            photometric_interpretation: photometric_interpretation
+                .expect("photometric interpretation not found"),
             document_name,
             image_description,
             strip_offsets,
             orientation,
-            samples_per_pixel: samples_per_pixel.unwrap(),
+            samples_per_pixel: samples_per_pixel.expect("samples_per_pixel not found"),
             rows_per_strip,
             strip_byte_counts,
             min_sample_value,
             max_sample_value,
             x_resolution,
             y_resolution,
-            planar_configuration: planar_configuration.unwrap(),
+            planar_configuration: planar_configuration.expect("planar_configuration not found"),
             resolution_unit,
             software,
             date_time,
@@ -437,12 +430,12 @@ impl ImageFileDirectory {
             host_computer,
             predictor,
             color_map,
-            tile_width: tile_width.unwrap(),
-            tile_height: tile_height.unwrap(),
-            tile_offsets: tile_offsets.unwrap(),
-            tile_byte_counts: tile_byte_counts.unwrap(),
+            tile_width: tile_width.expect("tile_width not found"),
+            tile_height: tile_height.expect("tile_height not found"),
+            tile_offsets: tile_offsets.expect("tile_offsets not found"),
+            tile_byte_counts: tile_byte_counts.expect("tile_byte_counts not found"),
             extra_samples,
-            sample_format: sample_format.unwrap(),
+            sample_format: sample_format.expect("sample_format not found"),
             copyright,
             jpeg_tables,
             geo_key_directory,
@@ -628,15 +621,16 @@ impl ImageFileDirectory {
 }
 
 /// Read a single tag from the cursor
-async fn read_tag(cursor: &mut AsyncCursor) -> TiffResult<(Tag, Value)> {
-    let code = cursor.read_u16().await;
+async fn read_tag(cursor: &mut AsyncCursor) -> Result<(Tag, Value)> {
+    let code = cursor.read_u16().await?;
     let tag_name = Tag::from_u16_exhaustive(code);
     // dbg!(&tag_name);
 
     let current_cursor_position = cursor.position();
 
-    let tag_type = Type::from_u16(cursor.read_u16().await).unwrap();
-    let count = cursor.read_u32().await as usize;
+    let tag_type_code = cursor.read_u16().await?;
+    let tag_type = Type::from_u16(tag_type_code).expect("Unknown tag type {tag_type_code}");
+    let count = cursor.read_u32().await? as usize;
 
     let tag_value = read_tag_value(cursor, tag_type, count).await?;
 
@@ -656,7 +650,7 @@ async fn read_tag_value(
     tag_type: Type,
     count: usize,
     // length: usize,
-) -> TiffResult<Value> {
+) -> Result<Value> {
     // Case 1: there are no values so we can return immediately.
     if count == 0 {
         return Ok(Value::List(vec![]));
@@ -687,17 +681,17 @@ async fn read_tag_value(
         // NOTE: we should only be reading value_byte_length when it's 4 bytes or fewer. Right now
         // we're reading even if it's 8 bytes, but then only using the first 4 bytes of this
         // buffer.
-        let data = cursor.read(value_byte_length).await;
+        let data = cursor.read(value_byte_length).await?;
 
         // 2b: the value is at most 4 bytes or doesn't fit in the offset field.
         return Ok(match tag_type {
-            Type::BYTE | Type::UNDEFINED => Value::Byte(data.reader().read_u8().unwrap()),
-            Type::SBYTE => Value::Signed(data.reader().read_i8().unwrap() as i32),
-            Type::SHORT => Value::Short(data.reader().read_u16::<LittleEndian>().unwrap()),
-            Type::SSHORT => Value::Signed(data.reader().read_i16::<LittleEndian>().unwrap() as i32),
-            Type::LONG => Value::Unsigned(data.reader().read_u32::<LittleEndian>().unwrap()),
-            Type::SLONG => Value::Signed(data.reader().read_i32::<LittleEndian>().unwrap()),
-            Type::FLOAT => Value::Float(data.reader().read_f32::<LittleEndian>().unwrap()),
+            Type::BYTE | Type::UNDEFINED => Value::Byte(data.reader().read_u8()?),
+            Type::SBYTE => Value::Signed(data.reader().read_i8()? as i32),
+            Type::SHORT => Value::Short(data.reader().read_u16::<LittleEndian>()?),
+            Type::SSHORT => Value::Signed(data.reader().read_i16::<LittleEndian>()? as i32),
+            Type::LONG => Value::Unsigned(data.reader().read_u32::<LittleEndian>()?),
+            Type::SLONG => Value::Signed(data.reader().read_i32::<LittleEndian>()?),
+            Type::FLOAT => Value::Float(data.reader().read_f32::<LittleEndian>()?),
             Type::ASCII => {
                 if data[0] == 0 {
                     Value::Ascii("".to_string())
@@ -707,39 +701,39 @@ async fn read_tag_value(
                 }
             }
             Type::LONG8 => {
-                let offset = data.reader().read_u32::<LittleEndian>().unwrap();
+                let offset = data.reader().read_u32::<LittleEndian>()?;
                 cursor.seek(offset as usize);
-                Value::UnsignedBig(cursor.read_u64().await)
+                Value::UnsignedBig(cursor.read_u64().await?)
             }
             Type::SLONG8 => {
-                let offset = data.reader().read_u32::<LittleEndian>().unwrap();
+                let offset = data.reader().read_u32::<LittleEndian>()?;
                 cursor.seek(offset as usize);
-                Value::SignedBig(cursor.read_i64().await)
+                Value::SignedBig(cursor.read_i64().await?)
             }
             Type::DOUBLE => {
-                let offset = data.reader().read_u32::<LittleEndian>().unwrap();
+                let offset = data.reader().read_u32::<LittleEndian>()?;
                 cursor.seek(offset as usize);
-                Value::Double(cursor.read_f64().await)
+                Value::Double(cursor.read_f64().await?)
             }
             Type::RATIONAL => {
-                let offset = data.reader().read_u32::<LittleEndian>().unwrap();
+                let offset = data.reader().read_u32::<LittleEndian>()?;
                 cursor.seek(offset as usize);
-                let numerator = cursor.read_u32().await;
-                let denominator = cursor.read_u32().await;
+                let numerator = cursor.read_u32().await?;
+                let denominator = cursor.read_u32().await?;
                 Value::Rational(numerator, denominator)
             }
             Type::SRATIONAL => {
-                let offset = data.reader().read_u32::<LittleEndian>().unwrap();
+                let offset = data.reader().read_u32::<LittleEndian>()?;
                 cursor.seek(offset as usize);
-                let numerator = cursor.read_i32().await;
-                let denominator = cursor.read_i32().await;
+                let numerator = cursor.read_i32().await?;
+                let denominator = cursor.read_i32().await?;
                 Value::SRational(numerator, denominator)
             }
-            Type::IFD => Value::Ifd(data.reader().read_u32::<LittleEndian>().unwrap()),
+            Type::IFD => Value::Ifd(data.reader().read_u32::<LittleEndian>()?),
             Type::IFD8 => {
-                let offset = data.reader().read_u32::<LittleEndian>().unwrap();
+                let offset = data.reader().read_u32::<LittleEndian>()?;
                 cursor.seek(offset as usize);
-                Value::IfdBig(cursor.read_u64().await)
+                Value::IfdBig(cursor.read_u64().await?)
             }
             t => panic!("unexpected tag type {t:?}"),
         });
@@ -747,7 +741,7 @@ async fn read_tag_value(
 
     // Case 3: There is more than one value, but it fits in the offset field.
     if value_byte_length <= 4 {
-        let data = cursor.read(value_byte_length).await;
+        let data = cursor.read(value_byte_length).await?;
         cursor.advance(4 - value_byte_length);
 
         match tag_type {
@@ -773,9 +767,10 @@ async fn read_tag_value(
             }
             Type::ASCII => {
                 let mut buf = vec![0; count];
-                data.reader().read_exact(&mut buf).unwrap();
+                data.reader().read_exact(&mut buf)?;
                 if buf.is_ascii() && buf.ends_with(&[0]) {
-                    let v = std::str::from_utf8(&buf)?;
+                    let v = std::str::from_utf8(&buf)
+                        .map_err(|err| AiocogeoError::General(err.to_string()))?;
                     let v = v.trim_matches(char::from(0));
                     return Ok(Value::Ascii(v.into()));
                 } else {
@@ -844,7 +839,7 @@ async fn read_tag_value(
     }
 
     // Seek cursor
-    let offset = cursor.read_u32().await;
+    let offset = cursor.read_u32().await?;
     cursor.seek(offset as usize);
 
     // Case 4: there is more than one value, and it doesn't fit in the offset field.
@@ -854,56 +849,56 @@ async fn read_tag_value(
         Type::BYTE | Type::UNDEFINED => {
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
-                v.push(Value::Byte(cursor.read_u8().await))
+                v.push(Value::Byte(cursor.read_u8().await?))
             }
             Ok(Value::List(v))
         }
         Type::SBYTE => {
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
-                v.push(Value::Signed(cursor.read_i8().await as i32))
+                v.push(Value::Signed(cursor.read_i8().await? as i32))
             }
             Ok(Value::List(v))
         }
         Type::SHORT => {
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
-                v.push(Value::Short(cursor.read_u16().await))
+                v.push(Value::Short(cursor.read_u16().await?))
             }
             Ok(Value::List(v))
         }
         Type::SSHORT => {
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
-                v.push(Value::Signed(cursor.read_i16().await as i32))
+                v.push(Value::Signed(cursor.read_i16().await? as i32))
             }
             Ok(Value::List(v))
         }
         Type::LONG => {
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
-                v.push(Value::Unsigned(cursor.read_u32().await))
+                v.push(Value::Unsigned(cursor.read_u32().await?))
             }
             Ok(Value::List(v))
         }
         Type::SLONG => {
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
-                v.push(Value::Signed(cursor.read_i32().await))
+                v.push(Value::Signed(cursor.read_i32().await?))
             }
             Ok(Value::List(v))
         }
         Type::FLOAT => {
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
-                v.push(Value::Float(cursor.read_f32().await))
+                v.push(Value::Float(cursor.read_f32().await?))
             }
             Ok(Value::List(v))
         }
         Type::DOUBLE => {
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
-                v.push(Value::Double(cursor.read_f64().await))
+                v.push(Value::Double(cursor.read_f64().await?))
             }
             Ok(Value::List(v))
         }
@@ -911,8 +906,8 @@ async fn read_tag_value(
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
                 v.push(Value::Rational(
-                    cursor.read_u32().await,
-                    cursor.read_u32().await,
+                    cursor.read_u32().await?,
+                    cursor.read_u32().await?,
                 ))
             }
             Ok(Value::List(v))
@@ -921,8 +916,8 @@ async fn read_tag_value(
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
                 v.push(Value::SRational(
-                    cursor.read_i32().await,
-                    cursor.read_i32().await,
+                    cursor.read_i32().await?,
+                    cursor.read_i32().await?,
                 ))
             }
             Ok(Value::List(v))
@@ -930,42 +925,44 @@ async fn read_tag_value(
         Type::LONG8 => {
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
-                v.push(Value::UnsignedBig(cursor.read_u64().await))
+                v.push(Value::UnsignedBig(cursor.read_u64().await?))
             }
             Ok(Value::List(v))
         }
         Type::SLONG8 => {
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
-                v.push(Value::SignedBig(cursor.read_i64().await))
+                v.push(Value::SignedBig(cursor.read_i64().await?))
             }
             Ok(Value::List(v))
         }
         Type::IFD => {
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
-                v.push(Value::Ifd(cursor.read_u32().await))
+                v.push(Value::Ifd(cursor.read_u32().await?))
             }
             Ok(Value::List(v))
         }
         Type::IFD8 => {
             let mut v = Vec::with_capacity(count);
             for _ in 0..count {
-                v.push(Value::IfdBig(cursor.read_u64().await))
+                v.push(Value::IfdBig(cursor.read_u64().await?))
             }
             Ok(Value::List(v))
         }
         Type::ASCII => {
             let n = count;
             let mut out = vec![0; n];
-            let buf = cursor.read(n).await;
-            buf.reader().read_exact(&mut out).unwrap();
+            let buf = cursor.read(n).await?;
+            buf.reader().read_exact(&mut out)?;
 
             // Strings may be null-terminated, so we trim anything downstream of the null byte
             if let Some(first) = out.iter().position(|&b| b == 0) {
                 out.truncate(first);
             }
-            Ok(Value::Ascii(String::from_utf8(out)?))
+            Ok(Value::Ascii(
+                String::from_utf8(out).map_err(|err| AiocogeoError::General(err.to_string()))?,
+            ))
         }
         t => panic!("unexpected tag type {t:?}"),
     }

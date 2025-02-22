@@ -132,11 +132,11 @@ pub(crate) struct AsyncCursor {
 /// Macro to generate functions to read scalar values from the cursor
 macro_rules! impl_read_byteorder {
     ($method_name:ident, $typ:ty) => {
-        pub(crate) async fn $method_name(&mut self) -> $typ {
-            let mut buf = Cursor::new(self.read(<$typ>::BITS as usize / 8).await);
+        pub(crate) async fn $method_name(&mut self) -> Result<$typ> {
+            let mut buf = Cursor::new(self.read(<$typ>::BITS as usize / 8).await?);
             match self.endianness {
-                Endianness::LittleEndian => buf.$method_name::<LittleEndian>().unwrap(),
-                Endianness::BigEndian => buf.$method_name::<BigEndian>().unwrap(),
+                Endianness::LittleEndian => Ok(buf.$method_name::<LittleEndian>()?),
+                Endianness::BigEndian => Ok(buf.$method_name::<BigEndian>()?),
             }
         }
     };
@@ -157,7 +157,7 @@ impl AsyncCursor {
     pub(crate) async fn try_open_tiff(reader: Box<dyn AsyncFileReader>) -> Result<Self> {
         // Initialize with default endianness and then set later
         let mut cursor = Self::new(reader, Default::default());
-        let magic_bytes = cursor.read(2).await;
+        let magic_bytes = cursor.read(2).await?;
 
         // Should be b"II" for little endian or b"MM" for big endian
         if magic_bytes == Bytes::from_static(b"II") {
@@ -179,22 +179,22 @@ impl AsyncCursor {
     }
 
     /// Read the given number of bytes, advancing the internal cursor state by the same amount.
-    pub(crate) async fn read(&mut self, length: usize) -> Bytes {
+    pub(crate) async fn read(&mut self, length: usize) -> Result<Bytes> {
         let range = self.offset as _..(self.offset + length) as _;
         self.offset += length;
-        self.reader.get_bytes(range).await.unwrap()
+        self.reader.get_bytes(range).await
     }
 
-    /// Read a u8 from the cursor
-    pub(crate) async fn read_u8(&mut self) -> u8 {
-        let buf = self.read(1).await;
-        Cursor::new(buf).read_u8().unwrap()
+    /// Read a u8 from the cursor, advancing the internal state by 1 byte.
+    pub(crate) async fn read_u8(&mut self) -> Result<u8> {
+        let buf = self.read(1).await?;
+        Ok(Cursor::new(buf).read_u8()?)
     }
 
-    /// Read a i8 from the cursor
-    pub(crate) async fn read_i8(&mut self) -> i8 {
-        let buf = self.read(1).await;
-        Cursor::new(buf).read_i8().unwrap()
+    /// Read a i8 from the cursor, advancing the internal state by 1 byte.
+    pub(crate) async fn read_i8(&mut self) -> Result<i8> {
+        let buf = self.read(1).await?;
+        Ok(Cursor::new(buf).read_i8()?)
     }
 
     impl_read_byteorder!(read_u16, u16);
@@ -204,20 +204,22 @@ impl AsyncCursor {
     impl_read_byteorder!(read_i32, i32);
     impl_read_byteorder!(read_i64, i64);
 
-    pub(crate) async fn read_f32(&mut self) -> f32 {
-        let mut buf = Cursor::new(self.read(4).await);
-        match self.endianness {
-            Endianness::LittleEndian => buf.read_f32::<LittleEndian>().unwrap(),
-            Endianness::BigEndian => buf.read_f32::<BigEndian>().unwrap(),
-        }
+    pub(crate) async fn read_f32(&mut self) -> Result<f32> {
+        let mut buf = Cursor::new(self.read(4).await?);
+        let out = match self.endianness {
+            Endianness::LittleEndian => buf.read_f32::<LittleEndian>()?,
+            Endianness::BigEndian => buf.read_f32::<BigEndian>()?,
+        };
+        Ok(out)
     }
 
-    pub(crate) async fn read_f64(&mut self) -> f64 {
-        let mut buf = Cursor::new(self.read(8).await);
-        match self.endianness {
-            Endianness::LittleEndian => buf.read_f64::<LittleEndian>().unwrap(),
-            Endianness::BigEndian => buf.read_f64::<BigEndian>().unwrap(),
-        }
+    pub(crate) async fn read_f64(&mut self) -> Result<f64> {
+        let mut buf = Cursor::new(self.read(8).await?);
+        let out = match self.endianness {
+            Endianness::LittleEndian => buf.read_f64::<LittleEndian>()?,
+            Endianness::BigEndian => buf.read_f64::<BigEndian>()?,
+        };
+        Ok(out)
     }
 
     #[allow(dead_code)]

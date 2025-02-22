@@ -12,16 +12,14 @@ pub struct COGReader {
 impl COGReader {
     pub async fn try_open(reader: Box<dyn AsyncFileReader>) -> Result<Self> {
         let mut cursor = AsyncCursor::try_open_tiff(reader).await?;
-        let version = cursor.read_u16().await;
+        let version = cursor.read_u16().await?;
 
         // Assert it's a standard non-big tiff
         assert_eq!(version, 42);
 
-        let first_ifd_location = cursor.read_u32().await;
+        let first_ifd_location = cursor.read_u32().await?;
 
-        let ifds = ImageFileDirectories::open(&mut cursor, first_ifd_location as usize)
-            .await
-            .unwrap();
+        let ifds = ImageFileDirectories::open(&mut cursor, first_ifd_location as usize).await?;
 
         let reader = cursor.into_inner();
         Ok(Self { reader, ifds })
