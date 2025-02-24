@@ -1,10 +1,5 @@
 #![deny(clippy::undocumented_unsafe_blocks)]
 
-mod coord_type;
-mod kdtree;
-mod rtree;
-pub(crate) mod util;
-
 use pyo3::prelude::*;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
