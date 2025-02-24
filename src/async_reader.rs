@@ -16,8 +16,8 @@ use crate::error::{AiocogeoError, Result};
 ///
 /// Notes:
 ///
-/// 1. There is a default implementation for types that implement [`AsyncRead`]
-///    and [`AsyncSeek`], for example [`tokio::fs::File`].
+/// 1. There is a default implementation for types that implement [`tokio::io::AsyncRead`]
+///    and [`tokio::io::AsyncSeek`], for example [`tokio::fs::File`].
 ///
 /// 2. [`ObjectReader`], available when the `object_store` crate feature
 ///    is enabled, implements this interface for [`ObjectStore`].
