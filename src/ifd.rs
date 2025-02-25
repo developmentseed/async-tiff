@@ -181,9 +181,9 @@ pub struct ImageFileDirectory {
 }
 
 impl ImageFileDirectory {
-    async fn read(cursor: &mut AsyncCursor, offset: usize) -> Result<Self> {
-        let ifd_start = offset;
-        cursor.seek(offset);
+    /// Read and parse the IFD starting at the given file offset
+    async fn read(cursor: &mut AsyncCursor, ifd_start: usize) -> Result<Self> {
+        cursor.seek(ifd_start);
 
         let tag_count = cursor.read_u16().await?;
         let mut tags = HashMap::with_capacity(tag_count as usize);
@@ -446,6 +446,174 @@ impl ImageFileDirectory {
         })
     }
 
+    pub fn new_subfile_type(&self) -> Option<u32> {
+        self.new_subfile_type
+    }
+
+    /// The number of columns in the image, i.e., the number of pixels per row.
+    pub fn image_width(&self) -> u32 {
+        self.image_width
+    }
+
+    /// The number of rows of pixels in the image.
+    pub fn image_height(&self) -> u32 {
+        self.image_height
+    }
+
+    pub fn bits_per_sample(&self) -> &[u16] {
+        &self.bits_per_sample
+    }
+
+    pub fn compression(&self) -> CompressionMethod {
+        self.compression
+    }
+
+    pub fn photometric_interpretation(&self) -> PhotometricInterpretation {
+        self.photometric_interpretation
+    }
+
+    pub fn document_name(&self) -> Option<&str> {
+        self.document_name.as_deref()
+    }
+
+    pub fn image_description(&self) -> Option<&str> {
+        self.image_description.as_deref()
+    }
+
+    pub fn strip_offsets(&self) -> Option<&[u32]> {
+        self.strip_offsets.as_deref()
+    }
+
+    pub fn orientation(&self) -> Option<u16> {
+        self.orientation
+    }
+
+    /// The number of components per pixel.
+    ///
+    /// SamplesPerPixel is usually 1 for bilevel, grayscale, and palette-color images.
+    /// SamplesPerPixel is usually 3 for RGB images. If this value is higher, ExtraSamples should
+    /// give an indication of the meaning of the additional channels.
+    pub fn samples_per_pixel(&self) -> u16 {
+        self.samples_per_pixel
+    }
+
+    pub fn rows_per_strip(&self) -> Option<u32> {
+        self.rows_per_strip
+    }
+
+    pub fn strip_byte_counts(&self) -> Option<&[u32]> {
+        self.strip_byte_counts.as_deref()
+    }
+
+    pub fn min_sample_value(&self) -> Option<&[u16]> {
+        self.min_sample_value.as_deref()
+    }
+
+    pub fn max_sample_value(&self) -> Option<&[u16]> {
+        self.max_sample_value.as_deref()
+    }
+
+    /// The number of pixels per ResolutionUnit in the ImageWidth direction.
+    pub fn x_resolution(&self) -> Option<f64> {
+        self.x_resolution
+    }
+
+    /// The number of pixels per ResolutionUnit in the ImageLength direction.
+    pub fn y_resolution(&self) -> Option<f64> {
+        self.y_resolution
+    }
+
+    /// How the components of each pixel are stored.
+    ///
+    /// The specification defines these values:
+    ///
+    /// - Chunky format. The component values for each pixel are stored contiguously. For example,
+    ///   for RGB data, the data is stored as RGBRGBRGB
+    /// - Planar format. The components are stored in separate component planes. For example, RGB
+    ///   data is stored with the Red components in one component plane, the Green in another, and
+    ///   the Blue in another.
+    ///
+    /// The specification adds a warning that PlanarConfiguration=2 is not in widespread use and
+    /// that Baseline TIFF readers are not required to support it.
+    ///
+    /// If SamplesPerPixel is 1, PlanarConfiguration is irrelevant, and need not be included.
+    pub fn planar_configuration(&self) -> PlanarConfiguration {
+        self.planar_configuration
+    }
+
+    pub fn resolution_unit(&self) -> Option<ResolutionUnit> {
+        self.resolution_unit
+    }
+
+    /// Name and version number of the software package(s) used to create the image.
+    pub fn software(&self) -> Option<&str> {
+        self.software.as_deref()
+    }
+
+    /// Date and time of image creation.
+    ///
+    /// The format is: "YYYY:MM:DD HH:MM:SS", with hours like those on a 24-hour clock, and one
+    /// space character between the date and the time. The length of the string, including the
+    /// terminating NUL, is 20 bytes.
+    pub fn date_time(&self) -> Option<&str> {
+        self.date_time.as_deref()
+    }
+
+    pub fn artist(&self) -> Option<&str> {
+        self.artist.as_deref()
+    }
+
+    pub fn host_computer(&self) -> Option<&str> {
+        self.host_computer.as_deref()
+    }
+
+    pub fn predictor(&self) -> Option<Predictor> {
+        self.predictor
+    }
+
+    pub fn tile_width(&self) -> u32 {
+        self.tile_width
+    }
+    pub fn tile_height(&self) -> u32 {
+        self.tile_height
+    }
+
+    pub fn tile_offsets(&self) -> &[u32] {
+        &self.tile_offsets
+    }
+    pub fn tile_byte_counts(&self) -> &[u32] {
+        &self.tile_byte_counts
+    }
+
+    pub fn extra_samples(&self) -> Option<&[u8]> {
+        self.extra_samples.as_deref()
+    }
+
+    pub fn sample_format(&self) -> &[SampleFormat] {
+        &self.sample_format
+    }
+
+    pub fn jpeg_tables(&self) -> Option<&[u8]> {
+        self.jpeg_tables.as_deref()
+    }
+
+    pub fn copyright(&self) -> Option<&str> {
+        self.copyright.as_deref()
+    }
+
+    // Geospatial tags
+    pub fn geo_key_directory(&self) -> Option<&GeoKeyDirectory> {
+        self.geo_key_directory.as_ref()
+    }
+
+    pub fn model_pixel_scale(&self) -> Option<&[f64]> {
+        self.model_pixel_scale.as_deref()
+    }
+
+    pub fn model_tiepoint(&self) -> Option<&[f64]> {
+        self.model_tiepoint.as_deref()
+    }
+
     /// Check if an IFD is masked based on a dictionary of tiff tags
     /// https://www.awaresystems.be/imaging/tiff/tifftags/newsubfiletype.html
     /// https://gdal.org/drivers/raster/gtiff.html#internal-nodata-masks
@@ -490,27 +658,6 @@ impl ImageFileDirectory {
         } else {
             None
         }
-    }
-
-    pub fn compression(&self) -> CompressionMethod {
-        self.compression
-    }
-
-    pub fn bands(&self) -> u16 {
-        self.samples_per_pixel
-    }
-
-    // pub fn dtype(&self)
-
-    // pub fn nodata(&self)
-
-    pub fn has_extra_samples(&self) -> bool {
-        self.extra_samples.is_some()
-    }
-
-    /// Return the interleave of the IFD
-    pub fn interleave(&self) -> PlanarConfiguration {
-        self.planar_configuration
     }
 
     /// Returns true if this IFD contains a full resolution image (not an overview)

@@ -1,6 +1,13 @@
 #![deny(clippy::undocumented_unsafe_blocks)]
 
+mod enums;
+mod geo;
+mod ifd;
+
 use pyo3::prelude::*;
+
+use crate::geo::PyGeoKeyDirectory;
+use crate::ifd::PyImageFileDirectory;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -34,6 +41,8 @@ fn _async_tiff(py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     check_debug_build(py)?;
 
     m.add_wrapped(wrap_pyfunction!(___version))?;
+    m.add_class::<PyGeoKeyDirectory>()?;
+    m.add_class::<PyImageFileDirectory>()?;
 
     Ok(())
 }

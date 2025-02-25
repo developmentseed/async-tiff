@@ -22,6 +22,7 @@ bytes = "1.8"
 pyo3 = { version = "0.23.0", features = ["macros"] }
 pyo3-bytes = "0.1.2"
 thiserror = "1"
+tiff = "0.9.1"
 
 [profile.release]
 lto = true

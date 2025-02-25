@@ -9,7 +9,7 @@ use tiff::{TiffError, TiffResult};
 /// Geospatial TIFF tag variants
 #[derive(Clone, Copy, Debug, PartialEq, TryFromPrimitive, IntoPrimitive, Eq, Hash)]
 #[repr(u16)]
-pub enum GeoKeyTag {
+pub(crate) enum GeoKeyTag {
     // GeoTIFF configuration keys
     ModelType = 1024,
     RasterType = 1025,
