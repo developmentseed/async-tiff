@@ -2,7 +2,7 @@
 
 mod async_reader;
 mod cog;
-mod decoder;
+pub mod decoder;
 pub mod error;
 pub mod geo;
 mod ifd;

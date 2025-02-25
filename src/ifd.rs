@@ -13,7 +13,7 @@ use tiff::tags::{
 use tiff::TiffError;
 
 use crate::async_reader::AsyncCursor;
-use crate::decoder::decode_tile;
+use crate::decoder::{decode_tile, DecoderRegistry};
 use crate::error::{AiocogeoError, Result};
 use crate::geo::{AffineTransform, GeoKeyDirectory, GeoKeyTag};
 use crate::AsyncFileReader;
@@ -681,6 +681,7 @@ impl ImageFileDirectory {
         x: usize,
         y: usize,
         mut reader: Box<dyn AsyncFileReader>,
+        decoder_registry: &DecoderRegistry,
     ) -> Result<Bytes> {
         let range = self.get_tile_byte_range(x, y);
         let buf = reader.get_bytes(range).await?;
@@ -688,7 +689,8 @@ impl ImageFileDirectory {
             buf,
             self.photometric_interpretation,
             self.compression,
-            self.jpeg_tables.as_ref(),
+            self.jpeg_tables.as_deref(),
+            decoder_registry,
         )
     }
 
@@ -697,6 +699,7 @@ impl ImageFileDirectory {
         x: &[usize],
         y: &[usize],
         mut reader: Box<dyn AsyncFileReader>,
+        decoder_registry: &DecoderRegistry,
     ) -> Result<Vec<Bytes>> {
         assert_eq!(x.len(), y.len(), "x and y should have same len");
 
@@ -717,7 +720,8 @@ impl ImageFileDirectory {
                 buf,
                 self.photometric_interpretation,
                 self.compression,
-                self.jpeg_tables.as_ref(),
+                self.jpeg_tables.as_deref(),
+                decoder_registry,
             )?;
             decoded_tiles.push(decoded);
         }

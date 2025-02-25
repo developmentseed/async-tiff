@@ -14,6 +14,18 @@ impl From<CompressionMethod> for PyCompressionMethod {
     }
 }
 
+impl From<PyCompressionMethod> for CompressionMethod {
+    fn from(value: PyCompressionMethod) -> Self {
+        value.0
+    }
+}
+
+impl<'py> FromPyObject<'py> for PyCompressionMethod {
+    fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
+        Ok(Self(CompressionMethod::from_u16_exhaustive(ob.extract()?)))
+    }
+}
+
 impl<'py> IntoPyObject<'py> for PyCompressionMethod {
     type Target = PyAny;
     type Output = Bound<'py, PyAny>;

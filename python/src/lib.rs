@@ -1,5 +1,6 @@
 #![deny(clippy::undocumented_unsafe_blocks)]
 
+mod decoder;
 mod enums;
 mod geo;
 mod ifd;
@@ -7,6 +8,7 @@ mod tiff;
 
 use pyo3::prelude::*;
 
+use crate::decoder::PyDecoderRegistry;
 use crate::geo::PyGeoKeyDirectory;
 use crate::ifd::PyImageFileDirectory;
 use crate::tiff::PyTIFF;
@@ -43,6 +45,7 @@ fn _async_tiff(py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     check_debug_build(py)?;
 
     m.add_wrapped(wrap_pyfunction!(___version))?;
+    m.add_class::<PyDecoderRegistry>()?;
     m.add_class::<PyGeoKeyDirectory>()?;
     m.add_class::<PyImageFileDirectory>()?;
     m.add_class::<PyTIFF>()?;

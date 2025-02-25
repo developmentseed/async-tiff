@@ -49,6 +49,7 @@ mod test {
     use std::io::BufReader;
     use std::sync::Arc;
 
+    use crate::decoder::DecoderRegistry;
     use crate::ObjectReader;
 
     use super::*;
@@ -66,7 +67,11 @@ mod test {
         let cog_reader = COGReader::try_open(Box::new(reader.clone())).await.unwrap();
 
         let ifd = &cog_reader.ifds.as_ref()[1];
-        let tile = ifd.get_tile(0, 0, Box::new(reader)).await.unwrap();
+        let decoder_registry = DecoderRegistry::default();
+        let tile = ifd
+            .get_tile(0, 0, Box::new(reader), &decoder_registry)
+            .await
+            .unwrap();
         std::fs::write("img.buf", tile).unwrap();
     }
 
