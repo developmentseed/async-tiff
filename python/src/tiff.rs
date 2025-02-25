@@ -37,6 +37,7 @@ impl PyTIFF {
         Ok(cog_reader)
     }
 
+    #[getter]
     fn ifds(&self) -> Vec<PyImageFileDirectory> {
         let ifds = self.0.ifds();
         ifds.as_ref().iter().map(|ifd| ifd.clone().into()).collect()

@@ -47,7 +47,6 @@ impl ImageFileDirectories {
             next_ifd_offset = ifd.next_ifd_offset();
             ifds.push(ifd);
         }
-        dbg!(&ifds[0].compression);
 
         Ok(Self { ifds })
     }
@@ -771,7 +770,6 @@ impl ImageFileDirectory {
 async fn read_tag(cursor: &mut AsyncCursor) -> Result<(Tag, Value)> {
     let code = cursor.read_u16().await?;
     let tag_name = Tag::from_u16_exhaustive(code);
-    // dbg!(&tag_name);
 
     let current_cursor_position = cursor.position();
 
@@ -823,8 +821,6 @@ async fn read_tag_value(
         // 2a: the value is 5-8 bytes and we're in BigTiff mode.
         // We don't support bigtiff yet
 
-        // dbg!(value_byte_length);
-        // dbg!(tag_type);
         // NOTE: we should only be reading value_byte_length when it's 4 bytes or fewer. Right now
         // we're reading even if it's 8 bytes, but then only using the first 4 bytes of this
         // buffer.

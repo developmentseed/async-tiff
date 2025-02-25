@@ -66,11 +66,8 @@ mod test {
         let cog_reader = COGReader::try_open(Box::new(reader.clone())).await.unwrap();
 
         let ifd = &cog_reader.ifds.as_ref()[1];
-        // dbg!(ifd.geotransform());
-        dbg!(ifd);
         let tile = ifd.get_tile(0, 0, Box::new(reader)).await.unwrap();
         std::fs::write("img.buf", tile).unwrap();
-        // dbg!(tile.len());
     }
 
     #[ignore = "local file"]
