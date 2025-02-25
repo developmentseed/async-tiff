@@ -114,6 +114,44 @@ impl AsyncFileReader for ObjectReader {
     }
 }
 
+pub struct PrefetchReader {
+    reader: Box<dyn AsyncFileReader>,
+    buffer: Bytes,
+}
+
+impl PrefetchReader {
+    pub async fn new(mut reader: Box<dyn AsyncFileReader>, prefetch: u64) -> Result<Self> {
+        let buffer = reader.get_bytes(0..prefetch).await?;
+        Ok(Self { reader, buffer })
+    }
+}
+
+impl AsyncFileReader for PrefetchReader {
+    fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, Result<Bytes>> {
+        if range.start < self.buffer.len() as _ {
+            if range.end < self.buffer.len() as _ {
+                let usize_range = range.start as usize..range.end as usize;
+                let result = self.buffer.slice(usize_range);
+                async { Ok(result) }.boxed()
+            } else {
+                // TODO: reuse partial internal buffer
+                self.reader.get_bytes(range)
+            }
+        } else {
+            self.reader.get_bytes(range)
+        }
+    }
+
+    fn get_byte_ranges(&mut self, ranges: Vec<Range<u64>>) -> BoxFuture<'_, Result<Vec<Bytes>>>
+    where
+        Self: Send,
+    {
+        // In practice, get_byte_ranges is only used for fetching tiles, which are unlikely to
+        // overlap a metadata prefetch.
+        self.reader.get_byte_ranges(ranges)
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub enum Endianness {
     #[default]

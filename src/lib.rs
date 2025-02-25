@@ -7,6 +7,6 @@ pub mod error;
 pub mod geo;
 mod ifd;
 
-pub use async_reader::{AsyncFileReader, ObjectReader};
+pub use async_reader::{AsyncFileReader, ObjectReader, PrefetchReader};
 pub use cog::COGReader;
 pub use ifd::{ImageFileDirectories, ImageFileDirectory};
