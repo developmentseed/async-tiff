@@ -1,4 +1,4 @@
-use std::io::{Cursor, SeekFrom};
+use std::io::Cursor;
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -25,7 +25,7 @@ use crate::error::{AiocogeoError, Result};
 /// [`ObjectStore`]: object_store::ObjectStore
 ///
 /// [`tokio::fs::File`]: https://docs.rs/tokio/latest/tokio/fs/struct.File.html
-pub trait AsyncFileReader: Send {
+pub trait AsyncFileReader: Send + Sync {
     /// Retrieve the bytes in `range`
     fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, Result<Bytes>>;
 
@@ -57,12 +57,12 @@ impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
 }
 
 #[cfg(feature = "tokio")]
-impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send> AsyncFileReader for T {
+impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Sync> AsyncFileReader for T {
     fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, Result<Bytes>> {
         use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
         async move {
-            self.seek(SeekFrom::Start(range.start)).await?;
+            self.seek(std::io::SeekFrom::Start(range.start)).await?;
 
             let to_read = (range.end - range.start).try_into().unwrap();
             let mut buffer = Vec::with_capacity(to_read);

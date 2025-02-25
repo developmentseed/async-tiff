@@ -215,3 +215,9 @@ impl PyImageFileDirectory {
         self.0.model_tiepoint()
     }
 }
+
+impl From<ImageFileDirectory> for PyImageFileDirectory {
+    fn from(value: ImageFileDirectory) -> Self {
+        Self(value)
+    }
+}

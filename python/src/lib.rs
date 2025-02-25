@@ -3,11 +3,13 @@
 mod enums;
 mod geo;
 mod ifd;
+mod tiff;
 
 use pyo3::prelude::*;
 
 use crate::geo::PyGeoKeyDirectory;
 use crate::ifd::PyImageFileDirectory;
+use crate::tiff::PyTIFF;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -43,6 +45,10 @@ fn _async_tiff(py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(___version))?;
     m.add_class::<PyGeoKeyDirectory>()?;
     m.add_class::<PyImageFileDirectory>()?;
+    m.add_class::<PyTIFF>()?;
+
+    pyo3_object_store::register_store_module(py, m, "async_tiff")?;
+    pyo3_object_store::register_exceptions_module(py, m, "async_tiff")?;
 
     Ok(())
 }

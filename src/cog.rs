@@ -25,6 +25,10 @@ impl COGReader {
         Ok(Self { reader, ifds })
     }
 
+    pub fn ifds(&self) -> &ImageFileDirectories {
+        &self.ifds
+    }
+
     /// Return the EPSG code representing the crs of the image
     pub fn epsg(&self) -> Option<u16> {
         let ifd = &self.ifds.as_ref()[0];
