@@ -1,9 +1,11 @@
-use std::io::Cursor;
+use std::fmt::Debug;
+use std::io::Read;
 use std::ops::Range;
 use std::sync::Arc;
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
-use bytes::Bytes;
+use bytes::buf::Reader;
+use bytes::{Buf, Bytes};
 use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use object_store::ObjectStore;
 
@@ -25,7 +27,7 @@ use crate::error::{AiocogeoError, Result};
 /// [`ObjectStore`]: object_store::ObjectStore
 ///
 /// [`tokio::fs::File`]: https://docs.rs/tokio/latest/tokio/fs/struct.File.html
-pub trait AsyncFileReader: Send + Sync {
+pub trait AsyncFileReader: Debug + Send + Sync {
     /// Retrieve the bytes in `range`
     fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, Result<Bytes>>;
 
@@ -57,7 +59,9 @@ impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
 }
 
 #[cfg(feature = "tokio")]
-impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Sync> AsyncFileReader for T {
+impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Debug + Send + Sync> AsyncFileReader
+    for T
+{
     fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, Result<Bytes>> {
         use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
@@ -114,6 +118,7 @@ impl AsyncFileReader for ObjectReader {
     }
 }
 
+#[derive(Debug)]
 pub struct PrefetchReader {
     reader: Box<dyn AsyncFileReader>,
     buffer: Bytes,
@@ -161,23 +166,11 @@ pub enum Endianness {
 
 /// A wrapper around an [ObjectStore] that provides a seek-oriented interface
 // TODO: in the future add buffering to this
+#[derive(Debug)]
 pub(crate) struct AsyncCursor {
     reader: Box<dyn AsyncFileReader>,
     offset: usize,
     endianness: Endianness,
-}
-
-/// Macro to generate functions to read scalar values from the cursor
-macro_rules! impl_read_byteorder {
-    ($method_name:ident, $typ:ty) => {
-        pub(crate) async fn $method_name(&mut self) -> Result<$typ> {
-            let mut buf = Cursor::new(self.read(<$typ>::BITS as usize / 8).await?);
-            match self.endianness {
-                Endianness::LittleEndian => Ok(buf.$method_name::<LittleEndian>()?),
-                Endianness::BigEndian => Ok(buf.$method_name::<BigEndian>()?),
-            }
-        }
-    };
 }
 
 impl AsyncCursor {
@@ -196,6 +189,7 @@ impl AsyncCursor {
         // Initialize with default endianness and then set later
         let mut cursor = Self::new(reader, Default::default());
         let magic_bytes = cursor.read(2).await?;
+        let magic_bytes = magic_bytes.as_ref();
 
         // Should be b"II" for little endian or b"MM" for big endian
         if magic_bytes == Bytes::from_static(b"II") {
@@ -212,57 +206,78 @@ impl AsyncCursor {
     }
 
     /// Consume self and return the underlying [`AsyncFileReader`].
+    #[allow(dead_code)]
     pub(crate) fn into_inner(self) -> Box<dyn AsyncFileReader> {
         self.reader
     }
 
     /// Read the given number of bytes, advancing the internal cursor state by the same amount.
-    pub(crate) async fn read(&mut self, length: usize) -> Result<Bytes> {
+    pub(crate) async fn read(&mut self, length: usize) -> Result<EndianAwareReader> {
         let range = self.offset as _..(self.offset + length) as _;
         self.offset += length;
-        self.reader.get_bytes(range).await
+        let bytes = self.reader.get_bytes(range).await?;
+        Ok(EndianAwareReader {
+            reader: bytes.reader(),
+            endianness: self.endianness,
+        })
     }
 
     /// Read a u8 from the cursor, advancing the internal state by 1 byte.
     pub(crate) async fn read_u8(&mut self) -> Result<u8> {
-        let buf = self.read(1).await?;
-        Ok(Cursor::new(buf).read_u8()?)
+        self.read(1).await?.read_u8()
     }
 
     /// Read a i8 from the cursor, advancing the internal state by 1 byte.
     pub(crate) async fn read_i8(&mut self) -> Result<i8> {
-        let buf = self.read(1).await?;
-        Ok(Cursor::new(buf).read_i8()?)
+        self.read(1).await?.read_i8()
     }
 
-    impl_read_byteorder!(read_u16, u16);
-    impl_read_byteorder!(read_u32, u32);
-    impl_read_byteorder!(read_u64, u64);
-    impl_read_byteorder!(read_i16, i16);
-    impl_read_byteorder!(read_i32, i32);
-    impl_read_byteorder!(read_i64, i64);
+    /// Read a u16 from the cursor, advancing the internal state by 2 bytes.
+    pub(crate) async fn read_u16(&mut self) -> Result<u16> {
+        self.read(2).await?.read_u16()
+    }
+
+    /// Read a i16 from the cursor, advancing the internal state by 2 bytes.
+    pub(crate) async fn read_i16(&mut self) -> Result<i16> {
+        self.read(2).await?.read_i16()
+    }
+
+    /// Read a u32 from the cursor, advancing the internal state by 4 bytes.
+    pub(crate) async fn read_u32(&mut self) -> Result<u32> {
+        self.read(4).await?.read_u32()
+    }
+
+    /// Read a i32 from the cursor, advancing the internal state by 4 bytes.
+    pub(crate) async fn read_i32(&mut self) -> Result<i32> {
+        self.read(4).await?.read_i32()
+    }
+
+    /// Read a u64 from the cursor, advancing the internal state by 8 bytes.
+    pub(crate) async fn read_u64(&mut self) -> Result<u64> {
+        self.read(8).await?.read_u64()
+    }
+
+    /// Read a i64 from the cursor, advancing the internal state by 8 bytes.
+    pub(crate) async fn read_i64(&mut self) -> Result<i64> {
+        self.read(8).await?.read_i64()
+    }
 
     pub(crate) async fn read_f32(&mut self) -> Result<f32> {
-        let mut buf = Cursor::new(self.read(4).await?);
-        let out = match self.endianness {
-            Endianness::LittleEndian => buf.read_f32::<LittleEndian>()?,
-            Endianness::BigEndian => buf.read_f32::<BigEndian>()?,
-        };
-        Ok(out)
+        self.read(4).await?.read_f32()
     }
 
     pub(crate) async fn read_f64(&mut self) -> Result<f64> {
-        let mut buf = Cursor::new(self.read(8).await?);
-        let out = match self.endianness {
-            Endianness::LittleEndian => buf.read_f64::<LittleEndian>()?,
-            Endianness::BigEndian => buf.read_f64::<BigEndian>()?,
-        };
-        Ok(out)
+        self.read(8).await?.read_f64()
     }
 
     #[allow(dead_code)]
     pub(crate) fn reader(&self) -> &dyn AsyncFileReader {
         &self.reader
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn endianness(&self) -> Endianness {
+        self.endianness
     }
 
     /// Advance cursor position by a set amount
@@ -276,5 +291,95 @@ impl AsyncCursor {
 
     pub(crate) fn position(&self) -> usize {
         self.offset
+    }
+}
+
+pub(crate) struct EndianAwareReader {
+    reader: Reader<Bytes>,
+    endianness: Endianness,
+}
+
+impl EndianAwareReader {
+    /// Read a u8 from the cursor, advancing the internal state by 1 byte.
+    pub(crate) fn read_u8(&mut self) -> Result<u8> {
+        Ok(self.reader.read_u8()?)
+    }
+
+    /// Read a i8 from the cursor, advancing the internal state by 1 byte.
+    pub(crate) fn read_i8(&mut self) -> Result<i8> {
+        Ok(self.reader.read_i8()?)
+    }
+
+    pub(crate) fn read_u16(&mut self) -> Result<u16> {
+        match self.endianness {
+            Endianness::LittleEndian => Ok(self.reader.read_u16::<LittleEndian>()?),
+            Endianness::BigEndian => Ok(self.reader.read_u16::<BigEndian>()?),
+        }
+    }
+
+    pub(crate) fn read_i16(&mut self) -> Result<i16> {
+        match self.endianness {
+            Endianness::LittleEndian => Ok(self.reader.read_i16::<LittleEndian>()?),
+            Endianness::BigEndian => Ok(self.reader.read_i16::<BigEndian>()?),
+        }
+    }
+
+    pub(crate) fn read_u32(&mut self) -> Result<u32> {
+        match self.endianness {
+            Endianness::LittleEndian => Ok(self.reader.read_u32::<LittleEndian>()?),
+            Endianness::BigEndian => Ok(self.reader.read_u32::<BigEndian>()?),
+        }
+    }
+
+    pub(crate) fn read_i32(&mut self) -> Result<i32> {
+        match self.endianness {
+            Endianness::LittleEndian => Ok(self.reader.read_i32::<LittleEndian>()?),
+            Endianness::BigEndian => Ok(self.reader.read_i32::<BigEndian>()?),
+        }
+    }
+
+    pub(crate) fn read_u64(&mut self) -> Result<u64> {
+        match self.endianness {
+            Endianness::LittleEndian => Ok(self.reader.read_u64::<LittleEndian>()?),
+            Endianness::BigEndian => Ok(self.reader.read_u64::<BigEndian>()?),
+        }
+    }
+
+    pub(crate) fn read_i64(&mut self) -> Result<i64> {
+        match self.endianness {
+            Endianness::LittleEndian => Ok(self.reader.read_i64::<LittleEndian>()?),
+            Endianness::BigEndian => Ok(self.reader.read_i64::<BigEndian>()?),
+        }
+    }
+
+    pub(crate) fn read_f32(&mut self) -> Result<f32> {
+        match self.endianness {
+            Endianness::LittleEndian => Ok(self.reader.read_f32::<LittleEndian>()?),
+            Endianness::BigEndian => Ok(self.reader.read_f32::<BigEndian>()?),
+        }
+    }
+
+    pub(crate) fn read_f64(&mut self) -> Result<f64> {
+        match self.endianness {
+            Endianness::LittleEndian => Ok(self.reader.read_f64::<LittleEndian>()?),
+            Endianness::BigEndian => Ok(self.reader.read_f64::<BigEndian>()?),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn into_inner(self) -> (Reader<Bytes>, Endianness) {
+        (self.reader, self.endianness)
+    }
+}
+
+impl AsRef<[u8]> for EndianAwareReader {
+    fn as_ref(&self) -> &[u8] {
+        self.reader.get_ref().as_ref()
+    }
+}
+
+impl Read for EndianAwareReader {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.reader.read(buf)
     }
 }

@@ -1,9 +1,8 @@
 use std::collections::HashMap;
-use std::io::{Cursor, Read};
+use std::io::Read;
 use std::ops::Range;
 
-use byteorder::{LittleEndian, ReadBytesExt};
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 use num_enum::TryFromPrimitive;
 use tiff::decoder::ifd::Value;
 use tiff::tags::{
@@ -23,6 +22,7 @@ const DOCUMENT_NAME: u16 = 269;
 /// A collection of all the IFD
 // TODO: maybe separate out the primary/first image IFD out of the vec, as that one should have
 // geospatial metadata?
+#[derive(Debug)]
 pub struct ImageFileDirectories {
     /// There's always at least one IFD in a TIFF. We store this separately
     ifds: Vec<ImageFileDirectory>,
@@ -841,19 +841,19 @@ async fn read_tag_value(
         // NOTE: we should only be reading value_byte_length when it's 4 bytes or fewer. Right now
         // we're reading even if it's 8 bytes, but then only using the first 4 bytes of this
         // buffer.
-        let data = cursor.read(value_byte_length).await?;
+        let mut data = cursor.read(value_byte_length).await?;
 
         // 2b: the value is at most 4 bytes or doesn't fit in the offset field.
         return Ok(match tag_type {
-            Type::BYTE | Type::UNDEFINED => Value::Byte(data.reader().read_u8()?),
-            Type::SBYTE => Value::Signed(data.reader().read_i8()? as i32),
-            Type::SHORT => Value::Short(data.reader().read_u16::<LittleEndian>()?),
-            Type::SSHORT => Value::Signed(data.reader().read_i16::<LittleEndian>()? as i32),
-            Type::LONG => Value::Unsigned(data.reader().read_u32::<LittleEndian>()?),
-            Type::SLONG => Value::Signed(data.reader().read_i32::<LittleEndian>()?),
-            Type::FLOAT => Value::Float(data.reader().read_f32::<LittleEndian>()?),
+            Type::BYTE | Type::UNDEFINED => Value::Byte(data.read_u8()?),
+            Type::SBYTE => Value::Signed(data.read_i8()? as i32),
+            Type::SHORT => Value::Short(data.read_u16()?),
+            Type::SSHORT => Value::Signed(data.read_i16()? as i32),
+            Type::LONG => Value::Unsigned(data.read_u32()?),
+            Type::SLONG => Value::Signed(data.read_i32()?),
+            Type::FLOAT => Value::Float(data.read_f32()?),
             Type::ASCII => {
-                if data[0] == 0 {
+                if data.as_ref()[0] == 0 {
                     Value::Ascii("".to_string())
                 } else {
                     panic!("Invalid tag");
@@ -861,37 +861,37 @@ async fn read_tag_value(
                 }
             }
             Type::LONG8 => {
-                let offset = data.reader().read_u32::<LittleEndian>()?;
+                let offset = data.read_u32()?;
                 cursor.seek(offset as usize);
                 Value::UnsignedBig(cursor.read_u64().await?)
             }
             Type::SLONG8 => {
-                let offset = data.reader().read_u32::<LittleEndian>()?;
+                let offset = data.read_u32()?;
                 cursor.seek(offset as usize);
                 Value::SignedBig(cursor.read_i64().await?)
             }
             Type::DOUBLE => {
-                let offset = data.reader().read_u32::<LittleEndian>()?;
+                let offset = data.read_u32()?;
                 cursor.seek(offset as usize);
                 Value::Double(cursor.read_f64().await?)
             }
             Type::RATIONAL => {
-                let offset = data.reader().read_u32::<LittleEndian>()?;
+                let offset = data.read_u32()?;
                 cursor.seek(offset as usize);
                 let numerator = cursor.read_u32().await?;
                 let denominator = cursor.read_u32().await?;
                 Value::Rational(numerator, denominator)
             }
             Type::SRATIONAL => {
-                let offset = data.reader().read_u32::<LittleEndian>()?;
+                let offset = data.read_u32()?;
                 cursor.seek(offset as usize);
                 let numerator = cursor.read_i32().await?;
                 let denominator = cursor.read_i32().await?;
                 Value::SRational(numerator, denominator)
             }
-            Type::IFD => Value::Ifd(data.reader().read_u32::<LittleEndian>()?),
+            Type::IFD => Value::Ifd(data.read_u32()?),
             Type::IFD8 => {
-                let offset = data.reader().read_u32::<LittleEndian>()?;
+                let offset = data.read_u32()?;
                 cursor.seek(offset as usize);
                 Value::IfdBig(cursor.read_u64().await?)
             }
@@ -901,33 +901,31 @@ async fn read_tag_value(
 
     // Case 3: There is more than one value, but it fits in the offset field.
     if value_byte_length <= 4 {
-        let data = cursor.read(value_byte_length).await?;
+        let mut data = cursor.read(value_byte_length).await?;
         cursor.advance(4 - value_byte_length);
 
         match tag_type {
             Type::BYTE | Type::UNDEFINED => {
                 return {
-                    let mut data_cursor = Cursor::new(data);
                     Ok(Value::List(
                         (0..count)
-                            .map(|_| Value::Byte(data_cursor.read_u8().unwrap()))
+                            .map(|_| Value::Byte(data.read_u8().unwrap()))
                             .collect(),
                     ))
-                }
+                };
             }
             Type::SBYTE => {
                 return {
-                    let mut data_cursor = Cursor::new(data);
                     Ok(Value::List(
                         (0..count)
-                            .map(|_| Value::Signed(data_cursor.read_i8().unwrap() as i32))
+                            .map(|_| Value::Signed(data.read_i8().unwrap() as i32))
                             .collect(),
                     ))
                 }
             }
             Type::ASCII => {
                 let mut buf = vec![0; count];
-                data.reader().read_exact(&mut buf)?;
+                data.read_exact(&mut buf)?;
                 if buf.is_ascii() && buf.ends_with(&[0]) {
                     let v = std::str::from_utf8(&buf)
                         .map_err(|err| AiocogeoError::General(err.to_string()))?;
@@ -939,50 +937,44 @@ async fn read_tag_value(
                 }
             }
             Type::SHORT => {
-                let mut reader = data.reader();
                 let mut v = Vec::new();
                 for _ in 0..count {
-                    v.push(Value::Short(reader.read_u16::<LittleEndian>()?));
+                    v.push(Value::Short(data.read_u16()?));
                 }
                 return Ok(Value::List(v));
             }
             Type::SSHORT => {
-                let mut reader = data.reader();
                 let mut v = Vec::new();
                 for _ in 0..count {
-                    v.push(Value::Signed(i32::from(reader.read_i16::<LittleEndian>()?)));
+                    v.push(Value::Signed(i32::from(data.read_i16()?)));
                 }
                 return Ok(Value::List(v));
             }
             Type::LONG => {
-                let mut reader = data.reader();
                 let mut v = Vec::new();
                 for _ in 0..count {
-                    v.push(Value::Unsigned(reader.read_u32::<LittleEndian>()?));
+                    v.push(Value::Unsigned(data.read_u32()?));
                 }
                 return Ok(Value::List(v));
             }
             Type::SLONG => {
-                let mut reader = data.reader();
                 let mut v = Vec::new();
                 for _ in 0..count {
-                    v.push(Value::Signed(reader.read_i32::<LittleEndian>()?));
+                    v.push(Value::Signed(data.read_i32()?));
                 }
                 return Ok(Value::List(v));
             }
             Type::FLOAT => {
-                let mut reader = data.reader();
                 let mut v = Vec::new();
                 for _ in 0..count {
-                    v.push(Value::Float(reader.read_f32::<LittleEndian>()?));
+                    v.push(Value::Float(data.read_f32()?));
                 }
                 return Ok(Value::List(v));
             }
             Type::IFD => {
-                let mut reader = data.reader();
                 let mut v = Vec::new();
                 for _ in 0..count {
-                    v.push(Value::Ifd(reader.read_u32::<LittleEndian>()?));
+                    v.push(Value::Ifd(data.read_u32()?));
                 }
                 return Ok(Value::List(v));
             }
@@ -1113,8 +1105,8 @@ async fn read_tag_value(
         Type::ASCII => {
             let n = count;
             let mut out = vec![0; n];
-            let buf = cursor.read(n).await?;
-            buf.reader().read_exact(&mut out)?;
+            let mut buf = cursor.read(n).await?;
+            buf.read_exact(&mut out)?;
 
             // Strings may be null-terminated, so we trim anything downstream of the null byte
             if let Some(first) = out.iter().position(|&b| b == 0) {

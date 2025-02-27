@@ -3,9 +3,10 @@ use crate::error::Result;
 use crate::ifd::ImageFileDirectories;
 use crate::AsyncFileReader;
 
+#[derive(Debug)]
 pub struct COGReader {
     #[allow(dead_code)]
-    reader: Box<dyn AsyncFileReader>,
+    cursor: AsyncCursor,
     ifds: ImageFileDirectories,
 }
 
@@ -21,8 +22,7 @@ impl COGReader {
 
         let ifds = ImageFileDirectories::open(&mut cursor, first_ifd_location as usize).await?;
 
-        let reader = cursor.into_inner();
-        Ok(Self { reader, ifds })
+        Ok(Self { cursor, ifds })
     }
 
     pub fn ifds(&self) -> &ImageFileDirectories {

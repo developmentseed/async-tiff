@@ -1,12 +1,102 @@
 extern crate tiff;
 
+use async_tiff::{COGReader, ObjectReader};
+use object_store::local::LocalFileSystem;
 use tiff::decoder::{ifd, Decoder, DecodingResult};
+use tiff::tags::PhotometricInterpretation;
 use tiff::ColorType;
 
+use std::env::current_dir;
 use std::fs::File;
 use std::path::PathBuf;
+use std::sync::Arc;
 
-const TEST_IMAGE_DIR: &str = "./tests/image_tiff/images/";
+const TEST_IMAGE_DIR: &str = "tests/image_tiff/images/";
+
+async fn open_tiff(filename: &str) -> COGReader {
+    let store = Arc::new(LocalFileSystem::new_with_prefix(current_dir().unwrap()).unwrap());
+    let path = format!("{TEST_IMAGE_DIR}/{filename}");
+    let reader = Box::new(ObjectReader::new(store.clone(), path.as_str().into()));
+    COGReader::try_open(reader).await.unwrap()
+}
+
+#[tokio::test]
+async fn cmyk_u8() {
+    let tiff = open_tiff("cmyk-3c-8b.tiff").await;
+    let ifd = &tiff.ifds().as_ref()[0];
+    assert!(matches!(
+        ifd.photometric_interpretation(),
+        PhotometricInterpretation::CMYK
+    ));
+    assert!(ifd.bits_per_sample().iter().all(|x| *x == 8));
+}
+
+#[tokio::test]
+async fn test_cmyk_u16() {
+    let tiff = open_tiff("cmyk-3c-16b.tiff").await;
+    let ifd = &tiff.ifds().as_ref()[0];
+    assert!(matches!(
+        ifd.photometric_interpretation(),
+        PhotometricInterpretation::CMYK
+    ));
+    assert!(ifd.bits_per_sample().iter().all(|x| *x == 16));
+}
+
+#[tokio::test]
+async fn test_cmyk_f32() {
+    let tiff = open_tiff("cmyk-3c-32b-float.tiff").await;
+    let ifd = &tiff.ifds().as_ref()[0];
+    assert!(matches!(
+        ifd.photometric_interpretation(),
+        PhotometricInterpretation::CMYK
+    ));
+    assert!(ifd.bits_per_sample().iter().all(|x| *x == 32));
+}
+
+#[tokio::test]
+async fn test_gray_u8() {
+    let tiff = open_tiff("minisblack-1c-8b.tiff").await;
+    let ifd = &tiff.ifds().as_ref()[0];
+    assert!(matches!(
+        ifd.photometric_interpretation(),
+        PhotometricInterpretation::BlackIsZero
+    ));
+    assert!(ifd.bits_per_sample().iter().all(|x| *x == 8));
+}
+
+#[tokio::test]
+async fn test_gray_u12() {
+    let tiff = open_tiff("12bit.cropped.tiff").await;
+    let ifd = &tiff.ifds().as_ref()[0];
+    assert!(matches!(
+        ifd.photometric_interpretation(),
+        PhotometricInterpretation::BlackIsZero
+    ));
+    assert!(ifd.bits_per_sample().iter().all(|x| *x == 12));
+}
+
+#[tokio::test]
+async fn test_gray_u16() {
+    let tiff = open_tiff("minisblack-1c-16b.tiff").await;
+    let ifd = &tiff.ifds().as_ref()[0];
+    assert!(matches!(
+        ifd.photometric_interpretation(),
+        PhotometricInterpretation::BlackIsZero
+    ));
+    assert!(ifd.bits_per_sample().iter().all(|x| *x == 16));
+}
+
+#[tokio::test]
+async fn test_gray_u32() {
+    let tiff = open_tiff("gradient-1c-32b.tiff").await;
+    let ifd = &tiff.ifds().as_ref()[0];
+    assert!(matches!(
+        ifd.photometric_interpretation(),
+        PhotometricInterpretation::BlackIsZero
+    ));
+    assert!(ifd.bits_per_sample().iter().all(|x| *x == 32));
+}
+
 
 macro_rules! test_image_sum {
     ($name:ident, $buffer:ident, $sum_ty:ty) => {
@@ -51,51 +141,6 @@ fn test_image_color_type_unsupported(file: &str, expected_type: ColorType) {
         )) => true,
         _ => false,
     });
-}
-
-#[test]
-fn test_cmyk_u8() {
-    test_image_sum_u8("cmyk-3c-8b.tiff", ColorType::CMYK(8), 8522658);
-}
-
-#[test]
-fn test_cmyk_u16() {
-    test_image_sum_u16("cmyk-3c-16b.tiff", ColorType::CMYK(16), 2181426827);
-}
-
-#[test]
-fn test_cmyk_f32() {
-    test_image_sum_f32("cmyk-3c-32b-float.tiff", ColorType::CMYK(32), 496.0405);
-}
-
-#[test]
-fn test_gray_u8() {
-    test_image_sum_u8("minisblack-1c-8b.tiff", ColorType::Gray(8), 2840893);
-}
-
-#[test]
-fn test_gray_u12() {
-    test_image_color_type_unsupported("12bit.cropped.tiff", ColorType::Gray(12));
-}
-
-#[test]
-fn test_gray_u16() {
-    test_image_sum_u16("minisblack-1c-16b.tiff", ColorType::Gray(16), 733126239);
-}
-
-#[test]
-fn test_gray_u32() {
-    test_image_sum_u32("gradient-1c-32b.tiff", ColorType::Gray(32), 549892913787);
-}
-
-#[test]
-fn test_gray_u64() {
-    test_image_sum_u64("gradient-1c-64b.tiff", ColorType::Gray(64), 549892913787);
-}
-
-#[test]
-fn test_gray_f32() {
-    test_image_sum_f32("gradient-1c-32b-float.tiff", ColorType::Gray(32), 128.03194);
 }
 
 #[test]
