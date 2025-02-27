@@ -15,6 +15,7 @@ use super::tags::{
 
 /// Tiff error kinds.
 #[derive(Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum TiffError {
     /// The Image is not formatted properly.
     FormatError(TiffFormatError),

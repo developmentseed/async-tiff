@@ -880,7 +880,6 @@ async fn read_tag_value(
         | Type::RATIONAL
         | Type::SRATIONAL
         | Type::IFD8 => 8,
-        t => panic!("unexpected type {t:?}"),
     };
 
     let value_byte_length = count.checked_mul(tag_size).unwrap();
@@ -909,7 +908,6 @@ async fn read_tag_value(
                 | Type::SLONG
                 | Type::FLOAT
                 | Type::IFD => unreachable!(),
-                _ => panic!("Unknown tag type"),
             });
         }
 
@@ -971,7 +969,6 @@ async fn read_tag_value(
                 cursor.seek(offset as _);
                 Value::IfdBig(cursor.read_u64().await?)
             }
-            t => panic!("unexpected tag type {t:?}"),
         });
     }
 
@@ -1067,7 +1064,6 @@ async fn read_tag_value(
             | Type::IFD8 => {
                 unreachable!()
             }
-            t => panic!("unexpected tag type {t:?}"),
         }
     }
 
@@ -1201,6 +1197,5 @@ async fn read_tag_value(
                 String::from_utf8(out).map_err(|err| AiocogeoError::General(err.to_string()))?,
             ))
         }
-        t => panic!("unexpected tag type {t:?}"),
     }
 }

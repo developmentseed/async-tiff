@@ -1,8 +1,7 @@
-use tiff::{TiffError, TiffFormatError};
-
 use crate::async_reader::AsyncCursor;
 use crate::error::Result;
 use crate::ifd::ImageFileDirectories;
+use crate::tiff::{TiffError, TiffFormatError};
 use crate::AsyncFileReader;
 
 #[derive(Debug)]
