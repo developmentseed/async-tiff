@@ -3,8 +3,9 @@
 use std::collections::HashMap;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use tiff::decoder::ifd::Value;
-use tiff::{TiffError, TiffResult};
+
+use crate::tiff::Value;
+use crate::tiff::{TiffError, TiffResult};
 
 /// Geospatial TIFF tag variants
 #[derive(Clone, Copy, Debug, PartialEq, TryFromPrimitive, IntoPrimitive, Eq, Hash)]

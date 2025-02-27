@@ -1,46 +1,34 @@
 extern crate tiff;
 
-use tiff::decoder::Decoder;
-use tiff::tags::Tag;
-use tiff::ColorType;
+use async_tiff::tiff::tags::PhotometricInterpretation;
 
-use std::fs::File;
-use std::path::PathBuf;
+use crate::image_tiff::util::open_tiff;
 
-const TEST_IMAGE_DIR: &str = "./tests/images/bigtiff";
-
-#[test]
-fn test_big_tiff() {
-    let filenames = ["BigTIFF.tif", "BigTIFFMotorola.tif", "BigTIFFLong.tif"];
+#[tokio::test]
+async fn test_big_tiff() {
+    let filenames = [
+        "bigtiff/BigTIFF.tif",
+        "bigtiff/BigTIFFMotorola.tif",
+        "bigtiff/BigTIFFLong.tif",
+    ];
     for filename in filenames.iter() {
-        let path = PathBuf::from(TEST_IMAGE_DIR).join(filename);
-        let img_file = File::open(path).expect("Cannot find test image!");
-        let mut decoder = Decoder::new(img_file).expect("Cannot create decoder");
+        let tiff = open_tiff(filename).await;
+        let ifd = &tiff.ifds().as_ref()[0];
+        assert_eq!(ifd.image_height(), 64);
+        assert_eq!(ifd.image_width(), 64);
         assert_eq!(
-            decoder.dimensions().expect("Cannot get dimensions"),
-            (64, 64)
+            ifd.photometric_interpretation(),
+            PhotometricInterpretation::RGB
         );
+        assert!(ifd.bits_per_sample().iter().all(|x| *x == 8));
         assert_eq!(
-            decoder.colortype().expect("Cannot get colortype"),
-            ColorType::RGB(8)
+            ifd.strip_offsets().expect("Cannot get StripOffsets"),
+            vec![16]
         );
+        assert_eq!(ifd.rows_per_strip().expect("Cannot get RowsPerStrip"), 64);
         assert_eq!(
-            decoder
-                .get_tag_u64(Tag::StripOffsets)
-                .expect("Cannot get StripOffsets"),
-            16
+            ifd.strip_byte_counts().expect("Cannot get StripByteCounts"),
+            vec![12288]
         );
-        assert_eq!(
-            decoder
-                .get_tag_u64(Tag::RowsPerStrip)
-                .expect("Cannot get RowsPerStrip"),
-            64
-        );
-        assert_eq!(
-            decoder
-                .get_tag_u64(Tag::StripByteCounts)
-                .expect("Cannot get StripByteCounts"),
-            12288
-        )
     }
 }

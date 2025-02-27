@@ -23,6 +23,9 @@ pub enum AiocogeoError {
 
     #[error(transparent)]
     TIFFError(#[from] tiff::TiffError),
+
+    #[error(transparent)]
+    InternalTIFFError(#[from] crate::tiff::TiffError),
 }
 
 /// Crate-specific result type.

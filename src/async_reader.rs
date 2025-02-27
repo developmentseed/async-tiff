@@ -169,7 +169,7 @@ pub enum Endianness {
 #[derive(Debug)]
 pub(crate) struct AsyncCursor {
     reader: Box<dyn AsyncFileReader>,
-    offset: usize,
+    offset: u64,
     endianness: Endianness,
 }
 
@@ -212,7 +212,7 @@ impl AsyncCursor {
     }
 
     /// Read the given number of bytes, advancing the internal cursor state by the same amount.
-    pub(crate) async fn read(&mut self, length: usize) -> Result<EndianAwareReader> {
+    pub(crate) async fn read(&mut self, length: u64) -> Result<EndianAwareReader> {
         let range = self.offset as _..(self.offset + length) as _;
         self.offset += length;
         let bytes = self.reader.get_bytes(range).await?;
@@ -281,15 +281,15 @@ impl AsyncCursor {
     }
 
     /// Advance cursor position by a set amount
-    pub(crate) fn advance(&mut self, amount: usize) {
+    pub(crate) fn advance(&mut self, amount: u64) {
         self.offset += amount;
     }
 
-    pub(crate) fn seek(&mut self, offset: usize) {
+    pub(crate) fn seek(&mut self, offset: u64) {
         self.offset = offset;
     }
 
-    pub(crate) fn position(&self) -> usize {
+    pub(crate) fn position(&self) -> u64 {
         self.offset
     }
 }

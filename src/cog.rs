@@ -1,3 +1,5 @@
+use tiff::{TiffError, TiffFormatError};
+
 use crate::async_reader::AsyncCursor;
 use crate::error::Result;
 use crate::ifd::ImageFileDirectories;
@@ -8,6 +10,8 @@ pub struct COGReader {
     #[allow(dead_code)]
     cursor: AsyncCursor,
     ifds: ImageFileDirectories,
+    #[allow(dead_code)]
+    bigtiff: bool,
 }
 
 impl COGReader {
@@ -15,14 +19,39 @@ impl COGReader {
         let mut cursor = AsyncCursor::try_open_tiff(reader).await?;
         let version = cursor.read_u16().await?;
 
-        // Assert it's a standard non-big tiff
-        assert_eq!(version, 42);
+        let bigtiff = match version {
+            42 => false,
+            43 => {
+                // Read bytesize of offsets (in bigtiff it's alway 8 but provide a way to move to 16 some day)
+                if cursor.read_u16().await? != 8 {
+                    return Err(
+                        TiffError::FormatError(TiffFormatError::TiffSignatureNotFound).into(),
+                    );
+                }
+                // This constant should always be 0
+                if cursor.read_u16().await? != 0 {
+                    return Err(
+                        TiffError::FormatError(TiffFormatError::TiffSignatureNotFound).into(),
+                    );
+                }
+                true
+            }
+            _ => return Err(TiffError::FormatError(TiffFormatError::TiffSignatureInvalid).into()),
+        };
 
-        let first_ifd_location = cursor.read_u32().await?;
+        let first_ifd_location = if bigtiff {
+            cursor.read_u64().await?
+        } else {
+            cursor.read_u32().await?.into()
+        };
 
-        let ifds = ImageFileDirectories::open(&mut cursor, first_ifd_location as usize).await?;
+        let ifds = ImageFileDirectories::open(&mut cursor, first_ifd_location, bigtiff).await?;
 
-        Ok(Self { cursor, ifds })
+        Ok(Self {
+            cursor,
+            ifds,
+            bigtiff,
+        })
     }
 
     pub fn ifds(&self) -> &ImageFileDirectories {

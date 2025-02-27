@@ -4,10 +4,10 @@ use std::io::{Cursor, Read};
 
 use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
-use tiff::tags::{CompressionMethod, PhotometricInterpretation};
-use tiff::{TiffError, TiffUnsupportedError};
 
 use crate::error::Result;
+use crate::tiff::tags::{CompressionMethod, PhotometricInterpretation};
+use crate::tiff::{TiffError, TiffUnsupportedError};
 
 /// A registry of decoders.
 #[derive(Debug)]

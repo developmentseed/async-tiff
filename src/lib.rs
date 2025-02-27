@@ -6,6 +6,7 @@ pub mod decoder;
 pub mod error;
 pub mod geo;
 mod ifd;
+pub mod tiff;
 
 pub use async_reader::{AsyncFileReader, ObjectReader, PrefetchReader};
 pub use cog::COGReader;
