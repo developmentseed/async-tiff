@@ -8,21 +8,6 @@ use std::sync::Arc;
 
 const TEST_IMAGE_DIR: &str = "tests/image_tiff/images";
 
-// let folder = "/Users/kyle/github/developmentseed/async-tiff/";
-// let path = object_store::path::Path::parse("m_4007307_sw_18_060_20220803.tif").unwrap();
-// let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
-// let reader = ObjectReader::new(store, path);
-
-// let cog_reader = COGReader::try_open(Box::new(reader.clone())).await.unwrap();
-
-// let ifd = &cog_reader.ifds.as_ref()[1];
-// let decoder_registry = DecoderRegistry::default();
-// let tile = ifd
-//     .get_tile(0, 0, Box::new(reader), &decoder_registry)
-//     .await
-//     .unwrap();
-// std::fs::write("img.buf", tile).unwrap();
-
 #[tokio::test]
 async fn test_geo_tiff() {
     let filenames = ["geo-5b.tif"];

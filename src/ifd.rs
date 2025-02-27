@@ -403,8 +403,7 @@ impl ImageFileDirectory {
             geo_key_directory = Some(GeoKeyDirectory::from_tags(tags)?);
         }
 
-        dbg!(image_height);
-        dbg!(image_width);
+        let samples_per_pixel = samples_per_pixel.expect("samples_per_pixel not found");
         Ok(Self {
             new_subfile_type,
             image_width: image_width.expect("image_width not found"),
@@ -417,7 +416,7 @@ impl ImageFileDirectory {
             image_description,
             strip_offsets,
             orientation,
-            samples_per_pixel: samples_per_pixel.expect("samples_per_pixel not found"),
+            samples_per_pixel,
             rows_per_strip,
             strip_byte_counts,
             min_sample_value,
@@ -437,7 +436,10 @@ impl ImageFileDirectory {
             tile_offsets,
             tile_byte_counts,
             extra_samples,
-            sample_format: sample_format.expect("sample_format not found"),
+            // Uint8 is the default for SampleFormat
+            // https://web.archive.org/web/20240329145340/https://www.awaresystems.be/imaging/tiff/tifftags/sampleformat.html
+            sample_format: sample_format
+                .unwrap_or(vec![SampleFormat::Uint; samples_per_pixel as _]),
             copyright,
             jpeg_tables,
             geo_key_directory,
