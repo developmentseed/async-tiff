@@ -798,6 +798,7 @@ async fn read_tag_value(
     cursor: &mut AsyncCursor,
     tag_type: Type,
     count: usize,
+    bigtiff: bool,
     // length: usize,
 ) -> Result<Value> {
     // Case 1: there are no values so we can return immediately.
@@ -824,6 +825,41 @@ async fn read_tag_value(
     if count == 1 {
         // 2a: the value is 5-8 bytes and we're in BigTiff mode.
         // We don't support bigtiff yet
+        if bigtiff && value_byte_length > 4 && value_byte_length <= 8 {
+            let data = cursor.read(value_byte_length).await?;
+
+            return Ok(match tag_type {
+                Type::LONG8 => Value::UnsignedBig(data.reader().read_u64::<LittleEndian>()?),
+                Type::SLONG8 => Value::SignedBig(data.reader().read_i64::<LittleEndian>()?),
+                Type::DOUBLE => Value::Double(data.reader().read_f64::<LittleEndian>()?),
+                Type::RATIONAL => {
+                    let mut reader = data.reader();
+                    Value::Rational(
+                        reader.read_u32::<LittleEndian>()?,
+                        reader.read_u32::<LittleEndian>()?,
+                    )
+                }
+                Type::SRATIONAL => {
+                    let mut reader = data.reader();
+                    Value::SRational(
+                        reader.read_i32::<LittleEndian>()?,
+                        reader.read_i32::<LittleEndian>()?,
+                    )
+                }
+                Type::IFD8 => Value::IfdBig(data.reader().read_u64::<LittleEndian>()?),
+                Type::BYTE
+                | Type::SBYTE
+                | Type::ASCII
+                | Type::UNDEFINED
+                | Type::SHORT
+                | Type::SSHORT
+                | Type::LONG
+                | Type::SLONG
+                | Type::FLOAT
+                | Type::IFD => unreachable!(),
+                _ => panic!("Unknown tag type"),
+            });
+        }
 
         // NOTE: we should only be reading value_byte_length when it's 4 bytes or fewer. Right now
         // we're reading even if it's 8 bytes, but then only using the first 4 bytes of this
@@ -887,7 +923,7 @@ async fn read_tag_value(
     }
 
     // Case 3: There is more than one value, but it fits in the offset field.
-    if value_byte_length <= 4 {
+    if value_byte_length <= 4 || bigtiff && value_byte_length <= 8 {
         let data = cursor.read(value_byte_length).await?;
         cursor.advance(4 - value_byte_length);
 
