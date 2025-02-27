@@ -152,13 +152,13 @@ pub struct ImageFileDirectory {
     /// different from PaletteColor then next denotes the colorspace of the ColorMap entries.
     pub(crate) color_map: Option<Vec<u16>>,
 
-    pub(crate) tile_width: u32,
-    pub(crate) tile_height: u32,
+    pub(crate) tile_width: Option<u32>,
+    pub(crate) tile_height: Option<u32>,
 
-    pub(crate) tile_offsets: Vec<u32>,
-    pub(crate) tile_byte_counts: Vec<u32>,
+    pub(crate) tile_offsets: Option<Vec<u32>>,
+    pub(crate) tile_byte_counts: Option<Vec<u32>>,
 
-    pub(crate) extra_samples: Option<Vec<u8>>,
+    pub(crate) extra_samples: Option<Vec<u16>>,
 
     pub(crate) sample_format: Vec<SampleFormat>,
 
@@ -253,6 +253,7 @@ impl ImageFileDirectory {
         let mut other_tags = HashMap::new();
 
         tag_data.drain().try_for_each(|(tag, value)| {
+            dbg!(&tag);
             match tag {
                 Tag::NewSubfileType => new_subfile_type = Some(value.into_u32()?),
                 Tag::ImageWidth => image_width = Some(value.into_u32()?),
@@ -297,7 +298,7 @@ impl ImageFileDirectory {
                 Tag::TileLength => tile_height = Some(value.into_u32()?),
                 Tag::TileOffsets => tile_offsets = Some(value.into_u32_vec()?),
                 Tag::TileByteCounts => tile_byte_counts = Some(value.into_u32_vec()?),
-                Tag::ExtraSamples => extra_samples = Some(value.into_u8_vec()?),
+                Tag::ExtraSamples => extra_samples = Some(value.into_u16_vec()?),
                 Tag::SampleFormat => {
                     let values = value.into_u16_vec()?;
                     sample_format = Some(
@@ -402,6 +403,8 @@ impl ImageFileDirectory {
             geo_key_directory = Some(GeoKeyDirectory::from_tags(tags)?);
         }
 
+        dbg!(image_height);
+        dbg!(image_width);
         Ok(Self {
             new_subfile_type,
             image_width: image_width.expect("image_width not found"),
@@ -429,10 +432,10 @@ impl ImageFileDirectory {
             host_computer,
             predictor,
             color_map,
-            tile_width: tile_width.expect("tile_width not found"),
-            tile_height: tile_height.expect("tile_height not found"),
-            tile_offsets: tile_offsets.expect("tile_offsets not found"),
-            tile_byte_counts: tile_byte_counts.expect("tile_byte_counts not found"),
+            tile_width,
+            tile_height,
+            tile_offsets,
+            tile_byte_counts,
             extra_samples,
             sample_format: sample_format.expect("sample_format not found"),
             copyright,
@@ -570,21 +573,21 @@ impl ImageFileDirectory {
         self.predictor
     }
 
-    pub fn tile_width(&self) -> u32 {
+    pub fn tile_width(&self) -> Option<u32> {
         self.tile_width
     }
-    pub fn tile_height(&self) -> u32 {
+    pub fn tile_height(&self) -> Option<u32> {
         self.tile_height
     }
 
-    pub fn tile_offsets(&self) -> &[u32] {
-        &self.tile_offsets
+    pub fn tile_offsets(&self) -> Option<&[u32]> {
+        self.tile_offsets.as_deref()
     }
-    pub fn tile_byte_counts(&self) -> &[u32] {
-        &self.tile_byte_counts
+    pub fn tile_byte_counts(&self) -> Option<&[u32]> {
+        self.tile_byte_counts.as_deref()
     }
 
-    pub fn extra_samples(&self) -> Option<&[u8]> {
+    pub fn extra_samples(&self) -> Option<&[u16]> {
         self.extra_samples.as_deref()
     }
 
@@ -668,12 +671,14 @@ impl ImageFileDirectory {
         }
     }
 
-    fn get_tile_byte_range(&self, x: usize, y: usize) -> Range<u64> {
-        let idx = (y * self.tile_count().0) + x;
-        let offset = self.tile_offsets[idx] as usize;
+    fn get_tile_byte_range(&self, x: usize, y: usize) -> Option<Range<u64>> {
+        let tile_offsets = self.tile_offsets.as_deref()?;
+        let tile_byte_counts = self.tile_byte_counts.as_deref()?;
+        let idx = (y * self.tile_count()?.0) + x;
+        let offset = tile_offsets[idx] as usize;
         // TODO: aiocogeo has a -1 here, but I think that was in error
-        let byte_count = self.tile_byte_counts[idx] as usize;
-        offset as _..(offset + byte_count) as _
+        let byte_count = tile_byte_counts[idx] as usize;
+        Some(offset as _..(offset + byte_count) as _)
     }
 
     pub async fn get_tile(
@@ -683,7 +688,9 @@ impl ImageFileDirectory {
         mut reader: Box<dyn AsyncFileReader>,
         decoder_registry: &DecoderRegistry,
     ) -> Result<Bytes> {
-        let range = self.get_tile_byte_range(x, y);
+        let range = self
+            .get_tile_byte_range(x, y)
+            .ok_or(AiocogeoError::General("Not a tiled TIFF".to_string()))?;
         let buf = reader.get_bytes(range).await?;
         decode_tile(
             buf,
@@ -704,11 +711,14 @@ impl ImageFileDirectory {
         assert_eq!(x.len(), y.len(), "x and y should have same len");
 
         // 1: Get all the byte ranges for all tiles
-        let byte_ranges: Vec<_> = x
+        let byte_ranges = x
             .iter()
             .zip(y)
-            .map(|(x, y)| self.get_tile_byte_range(*x, *y))
-            .collect();
+            .map(|(x, y)| {
+                self.get_tile_byte_range(*x, *y)
+                    .ok_or(AiocogeoError::General("Not a tiled TIFF".to_string()))
+            })
+            .collect::<Result<Vec<_>>>()?;
 
         // 2: Fetch using `get_ranges
         let buffers = reader.get_byte_ranges(byte_ranges).await?;
@@ -729,10 +739,11 @@ impl ImageFileDirectory {
     }
 
     /// Return the number of x/y tiles in the IFD
-    pub fn tile_count(&self) -> (usize, usize) {
-        let x_count = (self.image_width as f64 / self.tile_width as f64).ceil();
-        let y_count = (self.image_height as f64 / self.tile_height as f64).ceil();
-        (x_count as usize, y_count as usize)
+    /// Returns `None` if this is not a tiled TIFF
+    pub fn tile_count(&self) -> Option<(usize, usize)> {
+        let x_count = (self.image_width as f64 / self.tile_width? as f64).ceil();
+        let y_count = (self.image_height as f64 / self.tile_height? as f64).ceil();
+        Some((x_count as usize, y_count as usize))
     }
 
     /// Return the geotransform of the image
