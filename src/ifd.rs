@@ -344,7 +344,7 @@ impl ImageFileDirectory {
             let key_revision = header[1];
             assert_eq!(key_revision, 1);
 
-            // let key_minor_revision = header[2];
+            let _key_minor_revision = header[2];
             let number_of_keys = header[3];
 
             let mut tags = HashMap::with_capacity(number_of_keys as usize);
@@ -404,6 +404,15 @@ impl ImageFileDirectory {
         }
 
         let samples_per_pixel = samples_per_pixel.expect("samples_per_pixel not found");
+        let planar_configuration = if let Some(planar_configuration) = planar_configuration {
+            planar_configuration
+        } else if samples_per_pixel == 1 {
+            // If SamplesPerPixel is 1, PlanarConfiguration is irrelevant, and need not be included.
+            // https://web.archive.org/web/20240329145253/https://www.awaresystems.be/imaging/tiff/tifftags/planarconfiguration.html
+            PlanarConfiguration::Chunky
+        } else {
+            panic!("planar_configuration not found and samples_per_pixel not 1")
+        };
         Ok(Self {
             new_subfile_type,
             image_width: image_width.expect("image_width not found"),
@@ -423,7 +432,7 @@ impl ImageFileDirectory {
             max_sample_value,
             x_resolution,
             y_resolution,
-            planar_configuration: planar_configuration.expect("planar_configuration not found"),
+            planar_configuration,
             resolution_unit,
             software,
             date_time,
