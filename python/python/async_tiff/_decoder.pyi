@@ -4,6 +4,8 @@ from collections.abc import Buffer
 from .enums import CompressionMethod
 
 class Decoder(Protocol):
+    # In the future, we could pass in photometric interpretation and jpeg tables as
+    # well.
     @staticmethod
     def __call__(buffer: Buffer) -> Buffer: ...
 

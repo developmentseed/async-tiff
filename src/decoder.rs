@@ -116,26 +116,6 @@ impl Decoder for UncompressedDecoder {
     }
 }
 
-// https://github.com/image-rs/image-tiff/blob/3bfb43e83e31b0da476832067ada68a82b378b7b/src/decoder/image.rs#L370
-pub(crate) fn decode_tile(
-    buf: Bytes,
-    photometric_interpretation: PhotometricInterpretation,
-    compression_method: CompressionMethod,
-    // compressed_length: u64,
-    jpeg_tables: Option<&[u8]>,
-    decoder_registry: &DecoderRegistry,
-) -> Result<Bytes> {
-    let decoder =
-        decoder_registry
-            .0
-            .get(&compression_method)
-            .ok_or(TiffError::UnsupportedError(
-                TiffUnsupportedError::UnsupportedCompressionMethod(compression_method),
-            ))?;
-
-    decoder.decode_tile(buf, photometric_interpretation, jpeg_tables)
-}
-
 // https://github.com/image-rs/image-tiff/blob/3bfb43e83e31b0da476832067ada68a82b378b7b/src/decoder/image.rs#L389-L450
 fn decode_modern_jpeg(
     buf: Bytes,

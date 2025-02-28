@@ -96,10 +96,8 @@ mod test {
 
         let ifd = &cog_reader.ifds.as_ref()[1];
         let decoder_registry = DecoderRegistry::default();
-        let tile = ifd
-            .get_tile(0, 0, Box::new(reader), &decoder_registry)
-            .await
-            .unwrap();
+        let tile = ifd.fetch_tile(0, 0, &reader).await.unwrap();
+        let tile = tile.decode(&decoder_registry).unwrap();
         std::fs::write("img.buf", tile).unwrap();
     }
 

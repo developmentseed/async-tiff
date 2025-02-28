@@ -6,7 +6,6 @@ use bytes::Bytes;
 use num_enum::TryFromPrimitive;
 
 use crate::async_reader::AsyncCursor;
-use crate::decoder::{decode_tile, DecoderRegistry};
 use crate::error::{AiocogeoError, Result};
 use crate::geo::{AffineTransform, GeoKeyDirectory, GeoKeyTag};
 use crate::tiff::tags::{
@@ -15,6 +14,7 @@ use crate::tiff::tags::{
 };
 use crate::tiff::TiffError;
 use crate::tiff::Value;
+use crate::tile::TiffTile;
 use crate::AsyncFileReader;
 
 const DOCUMENT_NAME: u16 = 269;
@@ -166,7 +166,7 @@ pub struct ImageFileDirectory {
 
     pub(crate) sample_format: Vec<SampleFormat>,
 
-    pub(crate) jpeg_tables: Option<Vec<u8>>,
+    pub(crate) jpeg_tables: Option<Bytes>,
 
     pub(crate) copyright: Option<String>,
 
@@ -339,7 +339,7 @@ impl ImageFileDirectory {
                             .collect(),
                     );
                 }
-                Tag::JPEGTables => jpeg_tables = Some(value.into_u8_vec()?),
+                Tag::JPEGTables => jpeg_tables = Some(value.into_u8_vec()?.into()),
                 Tag::Copyright => copyright = Some(value.into_string()?),
 
                 // Geospatial tags
@@ -728,33 +728,33 @@ impl ImageFileDirectory {
         Some(offset as _..(offset + byte_count) as _)
     }
 
-    pub async fn get_tile(
+    /// Fetch the tile located at `x` column and `y` row using the provided reader.
+    pub async fn fetch_tile(
         &self,
         x: usize,
         y: usize,
-        mut reader: Box<dyn AsyncFileReader>,
-        decoder_registry: &DecoderRegistry,
-    ) -> Result<Bytes> {
+        reader: &dyn AsyncFileReader,
+    ) -> Result<TiffTile> {
         let range = self
             .get_tile_byte_range(x, y)
             .ok_or(AiocogeoError::General("Not a tiled TIFF".to_string()))?;
-        let buf = reader.get_bytes(range).await?;
-        decode_tile(
-            buf,
-            self.photometric_interpretation,
-            self.compression,
-            self.jpeg_tables.as_deref(),
-            decoder_registry,
-        )
+        let compressed_bytes = reader.get_bytes(range).await?;
+        Ok(TiffTile {
+            x,
+            y,
+            compressed_bytes,
+            compression_method: self.compression,
+            photometric_interpretation: self.photometric_interpretation,
+            jpeg_tables: self.jpeg_tables.clone(),
+        })
     }
 
-    pub async fn get_tiles(
+    pub async fn fetch_tiles(
         &self,
         x: &[usize],
         y: &[usize],
-        mut reader: Box<dyn AsyncFileReader>,
-        decoder_registry: &DecoderRegistry,
-    ) -> Result<Vec<Bytes>> {
+        reader: &dyn AsyncFileReader,
+    ) -> Result<Vec<TiffTile>> {
         assert_eq!(x.len(), y.len(), "x and y should have same len");
 
         // 1: Get all the byte ranges for all tiles
@@ -770,19 +770,20 @@ impl ImageFileDirectory {
         // 2: Fetch using `get_ranges
         let buffers = reader.get_byte_ranges(byte_ranges).await?;
 
-        // 3: Decode tiles (in the future, separate API)
-        let mut decoded_tiles = vec![];
-        for buf in buffers {
-            let decoded = decode_tile(
-                buf,
-                self.photometric_interpretation,
-                self.compression,
-                self.jpeg_tables.as_deref(),
-                decoder_registry,
-            )?;
-            decoded_tiles.push(decoded);
+        // 3: Create tile objects
+        let mut tiles = vec![];
+        for ((compressed_bytes, &x), &y) in buffers.into_iter().zip(x).zip(y) {
+            let tile = TiffTile {
+                x,
+                y,
+                compressed_bytes,
+                compression_method: self.compression,
+                photometric_interpretation: self.photometric_interpretation,
+                jpeg_tables: self.jpeg_tables.clone(),
+            };
+            tiles.push(tile);
         }
-        Ok(decoded_tiles)
+        Ok(tiles)
     }
 
     /// Return the number of x/y tiles in the IFD
