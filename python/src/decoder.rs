@@ -49,7 +49,7 @@ impl PyDecoderRegistry {
 }
 
 #[derive(Debug)]
-struct PyDecoder(PyObject);
+pub(crate) struct PyDecoder(PyObject);
 
 impl PyDecoder {
     fn call(&self, py: Python, buffer: Bytes) -> PyResult<PyBytes> {
