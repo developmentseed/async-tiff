@@ -1,10 +1,10 @@
-use pyo3::intern;
-use pyo3::prelude::*;
-use pyo3::types::{PyString, PyTuple};
-use tiff::tags::{
+use async_tiff::tiff::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat,
 };
+use pyo3::intern;
+use pyo3::prelude::*;
+use pyo3::types::{PyString, PyTuple};
 
 pub(crate) struct PyCompressionMethod(CompressionMethod);
 

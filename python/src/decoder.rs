@@ -1,5 +1,6 @@
 use async_tiff::decoder::{Decoder, DecoderRegistry};
 use async_tiff::error::AiocogeoError;
+use async_tiff::tiff::tags::PhotometricInterpretation;
 use bytes::Bytes;
 use pyo3::exceptions::PyTypeError;
 use pyo3::intern;
@@ -53,7 +54,7 @@ impl Decoder for PyDecoder {
     fn decode_tile(
         &self,
         buffer: bytes::Bytes,
-        _photometric_interpretation: tiff::tags::PhotometricInterpretation,
+        _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
     ) -> async_tiff::error::Result<bytes::Bytes> {
         let decoded_buffer = Python::with_gil(|py| self.call(py, buffer))

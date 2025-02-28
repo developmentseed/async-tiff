@@ -26,7 +26,6 @@ pyo3-async-runtimes = "0.23"
 pyo3-bytes = "0.1.2"
 pyo3-object_store = { git = "https://github.com/developmentseed/obstore", rev = "28ba07a621c1c104f084fb47ae7f8d08b1eae3ea" }
 thiserror = "1"
-tiff = "0.9.1"
 
 # We opt-in to using rustls as the TLS provider for reqwest, which is the HTTP
 # library used by object_store.

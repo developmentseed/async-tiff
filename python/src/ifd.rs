@@ -55,7 +55,7 @@ impl PyImageFileDirectory {
     }
 
     #[getter]
-    pub fn strip_offsets(&self) -> Option<&[u32]> {
+    pub fn strip_offsets(&self) -> Option<&[u64]> {
         self.0.strip_offsets()
     }
 
@@ -80,7 +80,7 @@ impl PyImageFileDirectory {
     }
 
     #[getter]
-    pub fn strip_byte_counts(&self) -> Option<&[u32]> {
+    pub fn strip_byte_counts(&self) -> Option<&[u64]> {
         self.0.strip_byte_counts()
     }
 
@@ -162,25 +162,25 @@ impl PyImageFileDirectory {
     }
 
     #[getter]
-    pub fn tile_width(&self) -> u32 {
+    pub fn tile_width(&self) -> Option<u32> {
         self.0.tile_width()
     }
     #[getter]
-    pub fn tile_height(&self) -> u32 {
+    pub fn tile_height(&self) -> Option<u32> {
         self.0.tile_height()
     }
 
     #[getter]
-    pub fn tile_offsets(&self) -> &[u32] {
+    pub fn tile_offsets(&self) -> Option<&[u64]> {
         self.0.tile_offsets()
     }
     #[getter]
-    pub fn tile_byte_counts(&self) -> &[u32] {
+    pub fn tile_byte_counts(&self) -> Option<&[u64]> {
         self.0.tile_byte_counts()
     }
 
     #[getter]
-    pub fn extra_samples(&self) -> Option<&[u8]> {
+    pub fn extra_samples(&self) -> Option<&[u16]> {
         self.0.extra_samples()
     }
 

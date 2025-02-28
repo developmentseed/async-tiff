@@ -1,0 +1,74 @@
+name: Test Python
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint-test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: "clippy --all"
+        run: cargo clippy --all --all-features --tests -- -D warnings
+
+      - name: "cargo check"
+        run: cargo check --all --all-features
+
+      - name: "cargo test"
+        run: |
+          cargo test --all
+          cargo test --all --all-features
+
+  pytest:
+    name: Pytest
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install a specific version of uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          version: "0.5.x"
+
+      - name: uv sync
+        working-directory: python
+        run: uv sync --no-install-package geoindex-rs
+
+      - name: maturin venv Build
+        working-directory: python
+        run: uv run --no-project maturin develop
+
+      # - name: Run pytest
+      #   working-directory: python
+      #   run: uv run --no-project pytest
