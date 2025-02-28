@@ -88,7 +88,7 @@ extra_css:
 
 plugins:
   - search
-  - social
+  # - social
   - mike:
       alias_type: "copy"
       canonical_version: "latest"
