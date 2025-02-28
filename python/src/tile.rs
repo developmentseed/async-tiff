@@ -1,4 +1,4 @@
-use async_tiff::TiffTile;
+use async_tiff::Tile;
 use pyo3::prelude::*;
 use pyo3_async_runtimes::tokio::future_into_py;
 use pyo3_bytes::PyBytes;
@@ -9,7 +9,7 @@ use crate::thread_pool::{get_default_pool, PyThreadPool};
 use crate::PyDecoderRegistry;
 
 #[pyclass(name = "Tile")]
-pub(crate) struct PyTile(Option<TiffTile>);
+pub(crate) struct PyTile(Option<Tile>);
 
 #[pymethods]
 impl PyTile {

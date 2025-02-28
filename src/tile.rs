@@ -12,7 +12,7 @@ use crate::tiff::{TiffError, TiffUnsupportedError};
 ///
 /// This is returned by `fetch_tile`.
 #[derive(Debug)]
-pub struct TiffTile {
+pub struct Tile {
     pub(crate) x: usize,
     pub(crate) y: usize,
     pub(crate) compressed_bytes: Bytes,
@@ -21,7 +21,7 @@ pub struct TiffTile {
     pub(crate) jpeg_tables: Option<Bytes>,
 }
 
-impl TiffTile {
+impl Tile {
     /// The column index of this tile.
     pub fn x(&self) -> usize {
         self.x

@@ -14,7 +14,7 @@ use crate::tiff::tags::{
 };
 use crate::tiff::TiffError;
 use crate::tiff::Value;
-use crate::tile::TiffTile;
+use crate::tile::Tile;
 use crate::AsyncFileReader;
 
 const DOCUMENT_NAME: u16 = 269;
@@ -712,12 +712,12 @@ impl ImageFileDirectory {
         x: usize,
         y: usize,
         reader: &dyn AsyncFileReader,
-    ) -> Result<TiffTile> {
+    ) -> Result<Tile> {
         let range = self
             .get_tile_byte_range(x, y)
             .ok_or(AiocogeoError::General("Not a tiled TIFF".to_string()))?;
         let compressed_bytes = reader.get_bytes(range).await?;
-        Ok(TiffTile {
+        Ok(Tile {
             x,
             y,
             compressed_bytes,
@@ -732,7 +732,7 @@ impl ImageFileDirectory {
         x: &[usize],
         y: &[usize],
         reader: &dyn AsyncFileReader,
-    ) -> Result<Vec<TiffTile>> {
+    ) -> Result<Vec<Tile>> {
         assert_eq!(x.len(), y.len(), "x and y should have same len");
 
         // 1: Get all the byte ranges for all tiles
@@ -751,7 +751,7 @@ impl ImageFileDirectory {
         // 3: Create tile objects
         let mut tiles = vec![];
         for ((compressed_bytes, &x), &y) in buffers.into_iter().zip(x).zip(y) {
-            let tile = TiffTile {
+            let tile = Tile {
                 x,
                 y,
                 compressed_bytes,
