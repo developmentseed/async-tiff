@@ -22,6 +22,16 @@ extra:
 
 nav:
   - "index.md"
+  - API Reference:
+      - async-tiff.store:
+          - api/store/index.md
+          - api/store/aws.md
+          - api/store/gcs.md
+          - api/store/azure.md
+          - api/store/http.md
+          - api/store/local.md
+          - api/store/memory.md
+          - api/store/config.md
   # - API Reference:
   #     - api/rtree.md
   #     - api/kdtree.md
