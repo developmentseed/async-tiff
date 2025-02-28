@@ -10,7 +10,7 @@ mod tile;
 
 use pyo3::prelude::*;
 
-use crate::decoder::{PyDecoderRegistry, PyDecoderRegistryBuilder};
+use crate::decoder::PyDecoderRegistry;
 use crate::geo::PyGeoKeyDirectory;
 use crate::ifd::PyImageFileDirectory;
 use crate::thread_pool::PyThreadPool;
@@ -49,7 +49,6 @@ fn _async_tiff(py: Python, m: &Bound<PyModule>) -> PyResult<()> {
 
     m.add_wrapped(wrap_pyfunction!(___version))?;
     m.add_class::<PyDecoderRegistry>()?;
-    m.add_class::<PyDecoderRegistryBuilder>()?;
     m.add_class::<PyGeoKeyDirectory>()?;
     m.add_class::<PyImageFileDirectory>()?;
     m.add_class::<PyThreadPool>()?;
