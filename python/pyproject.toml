@@ -20,6 +20,8 @@ python-source = "python"
 
 [tool.uv]
 dev-dependencies = [
+    # To enable following symlinks for pyi files
+    "griffe>=1.6.0",
     "griffe-inherited-docstrings>=1.0.1",
     "ipykernel>=6.29.5",
     "maturin>=1.7.4",
