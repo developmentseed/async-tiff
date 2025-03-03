@@ -4,13 +4,16 @@ mod decoder;
 mod enums;
 mod geo;
 mod ifd;
+mod thread_pool;
 mod tiff;
+mod tile;
 
 use pyo3::prelude::*;
 
 use crate::decoder::PyDecoderRegistry;
 use crate::geo::PyGeoKeyDirectory;
 use crate::ifd::PyImageFileDirectory;
+use crate::thread_pool::PyThreadPool;
 use crate::tiff::PyTIFF;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -48,6 +51,7 @@ fn _async_tiff(py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<PyDecoderRegistry>()?;
     m.add_class::<PyGeoKeyDirectory>()?;
     m.add_class::<PyImageFileDirectory>()?;
+    m.add_class::<PyThreadPool>()?;
     m.add_class::<PyTIFF>()?;
 
     pyo3_object_store::register_store_module(py, m, "async_tiff")?;

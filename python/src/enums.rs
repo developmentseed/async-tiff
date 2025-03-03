@@ -6,6 +6,7 @@ use pyo3::intern;
 use pyo3::prelude::*;
 use pyo3::types::{PyString, PyTuple};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct PyCompressionMethod(CompressionMethod);
 
 impl From<CompressionMethod> for PyCompressionMethod {

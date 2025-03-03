@@ -7,14 +7,14 @@ use num_enum::TryFromPrimitive;
 
 use crate::async_reader::AsyncCursor;
 use crate::error::{AiocogeoError, Result};
-use crate::geo::{AffineTransform, GeoKeyDirectory, GeoKeyTag};
+use crate::geo::{GeoKeyDirectory, GeoKeyTag};
 use crate::tiff::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat, Tag, Type,
 };
 use crate::tiff::TiffError;
 use crate::tiff::Value;
-use crate::tile::TiffTile;
+use crate::tile::Tile;
 use crate::AsyncFileReader;
 
 const DOCUMENT_NAME: u16 = 269;
@@ -663,19 +663,6 @@ impl ImageFileDirectory {
         self.model_tiepoint.as_deref()
     }
 
-    /// Check if an IFD is masked based on a dictionary of tiff tags
-    /// https://www.awaresystems.be/imaging/tiff/tifftags/newsubfiletype.html
-    /// https://gdal.org/drivers/raster/gtiff.html#internal-nodata-masks
-    pub fn is_masked(&self) -> bool {
-        if let Some(subfile_type) = self.new_subfile_type {
-            (subfile_type == 1 || subfile_type == 2)
-                && self.photometric_interpretation == PhotometricInterpretation::TransparencyMask
-                && self.compression == CompressionMethod::Deflate
-        } else {
-            false
-        }
-    }
-
     /// Construct colormap from colormap tag
     pub fn colormap(&self) -> Option<HashMap<usize, [u8; 3]>> {
         fn cmap_transform(val: u16) -> u8 {
@@ -709,15 +696,6 @@ impl ImageFileDirectory {
         }
     }
 
-    /// Returns true if this IFD contains a full resolution image (not an overview)
-    pub fn is_full_resolution(&self) -> bool {
-        if let Some(val) = self.new_subfile_type {
-            val != 0
-        } else {
-            true
-        }
-    }
-
     fn get_tile_byte_range(&self, x: usize, y: usize) -> Option<Range<u64>> {
         let tile_offsets = self.tile_offsets.as_deref()?;
         let tile_byte_counts = self.tile_byte_counts.as_deref()?;
@@ -734,12 +712,12 @@ impl ImageFileDirectory {
         x: usize,
         y: usize,
         reader: &dyn AsyncFileReader,
-    ) -> Result<TiffTile> {
+    ) -> Result<Tile> {
         let range = self
             .get_tile_byte_range(x, y)
             .ok_or(AiocogeoError::General("Not a tiled TIFF".to_string()))?;
         let compressed_bytes = reader.get_bytes(range).await?;
-        Ok(TiffTile {
+        Ok(Tile {
             x,
             y,
             compressed_bytes,
@@ -754,7 +732,7 @@ impl ImageFileDirectory {
         x: &[usize],
         y: &[usize],
         reader: &dyn AsyncFileReader,
-    ) -> Result<Vec<TiffTile>> {
+    ) -> Result<Vec<Tile>> {
         assert_eq!(x.len(), y.len(), "x and y should have same len");
 
         // 1: Get all the byte ranges for all tiles
@@ -773,7 +751,7 @@ impl ImageFileDirectory {
         // 3: Create tile objects
         let mut tiles = vec![];
         for ((compressed_bytes, &x), &y) in buffers.into_iter().zip(x).zip(y) {
-            let tile = TiffTile {
+            let tile = Tile {
                 x,
                 y,
                 compressed_bytes,
@@ -792,40 +770,6 @@ impl ImageFileDirectory {
         let x_count = (self.image_width as f64 / self.tile_width? as f64).ceil();
         let y_count = (self.image_height as f64 / self.tile_height? as f64).ceil();
         Some((x_count as usize, y_count as usize))
-    }
-
-    /// Return the geotransform of the image
-    ///
-    /// This does not yet implement decimation
-    pub fn geotransform(&self) -> Option<AffineTransform> {
-        if let (Some(model_pixel_scale), Some(model_tiepoint)) =
-            (&self.model_pixel_scale, &self.model_tiepoint)
-        {
-            Some(AffineTransform::new(
-                model_pixel_scale[0],
-                0.0,
-                model_tiepoint[3],
-                0.0,
-                -model_pixel_scale[1],
-                model_tiepoint[4],
-            ))
-        } else {
-            None
-        }
-    }
-
-    /// Return the bounds of the image in native crs
-    pub fn native_bounds(&self) -> Option<(f64, f64, f64, f64)> {
-        if let Some(gt) = self.geotransform() {
-            let tlx = gt.c();
-            let tly = gt.f();
-
-            let brx = tlx + (gt.a() * self.image_width as f64);
-            let bry = tly + (gt.e() * self.image_height as f64);
-            Some((tlx, bry, brx, tly))
-        } else {
-            None
-        }
     }
 }
 

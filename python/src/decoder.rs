@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use async_tiff::decoder::{Decoder, DecoderRegistry};
 use async_tiff::error::AiocogeoError;
 use async_tiff::tiff::tags::PhotometricInterpretation;
@@ -5,30 +8,48 @@ use bytes::Bytes;
 use pyo3::exceptions::PyTypeError;
 use pyo3::intern;
 use pyo3::prelude::*;
+use pyo3::sync::GILOnceCell;
 use pyo3::types::{PyDict, PyTuple};
 use pyo3_bytes::PyBytes;
 
 use crate::enums::PyCompressionMethod;
 
-#[pyclass(name = "DecoderRegistry")]
-pub(crate) struct PyDecoderRegistry(DecoderRegistry);
+static DEFAULT_DECODER_REGISTRY: GILOnceCell<Arc<DecoderRegistry>> = GILOnceCell::new();
+
+pub fn get_default_decoder_registry(py: Python<'_>) -> Arc<DecoderRegistry> {
+    let registry =
+        DEFAULT_DECODER_REGISTRY.get_or_init(py, || Arc::new(DecoderRegistry::default()));
+    registry.clone()
+}
+
+#[pyclass(name = "DecoderRegistry", frozen)]
+#[derive(Debug, Default)]
+pub(crate) struct PyDecoderRegistry(Arc<DecoderRegistry>);
 
 #[pymethods]
 impl PyDecoderRegistry {
     #[new]
-    fn new() -> Self {
-        Self(DecoderRegistry::default())
+    #[pyo3(signature = (decoders = None))]
+    pub(crate) fn new(decoders: Option<HashMap<PyCompressionMethod, PyDecoder>>) -> Self {
+        let mut decoder_registry = DecoderRegistry::default();
+        if let Some(decoders) = decoders {
+            for (compression, decoder) in decoders.into_iter() {
+                decoder_registry
+                    .as_mut()
+                    .insert(compression.into(), Box::new(decoder));
+            }
+        }
+        Self(Arc::new(decoder_registry))
     }
-
-    fn add(&mut self, compression: PyCompressionMethod, decoder: PyDecoder) {
-        self.0
-            .as_mut()
-            .insert(compression.into(), Box::new(decoder));
+}
+impl PyDecoderRegistry {
+    pub(crate) fn inner(&self) -> &Arc<DecoderRegistry> {
+        &self.0
     }
 }
 
 #[derive(Debug)]
-struct PyDecoder(PyObject);
+pub(crate) struct PyDecoder(PyObject);
 
 impl PyDecoder {
     fn call(&self, py: Python, buffer: Bytes) -> PyResult<PyBytes> {

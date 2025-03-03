@@ -12,3 +12,4 @@ mod tile;
 pub use async_reader::{AsyncFileReader, ObjectReader, PrefetchReader};
 pub use cog::COGReader;
 pub use ifd::{ImageFileDirectories, ImageFileDirectory};
+pub use tile::Tile;
