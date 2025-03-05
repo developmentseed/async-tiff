@@ -1,4 +1,5 @@
 #![allow(clippy::no_effect)]
+#![allow(missing_docs)]
 
 macro_rules! tags {
     {
@@ -43,12 +44,14 @@ macro_rules! tags {
     // For u16 tags, provide direct inherent primitive conversion methods.
     ($name:tt, u16, $($unknown_doc:literal)*) => {
         impl $name {
+            /// Construct from a u16 value, returning `None` if the value is not a known tag.
             #[inline(always)]
             pub fn from_u16(val: u16) -> Option<Self> {
                 Self::__from_inner_type(val).ok()
             }
 
             $(
+            /// Construct from a u16 value, storing `Unknown` if the value is not a known tag.
             #[inline(always)]
             pub fn from_u16_exhaustive(val: u16) -> Self {
                 $unknown_doc;
@@ -56,6 +59,7 @@ macro_rules! tags {
             }
             )*
 
+            /// Convert to a u16 value.
             #[inline(always)]
             pub fn to_u16(&self) -> u16 {
                 Self::__to_inner_type(self)

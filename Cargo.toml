@@ -1,7 +1,12 @@
 [package]
 name = "async-tiff"
-version = "0.1.0"
+version = "0.1.0-beta.1"
 edition = "2021"
+authors = ["Kyle Barron <kyle@developmentseed.org>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/developmentseed/async-tiff"
+description = "Low-level asynchronous TIFF reader."
+readme = "README.md"
 
 [dependencies]
 byteorder = "1"
@@ -11,6 +16,7 @@ futures = "0.3.31"
 jpeg = { package = "jpeg-decoder", version = "0.3.0", default-features = false }
 num_enum = "0.7.3"
 # Match the version used by pyo3-object-store
+# We'll upgrade to object_store 0.12 ASAP when it comes out
 object_store = { git = "https://github.com/apache/arrow-rs", rev = "7a15e4b47ca97df2edef689c9f2ebd2f3888b79e" }
 thiserror = "1"
 tokio = { version = "1.43.0", optional = true }

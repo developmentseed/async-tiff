@@ -5,24 +5,22 @@ use std::ops::Range;
 use bytes::Bytes;
 use num_enum::TryFromPrimitive;
 
-use crate::async_reader::AsyncCursor;
-use crate::error::{AiocogeoError, Result};
+use crate::error::{AsyncTiffError, AsyncTiffResult};
 use crate::geo::{GeoKeyDirectory, GeoKeyTag};
+use crate::reader::{AsyncCursor, AsyncFileReader};
 use crate::tiff::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat, Tag, Type,
 };
-use crate::tiff::TiffError;
-use crate::tiff::Value;
+use crate::tiff::{TiffError, Value};
 use crate::tile::Tile;
-use crate::AsyncFileReader;
 
 const DOCUMENT_NAME: u16 = 269;
 
 /// A collection of all the IFD
 // TODO: maybe separate out the primary/first image IFD out of the vec, as that one should have
 // geospatial metadata?
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ImageFileDirectories {
     /// There's always at least one IFD in a TIFF. We store this separately
     ifds: Vec<ImageFileDirectory>,
@@ -42,7 +40,7 @@ impl ImageFileDirectories {
         cursor: &mut AsyncCursor,
         ifd_offset: u64,
         bigtiff: bool,
-    ) -> Result<Self> {
+    ) -> AsyncTiffResult<Self> {
         let mut next_ifd_offset = Some(ifd_offset);
 
         let mut ifds = vec![];
@@ -185,7 +183,11 @@ pub struct ImageFileDirectory {
 
 impl ImageFileDirectory {
     /// Read and parse the IFD starting at the given file offset
-    async fn read(cursor: &mut AsyncCursor, ifd_start: u64, bigtiff: bool) -> Result<Self> {
+    async fn read(
+        cursor: &mut AsyncCursor,
+        ifd_start: u64,
+        bigtiff: bool,
+    ) -> AsyncTiffResult<Self> {
         cursor.seek(ifd_start);
 
         let tag_count = if bigtiff {
@@ -235,7 +237,10 @@ impl ImageFileDirectory {
         self.next_ifd_offset
     }
 
-    fn from_tags(mut tag_data: HashMap<Tag, Value>, next_ifd_offset: Option<u64>) -> Result<Self> {
+    fn from_tags(
+        mut tag_data: HashMap<Tag, Value>,
+        next_ifd_offset: Option<u64>,
+    ) -> AsyncTiffResult<Self> {
         let mut new_subfile_type = None;
         let mut image_width = None;
         let mut image_height = None;
@@ -495,44 +500,61 @@ impl ImageFileDirectory {
         })
     }
 
+    /// A general indication of the kind of data contained in this subfile.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/newsubfiletype.html>
     pub fn new_subfile_type(&self) -> Option<u32> {
         self.new_subfile_type
     }
 
     /// The number of columns in the image, i.e., the number of pixels per row.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/imagewidth.html>
     pub fn image_width(&self) -> u32 {
         self.image_width
     }
 
     /// The number of rows of pixels in the image.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/imagelength.html>
     pub fn image_height(&self) -> u32 {
         self.image_height
     }
 
+    /// Number of bits per component.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/bitspersample.html>
     pub fn bits_per_sample(&self) -> &[u16] {
         &self.bits_per_sample
     }
 
+    /// Compression scheme used on the image data.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/compression.html>
     pub fn compression(&self) -> CompressionMethod {
         self.compression
     }
 
+    /// The color space of the image data.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/photometricinterpretation.html>
     pub fn photometric_interpretation(&self) -> PhotometricInterpretation {
         self.photometric_interpretation
     }
 
+    /// Document name.
     pub fn document_name(&self) -> Option<&str> {
         self.document_name.as_deref()
     }
 
+    /// A string that describes the subject of the image.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/imagedescription.html>
     pub fn image_description(&self) -> Option<&str> {
         self.image_description.as_deref()
     }
 
+    /// For each strip, the byte offset of that strip.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/stripoffsets.html>
     pub fn strip_offsets(&self) -> Option<&[u64]> {
         self.strip_offsets.as_deref()
     }
 
+    /// The orientation of the image with respect to the rows and columns.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/orientation.html>
     pub fn orientation(&self) -> Option<u16> {
         self.orientation
     }
@@ -546,28 +568,38 @@ impl ImageFileDirectory {
         self.samples_per_pixel
     }
 
+    /// The number of rows per strip.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/rowsperstrip.html>
     pub fn rows_per_strip(&self) -> Option<u32> {
         self.rows_per_strip
     }
 
+    /// For each strip, the number of bytes in the strip after compression.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/stripbytecounts.html>
     pub fn strip_byte_counts(&self) -> Option<&[u64]> {
         self.strip_byte_counts.as_deref()
     }
 
+    /// The minimum component value used.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/minsamplevalue.html>
     pub fn min_sample_value(&self) -> Option<&[u16]> {
         self.min_sample_value.as_deref()
     }
 
+    /// The maximum component value used.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/maxsamplevalue.html>
     pub fn max_sample_value(&self) -> Option<&[u16]> {
         self.max_sample_value.as_deref()
     }
 
     /// The number of pixels per ResolutionUnit in the ImageWidth direction.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/xresolution.html>
     pub fn x_resolution(&self) -> Option<f64> {
         self.x_resolution
     }
 
     /// The number of pixels per ResolutionUnit in the ImageLength direction.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/yresolution.html>
     pub fn y_resolution(&self) -> Option<f64> {
         self.y_resolution
     }
@@ -586,15 +618,20 @@ impl ImageFileDirectory {
     /// that Baseline TIFF readers are not required to support it.
     ///
     /// If SamplesPerPixel is 1, PlanarConfiguration is irrelevant, and need not be included.
+    ///
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/planarconfiguration.html>
     pub fn planar_configuration(&self) -> PlanarConfiguration {
         self.planar_configuration
     }
 
+    /// The unit of measurement for XResolution and YResolution.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/resolutionunit.html>
     pub fn resolution_unit(&self) -> Option<ResolutionUnit> {
         self.resolution_unit
     }
 
     /// Name and version number of the software package(s) used to create the image.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/software.html>
     pub fn software(&self) -> Option<&str> {
         self.software.as_deref()
     }
@@ -604,61 +641,93 @@ impl ImageFileDirectory {
     /// The format is: "YYYY:MM:DD HH:MM:SS", with hours like those on a 24-hour clock, and one
     /// space character between the date and the time. The length of the string, including the
     /// terminating NUL, is 20 bytes.
+    ///
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/datetime.html>
     pub fn date_time(&self) -> Option<&str> {
         self.date_time.as_deref()
     }
 
+    /// Person who created the image.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/artist.html>
     pub fn artist(&self) -> Option<&str> {
         self.artist.as_deref()
     }
 
+    /// The computer and/or operating system in use at the time of image creation.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/hostcomputer.html>
     pub fn host_computer(&self) -> Option<&str> {
         self.host_computer.as_deref()
     }
 
+    /// A mathematical operator that is applied to the image data before an encoding scheme is
+    /// applied.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/predictor.html>
     pub fn predictor(&self) -> Option<Predictor> {
         self.predictor
     }
 
+    /// The tile width in pixels. This is the number of columns in each tile.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/tilewidth.html>
     pub fn tile_width(&self) -> Option<u32> {
         self.tile_width
     }
+
+    /// The tile length (height) in pixels. This is the number of rows in each tile.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/tilelength.html>
     pub fn tile_height(&self) -> Option<u32> {
         self.tile_height
     }
 
+    /// For each tile, the byte offset of that tile, as compressed and stored on disk.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/tileoffsets.html>
     pub fn tile_offsets(&self) -> Option<&[u64]> {
         self.tile_offsets.as_deref()
     }
+
+    /// For each tile, the number of (compressed) bytes in that tile.
+    /// <https://web.archive.org/web/20240329145339/https://www.awaresystems.be/imaging/tiff/tifftags/tilebytecounts.html>
     pub fn tile_byte_counts(&self) -> Option<&[u64]> {
         self.tile_byte_counts.as_deref()
     }
 
+    /// Description of extra components.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/extrasamples.html>
     pub fn extra_samples(&self) -> Option<&[u16]> {
         self.extra_samples.as_deref()
     }
 
+    /// Specifies how to interpret each data sample in a pixel.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/sampleformat.html>
     pub fn sample_format(&self) -> &[SampleFormat] {
         &self.sample_format
     }
 
+    /// JPEG quantization and/or Huffman tables.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/jpegtables.html>
     pub fn jpeg_tables(&self) -> Option<&[u8]> {
         self.jpeg_tables.as_deref()
     }
 
+    /// Copyright notice.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/copyright.html>
     pub fn copyright(&self) -> Option<&str> {
         self.copyright.as_deref()
     }
 
-    // Geospatial tags
+    /// Geospatial tags
+    /// <https://web.archive.org/web/20240329145313/https://www.awaresystems.be/imaging/tiff/tifftags/geokeydirectorytag.html>
     pub fn geo_key_directory(&self) -> Option<&GeoKeyDirectory> {
         self.geo_key_directory.as_ref()
     }
 
+    /// Used in interchangeable GeoTIFF files.
+    /// <https://web.archive.org/web/20240329145238/https://www.awaresystems.be/imaging/tiff/tifftags/modelpixelscaletag.html>
     pub fn model_pixel_scale(&self) -> Option<&[f64]> {
         self.model_pixel_scale.as_deref()
     }
 
+    /// Used in interchangeable GeoTIFF files.
+    /// <https://web.archive.org/web/20240329145303/https://www.awaresystems.be/imaging/tiff/tifftags/modeltiepointtag.html>
     pub fn model_tiepoint(&self) -> Option<&[f64]> {
         self.model_tiepoint.as_deref()
     }
@@ -712,10 +781,10 @@ impl ImageFileDirectory {
         x: usize,
         y: usize,
         reader: &dyn AsyncFileReader,
-    ) -> Result<Tile> {
+    ) -> AsyncTiffResult<Tile> {
         let range = self
             .get_tile_byte_range(x, y)
-            .ok_or(AiocogeoError::General("Not a tiled TIFF".to_string()))?;
+            .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
         let compressed_bytes = reader.get_bytes(range).await?;
         Ok(Tile {
             x,
@@ -727,12 +796,13 @@ impl ImageFileDirectory {
         })
     }
 
+    /// Fetch the tiles located at `x` column and `y` row using the provided reader.
     pub async fn fetch_tiles(
         &self,
         x: &[usize],
         y: &[usize],
         reader: &dyn AsyncFileReader,
-    ) -> Result<Vec<Tile>> {
+    ) -> AsyncTiffResult<Vec<Tile>> {
         assert_eq!(x.len(), y.len(), "x and y should have same len");
 
         // 1: Get all the byte ranges for all tiles
@@ -741,9 +811,9 @@ impl ImageFileDirectory {
             .zip(y)
             .map(|(x, y)| {
                 self.get_tile_byte_range(*x, *y)
-                    .ok_or(AiocogeoError::General("Not a tiled TIFF".to_string()))
+                    .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))
             })
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<AsyncTiffResult<Vec<_>>>()?;
 
         // 2: Fetch using `get_ranges
         let buffers = reader.get_byte_ranges(byte_ranges).await?;
@@ -774,7 +844,7 @@ impl ImageFileDirectory {
 }
 
 /// Read a single tag from the cursor
-async fn read_tag(cursor: &mut AsyncCursor, bigtiff: bool) -> Result<(Tag, Value)> {
+async fn read_tag(cursor: &mut AsyncCursor, bigtiff: bool) -> AsyncTiffResult<(Tag, Value)> {
     let start_cursor_position = cursor.position();
 
     let tag_name = Tag::from_u16_exhaustive(cursor.read_u16().await?);
@@ -809,7 +879,7 @@ async fn read_tag_value(
     tag_type: Type,
     count: u64,
     bigtiff: bool,
-) -> Result<Value> {
+) -> AsyncTiffResult<Value> {
     // Case 1: there are no values so we can return immediately.
     if count == 0 {
         return Ok(Value::List(vec![]));
@@ -951,7 +1021,7 @@ async fn read_tag_value(
                 data.read_exact(&mut buf)?;
                 if buf.is_ascii() && buf.ends_with(&[0]) {
                     let v = std::str::from_utf8(&buf)
-                        .map_err(|err| AiocogeoError::General(err.to_string()))?;
+                        .map_err(|err| AsyncTiffError::General(err.to_string()))?;
                     let v = v.trim_matches(char::from(0));
                     return Ok(Value::Ascii(v.into()));
                 } else {
@@ -1139,7 +1209,7 @@ async fn read_tag_value(
                 out.truncate(first);
             }
             Ok(Value::Ascii(
-                String::from_utf8(out).map_err(|err| AiocogeoError::General(err.to_string()))?,
+                String::from_utf8(out).map_err(|err| AsyncTiffError::General(err.to_string()))?,
             ))
         }
     }

@@ -1,18 +1,19 @@
-use crate::async_reader::AsyncCursor;
-use crate::error::Result;
+use crate::error::AsyncTiffResult;
 use crate::ifd::ImageFileDirectories;
+use crate::reader::{AsyncCursor, AsyncFileReader};
 use crate::tiff::{TiffError, TiffFormatError};
-use crate::AsyncFileReader;
 
-#[derive(Debug)]
-pub struct COGReader {
-    #[allow(dead_code)]
-    cursor: AsyncCursor,
+/// A TIFF file.
+#[derive(Debug, Clone)]
+pub struct TIFF {
     ifds: ImageFileDirectories,
 }
 
-impl COGReader {
-    pub async fn try_open(reader: Box<dyn AsyncFileReader>) -> Result<Self> {
+impl TIFF {
+    /// Open a new TIFF file.
+    ///
+    /// This will read all the Image File Directories (IFDs) in the file.
+    pub async fn try_open(reader: Box<dyn AsyncFileReader>) -> AsyncTiffResult<Self> {
         let mut cursor = AsyncCursor::try_open_tiff(reader).await?;
         let version = cursor.read_u16().await?;
 
@@ -44,9 +45,10 @@ impl COGReader {
 
         let ifds = ImageFileDirectories::open(&mut cursor, first_ifd_location, bigtiff).await?;
 
-        Ok(Self { cursor, ifds })
+        Ok(Self { ifds })
     }
 
+    /// Access the underlying Image File Directories.
     pub fn ifds(&self) -> &ImageFileDirectories {
         &self.ifds
     }
@@ -58,7 +60,7 @@ mod test {
     use std::sync::Arc;
 
     use crate::decoder::DecoderRegistry;
-    use crate::ObjectReader;
+    use crate::reader::ObjectReader;
 
     use super::*;
     use object_store::local::LocalFileSystem;
@@ -72,7 +74,7 @@ mod test {
         let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
         let reader = ObjectReader::new(store, path);
 
-        let cog_reader = COGReader::try_open(Box::new(reader.clone())).await.unwrap();
+        let cog_reader = TIFF::try_open(Box::new(reader.clone())).await.unwrap();
 
         let ifd = &cog_reader.ifds.as_ref()[1];
         let decoder_registry = DecoderRegistry::default();

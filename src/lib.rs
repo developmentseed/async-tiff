@@ -1,6 +1,8 @@
 #![doc = include_str!("../README.md")]
+#![warn(missing_docs)]
 
-mod async_reader;
+pub mod reader;
+// TODO: maybe rename this mod
 mod cog;
 pub mod decoder;
 pub mod error;
@@ -9,7 +11,6 @@ mod ifd;
 pub mod tiff;
 mod tile;
 
-pub use async_reader::{AsyncFileReader, ObjectReader, PrefetchReader};
-pub use cog::COGReader;
+pub use cog::TIFF;
 pub use ifd::{ImageFileDirectories, ImageFileDirectory};
 pub use tile::Tile;

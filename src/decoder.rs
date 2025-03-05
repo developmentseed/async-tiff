@@ -1,3 +1,5 @@
+//! Decoders for different TIFF compression methods.
+
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::io::{Cursor, Read};
@@ -5,7 +7,7 @@ use std::io::{Cursor, Read};
 use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
 
-use crate::error::Result;
+use crate::error::AsyncTiffResult;
 use crate::tiff::tags::{CompressionMethod, PhotometricInterpretation};
 use crate::tiff::{TiffError, TiffUnsupportedError};
 
@@ -46,14 +48,16 @@ impl Default for DecoderRegistry {
 
 /// A trait to decode a TIFF tile.
 pub trait Decoder: Debug + Send + Sync {
+    /// Decode a TIFF tile.
     fn decode_tile(
         &self,
         buffer: Bytes,
         photometric_interpretation: PhotometricInterpretation,
         jpeg_tables: Option<&[u8]>,
-    ) -> Result<Bytes>;
+    ) -> AsyncTiffResult<Bytes>;
 }
 
+/// A decoder for the Deflate compression method.
 #[derive(Debug, Clone)]
 pub struct DeflateDecoder;
 
@@ -63,7 +67,7 @@ impl Decoder for DeflateDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
-    ) -> Result<Bytes> {
+    ) -> AsyncTiffResult<Bytes> {
         let mut decoder = ZlibDecoder::new(Cursor::new(buffer));
         let mut buf = Vec::new();
         decoder.read_to_end(&mut buf)?;
@@ -71,6 +75,7 @@ impl Decoder for DeflateDecoder {
     }
 }
 
+/// A decoder for the JPEG compression method.
 #[derive(Debug, Clone)]
 pub struct JPEGDecoder;
 
@@ -80,11 +85,12 @@ impl Decoder for JPEGDecoder {
         buffer: Bytes,
         photometric_interpretation: PhotometricInterpretation,
         jpeg_tables: Option<&[u8]>,
-    ) -> Result<Bytes> {
+    ) -> AsyncTiffResult<Bytes> {
         decode_modern_jpeg(buffer, photometric_interpretation, jpeg_tables)
     }
 }
 
+/// A decoder for the LZW compression method.
 #[derive(Debug, Clone)]
 pub struct LZWDecoder;
 
@@ -94,7 +100,7 @@ impl Decoder for LZWDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
-    ) -> Result<Bytes> {
+    ) -> AsyncTiffResult<Bytes> {
         // https://github.com/image-rs/image-tiff/blob/90ae5b8e54356a35e266fb24e969aafbcb26e990/src/decoder/stream.rs#L147
         let mut decoder = weezl::decode::Decoder::with_tiff_size_switch(weezl::BitOrder::Msb, 8);
         let decoded = decoder.decode(&buffer).expect("failed to decode LZW data");
@@ -102,6 +108,7 @@ impl Decoder for LZWDecoder {
     }
 }
 
+/// A decoder for uncompressed data.
 #[derive(Debug, Clone)]
 pub struct UncompressedDecoder;
 
@@ -111,7 +118,7 @@ impl Decoder for UncompressedDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
-    ) -> Result<Bytes> {
+    ) -> AsyncTiffResult<Bytes> {
         Ok(buffer)
     }
 }
@@ -121,7 +128,7 @@ fn decode_modern_jpeg(
     buf: Bytes,
     photometric_interpretation: PhotometricInterpretation,
     jpeg_tables: Option<&[u8]>,
-) -> Result<Bytes> {
+) -> AsyncTiffResult<Bytes> {
     // Construct new jpeg_reader wrapping a SmartReader.
     //
     // JPEG compression in TIFF allows saving quantization and/or huffman tables in one central
