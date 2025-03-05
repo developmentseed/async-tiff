@@ -1,4 +1,5 @@
-use async_tiff::{AsyncFileReader, COGReader, ObjectReader, PrefetchReader};
+use async_tiff::reader::{AsyncFileReader, ObjectReader, PrefetchReader};
+use async_tiff::TIFF;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use pyo3_async_runtimes::tokio::future_into_py;
@@ -7,7 +8,7 @@ use pyo3_object_store::PyObjectStore;
 use crate::PyImageFileDirectory;
 
 #[pyclass(name = "TIFF", frozen)]
-pub(crate) struct PyTIFF(COGReader);
+pub(crate) struct PyTIFF(TIFF);
 
 #[pymethods]
 impl PyTIFF {
@@ -32,7 +33,7 @@ impl PyTIFF {
             } else {
                 Box::new(reader)
             };
-            Ok(PyTIFF(COGReader::try_open(reader).await.unwrap()))
+            Ok(PyTIFF(TIFF::try_open(reader).await.unwrap()))
         })?;
         Ok(cog_reader)
     }

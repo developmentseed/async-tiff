@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_tiff::decoder::{Decoder, DecoderRegistry};
-use async_tiff::error::AiocogeoError;
+use async_tiff::error::{AsyncTiffError, AsyncTiffResult};
 use async_tiff::tiff::tags::PhotometricInterpretation;
 use bytes::Bytes;
 use pyo3::exceptions::PyTypeError;
@@ -74,12 +74,12 @@ impl<'py> FromPyObject<'py> for PyDecoder {
 impl Decoder for PyDecoder {
     fn decode_tile(
         &self,
-        buffer: bytes::Bytes,
+        buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
-    ) -> async_tiff::error::Result<bytes::Bytes> {
+    ) -> AsyncTiffResult<Bytes> {
         let decoded_buffer = Python::with_gil(|py| self.call(py, buffer))
-            .map_err(|err| AiocogeoError::General(err.to_string()))?;
+            .map_err(|err| AsyncTiffError::General(err.to_string()))?;
         Ok(decoded_buffer.into_inner())
     }
 }
