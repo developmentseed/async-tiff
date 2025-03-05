@@ -18,7 +18,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 async-tiff = { path = "../" }
-bytes = "1.8"
+bytes = "1.10.1"
+# We'll upgrade to object_store 0.12 ASAP
 # Match the version used by pyo3-object-store
 object_store = { git = "https://github.com/apache/arrow-rs", rev = "7a15e4b47ca97df2edef689c9f2ebd2f3888b79e" }
 pyo3 = { version = "0.23.0", features = ["macros"] }
