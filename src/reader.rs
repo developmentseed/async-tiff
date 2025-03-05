@@ -133,6 +133,35 @@ impl AsyncFileReader for ObjectReader {
     }
 }
 
+/// An AsyncFileReader that reads from a URL using reqwest.
+#[derive(Debug, Clone)]
+pub struct ReqwestReader {
+    client: reqwest::Client,
+    url: reqwest::Url,
+}
+
+impl ReqwestReader {
+    /// Construct a new ReqwestReader from a reqwest client and URL.
+    pub fn new(client: reqwest::Client, url: reqwest::Url) -> Self {
+        Self { client, url }
+    }
+}
+
+impl AsyncFileReader for ReqwestReader {
+    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        let url = self.url.clone();
+        let client = self.client.clone();
+        // HTTP range is inclusive, so we need to subtract 1 from the end
+        let range = format!("bytes={}-{}", range.start, range.end - 1);
+        async move {
+            let response = client.get(url).header("Range", range).send().await?;
+            let bytes = response.bytes().await?;
+            Ok(bytes)
+        }
+        .boxed()
+    }
+}
+
 /// An AsyncFileReader that caches the first `prefetch` bytes of a file.
 #[derive(Debug)]
 pub struct PrefetchReader {

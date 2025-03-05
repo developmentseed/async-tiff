@@ -30,6 +30,10 @@ pub enum AsyncTiffError {
     /// An error during TIFF tag parsing.
     #[error(transparent)]
     InternalTIFFError(#[from] crate::tiff::TiffError),
+
+    /// Reqwest error
+    #[error(transparent)]
+    ReqwestError(#[from] reqwest::Error),
 }
 
 /// Crate-specific result type.
