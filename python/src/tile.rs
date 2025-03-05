@@ -13,6 +13,12 @@ use crate::PyDecoderRegistry;
 #[pyclass(name = "Tile")]
 pub(crate) struct PyTile(Option<Tile>);
 
+impl PyTile {
+    pub(crate) fn new(tile: Tile) -> Self {
+        Self(Some(tile))
+    }
+}
+
 #[pymethods]
 impl PyTile {
     #[getter]
