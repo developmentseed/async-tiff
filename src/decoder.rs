@@ -12,6 +12,9 @@ use crate::tiff::tags::{CompressionMethod, PhotometricInterpretation};
 use crate::tiff::{TiffError, TiffUnsupportedError};
 
 /// A registry of decoders.
+///
+/// This allows end users to register their own decoders, for custom compression methods, or
+/// override the default decoder implementations.
 #[derive(Debug)]
 pub struct DecoderRegistry(HashMap<CompressionMethod, Box<dyn Decoder>>);
 

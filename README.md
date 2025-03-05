@@ -1,10 +1,19 @@
 # async-tiff
 
-An async [TIFF](https://en.wikipedia.org/wiki/TIFF) reader.
+An async, low-level [TIFF](https://en.wikipedia.org/wiki/TIFF) reader.
+
+## Features
+
+- Support for tiled TIFF images.
+- Read directly from object storage providers, via the `object_store` crate.
+- Support for user-defined decompression algorithms.
+- Tile request merging and concurrency.
+
+<!-- [Full documentation](https://docs.rs/async-tiff/). (version 0.1.0 will be published when object_store 0.12 is released.) -->
+
+## Background
 
 The existing [`tiff` crate](https://crates.io/crates/tiff) is great, but only supports synchronous reading of TIFF files. Furthermore, due to low maintenance bandwidth it is not designed for extensibility (see [#250](https://github.com/image-rs/image-tiff/issues/250)).
-
-This crate is designed to be a minimal, low-level interface to read tiled TIFF files in an async way.
 
 It additionally exposes geospatial-specific TIFF tag metadata.
 
