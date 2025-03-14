@@ -9,7 +9,7 @@ An async, low-level [TIFF](https://en.wikipedia.org/wiki/TIFF) reader.
 - Support for user-defined decompression algorithms.
 - Tile request merging and concurrency.
 
-<!-- [Full documentation](https://docs.rs/async-tiff/). (version 0.1.0 will be published when object_store 0.12 is released.) -->
+[Full documentation](https://docs.rs/async-tiff/).
 
 ## Background
 
