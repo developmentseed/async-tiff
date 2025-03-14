@@ -302,7 +302,6 @@ impl ImageFileDirectory {
                 Tag::SamplesPerPixel => samples_per_pixel = Some(value.into_u16()?),
                 Tag::RowsPerStrip => rows_per_strip = Some(value.into_u32()?),
                 Tag::StripByteCounts => {
-                    #[cfg(debug_assertions)]
                     strip_byte_counts = Some(value.into_u64_vec()?)
                 }
                 Tag::MinSampleValue => min_sample_value = Some(value.into_u16_vec()?),
