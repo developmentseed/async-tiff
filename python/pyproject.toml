@@ -31,6 +31,7 @@ dev-dependencies = [
     "mkdocstrings-python>=1.13.0",
     "mkdocstrings>=0.27.0",
     "numpy>=1",
+    "obstore",
     "pip>=24.2",
     "pytest-asyncio>=0.24.0",
     "pytest>=8.3.3",
