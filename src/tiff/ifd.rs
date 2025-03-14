@@ -1,5 +1,7 @@
 //! Function for reading TIFF tags
 
+#![allow(missing_docs)]
+
 use std::vec;
 
 use self::Value::{
