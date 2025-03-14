@@ -200,8 +200,6 @@ impl ImageFileDirectory {
             let (tag_name, tag_value) = read_tag(cursor, bigtiff).await?;
             tags.insert(tag_name, tag_value);
         }
-        #[cfg(debug_assertions)]
-        println!(&tags);
 
         // Tag   2 bytes
         // Type  2 bytes
@@ -284,8 +282,6 @@ impl ImageFileDirectory {
         let mut other_tags = HashMap::new();
 
         tag_data.drain().try_for_each(|(tag, value)| {
-            #[cfg(debug_assertions)]
-            println!(&tag);
             match tag {
                 Tag::NewSubfileType => new_subfile_type = Some(value.into_u32()?),
                 Tag::ImageWidth => image_width = Some(value.into_u32()?),
@@ -300,7 +296,6 @@ impl ImageFileDirectory {
                 }
                 Tag::ImageDescription => image_description = Some(value.into_string()?),
                 Tag::StripOffsets => {
-                    println!(&value);
                     strip_offsets = Some(value.into_u64_vec()?)
                 }
                 Tag::Orientation => orientation = Some(value.into_u16()?),
@@ -308,7 +303,6 @@ impl ImageFileDirectory {
                 Tag::RowsPerStrip => rows_per_strip = Some(value.into_u32()?),
                 Tag::StripByteCounts => {
                     #[cfg(debug_assertions)]
-                    println!(&value);
                     strip_byte_counts = Some(value.into_u64_vec()?)
                 }
                 Tag::MinSampleValue => min_sample_value = Some(value.into_u16_vec()?),
@@ -450,11 +444,6 @@ impl ImageFileDirectory {
             // https://web.archive.org/web/20240329145253/https://www.awaresystems.be/imaging/tiff/tifftags/planarconfiguration.html
             PlanarConfiguration::Chunky
         } else {
-            #[cfg(debug_assertions)]
-            println!(planar_configuration);
-            #[cfg(debug_assertions)]
-            println!(samples_per_pixel);
-            println!("planar_configuration not found and samples_per_pixel not 1");
             PlanarConfiguration::Chunky
         };
         Ok(Self {
@@ -858,8 +847,6 @@ async fn read_tag(cursor: &mut AsyncCursor, bigtiff: bool) -> AsyncTiffResult<(T
     let tag_type = Type::from_u16(tag_type_code).expect(
         "Unknown tag type {tag_type_code}. TODO: we should skip entries with unknown tag types.",
     );
-    #[cfg(debug_assertions)]
-    println!(tag_name, tag_type);
     let count = if bigtiff {
         cursor.read_u64().await?
     } else {
@@ -908,8 +895,6 @@ async fn read_tag_value(
     // Case 2: there is one value.
     if count == 1 {
         // 2a: the value is 5-8 bytes and we're in BigTiff mode.
-        #[cfg(debug_assertions)]
-        println!("case 2a");
         if bigtiff && value_byte_length > 4 && value_byte_length <= 8 {
             let mut data = cursor.read(value_byte_length).await?;
 
@@ -939,8 +924,6 @@ async fn read_tag_value(
         let mut data = cursor.read(value_byte_length).await?;
 
         // 2b: the value is at most 4 bytes or doesn't fit in the offset field.
-        #[cfg(debug_assertions)]
-        println!("case 2b");
         return Ok(match tag_type {
             Type::BYTE | Type::UNDEFINED => Value::Byte(data.read_u8()?),
             Type::SBYTE => Value::Signed(data.read_i8()? as i32),
@@ -997,8 +980,6 @@ async fn read_tag_value(
 
     // Case 3: There is more than one value, but it fits in the offset field.
     if value_byte_length <= 4 || bigtiff && value_byte_length <= 8 {
-        #[cfg(debug_assertions)]
-        println!("case 3");
         let mut data = cursor.read(value_byte_length).await?;
         if bigtiff {
             cursor.advance(8 - value_byte_length);
@@ -1100,8 +1081,6 @@ async fn read_tag_value(
     cursor.seek(offset);
 
     // Case 4: there is more than one value, and it doesn't fit in the offset field.
-    #[cfg(debug_assertions)]
-    println!("case 4");
     match tag_type {
         // TODO check if this could give wrong results
         // at a different endianess of file/computer.
