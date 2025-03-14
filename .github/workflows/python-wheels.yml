@@ -14,14 +14,18 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#   cancel-in-progress: true
 
 jobs:
   linux:
     runs-on: ${{ matrix.platform.runner }}
+    defaults:
+      run:
+        working-directory: python
     strategy:
+      fail-fast: false
       matrix:
         platform:
           - runner: ubuntu-latest
@@ -52,13 +56,13 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python versions
-        run: uv python install 3.9 3.10 3.11 3.12 3.13 pypy3.10
+        run: uv python install 3.9 3.10 3.11 3.12 3.13
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13 -i pypy3.10 --manifest-path python/Cargo.toml
+          args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13
           sccache: "true"
           manylinux: ${{ matrix.platform.manylinux }}
       - name: Upload wheels
@@ -69,7 +73,11 @@ jobs:
 
   musllinux:
     runs-on: ${{ matrix.platform.runner }}
+    defaults:
+      run:
+        working-directory: python
     strategy:
+      fail-fast: false
       matrix:
         platform:
           - runner: ubuntu-latest
@@ -90,13 +98,13 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python versions
-        run: uv python install 3.9 3.10 3.11 3.12 3.13 pypy3.10
+        run: uv python install 3.9 3.10 3.11 3.12 3.13
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13 -i pypy3.10 --manifest-path python/Cargo.toml
+          args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13
           sccache: "true"
           manylinux: musllinux_1_2
       - name: Upload wheels
@@ -107,7 +115,11 @@ jobs:
 
   windows:
     runs-on: ${{ matrix.platform.runner }}
+    defaults:
+      run:
+        working-directory: python
     strategy:
+      fail-fast: false
       matrix:
         platform:
           - runner: windows-latest
@@ -126,7 +138,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13 --manifest-path python/Cargo.toml
+          args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13
           sccache: "true"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -136,7 +148,11 @@ jobs:
 
   macos:
     runs-on: ${{ matrix.platform.runner }}
+    defaults:
+      run:
+        working-directory: python
     strategy:
+      fail-fast: false
       matrix:
         platform:
           - runner: macos-13
@@ -153,13 +169,13 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python versions
-        run: uv python install 3.9 3.10 3.11 3.12 3.13 pypy3.10
+        run: uv python install 3.9 3.10 3.11 3.12 3.13
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13 -i pypy3.10 --manifest-path python/Cargo.toml
+          args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13
           sccache: "true"
       - name: Upload wheels
         uses: actions/upload-artifact@v4
