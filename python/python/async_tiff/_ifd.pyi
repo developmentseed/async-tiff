@@ -8,6 +8,8 @@ from .enums import (
 )
 from ._geo import GeoKeyDirectory
 
+Value = int | float | str | tuple[int, int] | list[Value]
+
 class ImageFileDirectory:
     @property
     def new_subfile_type(self) -> int | None: ...
@@ -96,3 +98,5 @@ class ImageFileDirectory:
     def model_pixel_scale(self) -> list[float] | None: ...
     @property
     def model_tiepoint(self) -> list[float] | None: ...
+    @property
+    def other_tags(self) -> dict[int, Value]: ...

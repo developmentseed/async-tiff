@@ -721,6 +721,11 @@ impl ImageFileDirectory {
         self.model_tiepoint.as_deref()
     }
 
+    /// Tags for which the tiff crate doesn't have a hard-coded enum variant.
+    pub fn other_tags(&self) -> &HashMap<Tag, Value> {
+        &self.other_tags
+    }
+
     /// Construct colormap from colormap tag
     pub fn colormap(&self) -> Option<HashMap<usize, [u8; 3]>> {
         fn cmap_transform(val: u16) -> u8 {

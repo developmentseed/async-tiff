@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use async_tiff::ImageFileDirectory;
 use pyo3::prelude::*;
 
@@ -6,6 +8,7 @@ use crate::enums::{
     PyResolutionUnit, PySampleFormat,
 };
 use crate::geo::PyGeoKeyDirectory;
+use crate::value::PyValue;
 
 #[pyclass(name = "ImageFileDirectory")]
 pub(crate) struct PyImageFileDirectory(ImageFileDirectory);
@@ -213,6 +216,16 @@ impl PyImageFileDirectory {
     #[getter]
     pub fn model_tiepoint(&self) -> Option<&[f64]> {
         self.0.model_tiepoint()
+    }
+
+    #[getter]
+    pub fn other_tags(&self) -> HashMap<u16, PyValue> {
+        let iter = self
+            .0
+            .other_tags()
+            .iter()
+            .map(|(key, val)| (key.to_u16(), val.clone().into()));
+        HashMap::from_iter(iter)
     }
 }
 

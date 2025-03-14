@@ -7,6 +7,7 @@ mod ifd;
 mod thread_pool;
 mod tiff;
 mod tile;
+mod value;
 
 use pyo3::prelude::*;
 
