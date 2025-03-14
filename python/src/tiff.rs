@@ -6,7 +6,7 @@ use pyo3::exceptions::PyIndexError;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use pyo3_async_runtimes::tokio::future_into_py;
-use pyo3_object_store::PyObjectStore;
+use pyo3_object_store::AnyObjectStore;
 
 use crate::tile::PyTile;
 use crate::PyImageFileDirectory;
@@ -25,10 +25,10 @@ impl PyTIFF {
         _cls: &'py Bound<PyType>,
         py: Python<'py>,
         path: String,
-        store: PyObjectStore,
+        store: AnyObjectStore,
         prefetch: Option<u64>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        let reader = ObjectReader::new(store.into_inner(), path.into());
+        let reader = ObjectReader::new(store.into_dyn(), path.into());
         let object_reader = reader.clone();
 
         let cog_reader = future_into_py(py, async move {

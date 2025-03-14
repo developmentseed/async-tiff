@@ -54,8 +54,8 @@ fn _async_tiff(py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<PyThreadPool>()?;
     m.add_class::<PyTIFF>()?;
 
-    pyo3_object_store::register_store_module(py, m, "async_tiff")?;
-    pyo3_object_store::register_exceptions_module(py, m, "async_tiff")?;
+    pyo3_object_store::register_store_module(py, m, "async_tiff", "store")?;
+    pyo3_object_store::register_exceptions_module(py, m, "async_tiff", "exceptions")?;
 
     Ok(())
 }
