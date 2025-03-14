@@ -4,6 +4,7 @@ mod decoder;
 mod enums;
 mod geo;
 mod ifd;
+mod reader;
 mod thread_pool;
 mod tiff;
 mod tile;
