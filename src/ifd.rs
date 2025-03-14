@@ -295,15 +295,11 @@ impl ImageFileDirectory {
                         PhotometricInterpretation::from_u16(value.into_u16()?)
                 }
                 Tag::ImageDescription => image_description = Some(value.into_string()?),
-                Tag::StripOffsets => {
-                    strip_offsets = Some(value.into_u64_vec()?)
-                }
+                Tag::StripOffsets => strip_offsets = Some(value.into_u64_vec()?),
                 Tag::Orientation => orientation = Some(value.into_u16()?),
                 Tag::SamplesPerPixel => samples_per_pixel = Some(value.into_u16()?),
                 Tag::RowsPerStrip => rows_per_strip = Some(value.into_u32()?),
-                Tag::StripByteCounts => {
-                    strip_byte_counts = Some(value.into_u64_vec()?)
-                }
+                Tag::StripByteCounts => strip_byte_counts = Some(value.into_u64_vec()?),
                 Tag::MinSampleValue => min_sample_value = Some(value.into_u16_vec()?),
                 Tag::MaxSampleValue => max_sample_value = Some(value.into_u16_vec()?),
                 Tag::XResolution => match value {
