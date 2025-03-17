@@ -44,6 +44,8 @@ jobs:
             manylinux: auto
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -82,6 +84,8 @@ jobs:
             target: armv7
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -114,6 +118,8 @@ jobs:
             target: x64
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
       # There seem to be linking errors on Windows with the uv-provided Python
       # executables, so we use the Python versions provided by github actions
       # for now.
@@ -145,6 +151,8 @@ jobs:
             target: aarch64
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
