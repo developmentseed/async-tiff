@@ -24,7 +24,12 @@ class ImageFileDirectory:
     @property
     def bits_per_sample(self) -> list[int]: ...
     @property
-    def compression(self) -> CompressionMethod: ...
+    def compression(self) -> CompressionMethod | int:
+        """Access the compression tag.
+
+        An `int` will be returned if the compression is not one of the values in
+        `CompressionMethod`.
+        """
     @property
     def photometric_interpretation(self) -> PhotometricInterpretation: ...
     @property

@@ -2,9 +2,9 @@ use async_tiff::tiff::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat,
 };
-use pyo3::intern;
 use pyo3::prelude::*;
 use pyo3::types::{PyString, PyTuple};
+use pyo3::{intern, IntoPyObjectExt};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct PyCompressionMethod(CompressionMethod);
@@ -136,5 +136,10 @@ fn to_py_enum_variant<'py>(
     value: u16,
 ) -> PyResult<Bound<'py, PyAny>> {
     let enums_mod = py.import(intern!(py, "async_tiff.enums"))?;
-    enums_mod.call_method1(enum_name, PyTuple::new(py, vec![value])?)
+    if let Ok(enum_variant) = enums_mod.call_method1(enum_name, PyTuple::new(py, vec![value])?) {
+        Ok(enum_variant)
+    } else {
+        // If the value is not included in the enum, return the integer itself
+        value.into_bound_py_any(py)
+    }
 }
