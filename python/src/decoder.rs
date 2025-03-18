@@ -29,11 +29,11 @@ pub(crate) struct PyDecoderRegistry(Arc<DecoderRegistry>);
 #[pymethods]
 impl PyDecoderRegistry {
     #[new]
-    #[pyo3(signature = (decoders = None))]
-    pub(crate) fn new(decoders: Option<HashMap<PyCompressionMethod, PyDecoder>>) -> Self {
+    #[pyo3(signature = (custom_decoders = None))]
+    pub(crate) fn new(custom_decoders: Option<HashMap<PyCompressionMethod, PyDecoder>>) -> Self {
         let mut decoder_registry = DecoderRegistry::default();
-        if let Some(decoders) = decoders {
-            for (compression, decoder) in decoders.into_iter() {
+        if let Some(custom_decoders) = custom_decoders {
+            for (compression, decoder) in custom_decoders.into_iter() {
                 decoder_registry
                     .as_mut()
                     .insert(compression.into(), Box::new(decoder));

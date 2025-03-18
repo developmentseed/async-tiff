@@ -1,9 +1,6 @@
 # AWS S3
 
 ::: async_tiff.store.S3Store
-::: async_tiff.store.S3ConfigInput
-    options:
-        show_if_no_docstring: true
 ::: async_tiff.store.S3Config
     options:
         show_if_no_docstring: true

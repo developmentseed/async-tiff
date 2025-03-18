@@ -23,6 +23,12 @@ extra:
 nav:
   - "index.md"
   - API Reference:
+      - api/tiff.md
+      - api/ifd.md
+      - api/tile.md
+      - api/geo.md
+      - api/decoder.md
+      - api/thread-pool.md
       - async-tiff.store:
           - api/store/index.md
           - api/store/aws.md
