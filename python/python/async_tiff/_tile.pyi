@@ -18,7 +18,7 @@ class Tile:
     @property
     def compression_method(self) -> CompressionMethod | int:
         """The compression method used by this tile."""
-    async def decode(
+    async def decode_async(
         self,
         *,
         decoder_registry: DecoderRegistry | None = None,
