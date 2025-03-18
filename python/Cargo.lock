@@ -992,6 +992,7 @@ version = "0.1.0-beta.2"
 dependencies = [
  "async-tiff",
  "bytes",
+ "futures",
  "object_store",
  "pyo3",
  "pyo3-async-runtimes",

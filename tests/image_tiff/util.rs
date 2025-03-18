@@ -10,6 +10,6 @@ const TEST_IMAGE_DIR: &str = "tests/image_tiff/images/";
 pub(crate) async fn open_tiff(filename: &str) -> TIFF {
     let store = Arc::new(LocalFileSystem::new_with_prefix(current_dir().unwrap()).unwrap());
     let path = format!("{TEST_IMAGE_DIR}/{filename}");
-    let reader = Box::new(ObjectReader::new(store.clone(), path.as_str().into()));
+    let reader = Arc::new(ObjectReader::new(store.clone(), path.as_str().into()));
     TIFF::try_open(reader).await.unwrap()
 }

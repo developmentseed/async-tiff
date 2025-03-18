@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use async_tiff::reader::{AsyncFileReader, ObjectReader, PrefetchReader};
+use async_tiff::reader::{AsyncFileReader, PrefetchReader};
 use async_tiff::TIFF;
 use pyo3::exceptions::PyIndexError;
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use pyo3_async_runtimes::tokio::future_into_py;
-use pyo3_object_store::AnyObjectStore;
 
+use crate::reader::StoreInput;
 use crate::tile::PyTile;
 use crate::PyImageFileDirectory;
 
@@ -25,25 +25,20 @@ impl PyTIFF {
         _cls: &'py Bound<PyType>,
         py: Python<'py>,
         path: String,
-        store: AnyObjectStore,
+        store: StoreInput,
         prefetch: Option<u64>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        let reader = ObjectReader::new(store.into_dyn(), path.into());
-        let object_reader = reader.clone();
+        let reader = store.into_async_file_reader(path);
 
         let cog_reader = future_into_py(py, async move {
-            let reader: Box<dyn AsyncFileReader> = if let Some(prefetch) = prefetch {
-                Box::new(
-                    PrefetchReader::new(Box::new(reader), prefetch)
-                        .await
-                        .unwrap(),
-                )
+            let reader: Arc<dyn AsyncFileReader> = if let Some(prefetch) = prefetch {
+                Arc::new(PrefetchReader::new(reader, prefetch).await.unwrap())
             } else {
-                Box::new(reader)
+                reader
             };
             Ok(PyTIFF {
-                tiff: TIFF::try_open(reader).await.unwrap(),
-                reader: Arc::new(object_reader),
+                tiff: TIFF::try_open(reader.clone()).await.unwrap(),
+                reader,
             })
         })?;
         Ok(cog_reader)

@@ -1,7 +1,13 @@
-import obstore
+from typing import Protocol
 from ._tile import Tile
 from ._ifd import ImageFileDirectory
 from .store import ObjectStore
+
+# Fix exports
+from obspec._get import GetRangeAsync, GetRangesAsync
+
+class ObspecInput(GetRangeAsync, GetRangesAsync, Protocol):
+    """Supported obspec input to reader."""
 
 class TIFF:
     @classmethod
@@ -9,7 +15,7 @@ class TIFF:
         cls,
         path: str,
         *,
-        store: obstore.store.ObjectStore | ObjectStore,
+        store: ObjectStore | ObspecInput,
         prefetch: int | None = 16384,
     ) -> TIFF:
         """Open a new TIFF.

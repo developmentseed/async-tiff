@@ -165,13 +165,13 @@ impl AsyncFileReader for ReqwestReader {
 /// An AsyncFileReader that caches the first `prefetch` bytes of a file.
 #[derive(Debug)]
 pub struct PrefetchReader {
-    reader: Box<dyn AsyncFileReader>,
+    reader: Arc<dyn AsyncFileReader>,
     buffer: Bytes,
 }
 
 impl PrefetchReader {
     /// Construct a new PrefetchReader, catching the first `prefetch` bytes of the file.
-    pub async fn new(reader: Box<dyn AsyncFileReader>, prefetch: u64) -> AsyncTiffResult<Self> {
+    pub async fn new(reader: Arc<dyn AsyncFileReader>, prefetch: u64) -> AsyncTiffResult<Self> {
         let buffer = reader.get_bytes(0..prefetch).await?;
         Ok(Self { reader, buffer })
     }
@@ -213,14 +213,14 @@ pub(crate) enum Endianness {
 // TODO: in the future add buffering to this
 #[derive(Debug)]
 pub(crate) struct AsyncCursor {
-    reader: Box<dyn AsyncFileReader>,
+    reader: Arc<dyn AsyncFileReader>,
     offset: u64,
     endianness: Endianness,
 }
 
 impl AsyncCursor {
     /// Create a new AsyncCursor from a reader and endianness.
-    pub(crate) fn new(reader: Box<dyn AsyncFileReader>, endianness: Endianness) -> Self {
+    pub(crate) fn new(reader: Arc<dyn AsyncFileReader>, endianness: Endianness) -> Self {
         Self {
             reader,
             offset: 0,
@@ -230,7 +230,7 @@ impl AsyncCursor {
 
     /// Create a new AsyncCursor for a TIFF file, automatically inferring endianness from the first
     /// two bytes.
-    pub(crate) async fn try_open_tiff(reader: Box<dyn AsyncFileReader>) -> AsyncTiffResult<Self> {
+    pub(crate) async fn try_open_tiff(reader: Arc<dyn AsyncFileReader>) -> AsyncTiffResult<Self> {
         // Initialize with little endianness and then set later
         let mut cursor = Self::new(reader, Endianness::LittleEndian);
         let magic_bytes = cursor.read(2).await?;
@@ -252,7 +252,7 @@ impl AsyncCursor {
 
     /// Consume self and return the underlying [`AsyncFileReader`].
     #[allow(dead_code)]
-    pub(crate) fn into_inner(self) -> Box<dyn AsyncFileReader> {
+    pub(crate) fn into_inner(self) -> Arc<dyn AsyncFileReader> {
         self.reader
     }
 
@@ -316,7 +316,7 @@ impl AsyncCursor {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn reader(&self) -> &dyn AsyncFileReader {
+    pub(crate) fn reader(&self) -> &Arc<dyn AsyncFileReader> {
         &self.reader
     }
 

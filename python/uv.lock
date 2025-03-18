@@ -26,6 +26,9 @@ wheels = [
 [[package]]
 name = "async-tiff"
 source = { editable = "." }
+dependencies = [
+    { name = "obspec" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -48,6 +51,7 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "obspec", specifier = ">=0.1.0b3" }]
 
 [package.metadata.requires-dev]
 dev = [
@@ -972,6 +976,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/29/e8/5da32ffcaa7a72f7ecd82f90c062140a061eb823cb88e90279424e515cf4/numpy-2.2.3-pp310-pypy310_pp73-macosx_14_0_x86_64.whl", hash = "sha256:ed2cf9ed4e8ebc3b754d398cba12f24359f018b416c380f577bbae112ca52fc9", size = 6809418 },
     { url = "https://files.pythonhosted.org/packages/a8/a9/68aa7076c7656a7308a0f73d0a2ced8c03f282c9fd98fa7ce21c12634087/numpy-2.2.3-pp310-pypy310_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:39261798d208c3095ae4f7bc8eaeb3481ea8c6e03dc48028057d3cbdbdb8937e", size = 16215461 },
     { url = "https://files.pythonhosted.org/packages/17/7f/d322a4125405920401450118dbdc52e0384026bd669939484670ce8b2ab9/numpy-2.2.3-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:783145835458e60fa97afac25d511d00a1eca94d4a8f3ace9fe2043003c678e4", size = 12839607 },
+]
+
+[[package]]
+name = "obspec"
+version = "0.1.0b3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/c7/27e2de129314bed5419405d649bdf050569de5ab76236ece881869d7e489/obspec-0.1.0b3.tar.gz", hash = "sha256:085a4b977fc2c4b5ff8431c8c0a7634411390bf8d0d938ad0d8a0732bf28b6e3", size = 90810 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/46/4e/88974dfeff571b661127770f2a5a51ff638f96db4d3d391c044f3885b65c/obspec-0.1.0b3-py3-none-any.whl", hash = "sha256:f43ddfc79198ed614492c56c20e1c2a092d0ac368aef167aa3c6daa3115437e9", size = 15503 },
 ]
 
 [[package]]

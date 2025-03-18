@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name = "async-tiff"
 requires-python = ">=3.9"
-dependencies = []
+dependencies = ["obspec>=0.1.0-beta.3"]
 dynamic = ["version"]
 classifiers = [
     "Programming Language :: Rust",

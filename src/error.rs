@@ -34,6 +34,10 @@ pub enum AsyncTiffError {
     /// Reqwest error
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
+
+    /// External error
+    #[error(transparent)]
+    External(Box<dyn std::error::Error + Send + Sync>),
 }
 
 /// Crate-specific result type.

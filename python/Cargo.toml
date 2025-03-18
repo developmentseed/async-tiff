@@ -19,6 +19,7 @@ crate-type = ["cdylib"]
 [dependencies]
 async-tiff = { path = "../" }
 bytes = "1.10.1"
+futures = "0.3.31"
 object_store = "0.12"
 pyo3 = { version = "0.23.0", features = ["macros"] }
 pyo3-async-runtimes = "0.23"
