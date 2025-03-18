@@ -1,6 +1,9 @@
 # async-tiff
 
-An async, low-level [TIFF](https://en.wikipedia.org/wiki/TIFF) reader.
+An async, low-level [TIFF](https://en.wikipedia.org/wiki/TIFF) reader for Rust and Python.
+
+[**Rust documentation**](https://docs.rs/async-tiff/) <br/>
+[**Python documentation**](https://developmentseed.org/async-tiff/latest/)
 
 ## Features
 
@@ -8,8 +11,6 @@ An async, low-level [TIFF](https://en.wikipedia.org/wiki/TIFF) reader.
 - Read directly from object storage providers, via the `object_store` crate.
 - Support for user-defined decompression algorithms.
 - Tile request merging and concurrency.
-
-[Full documentation](https://docs.rs/async-tiff/).
 
 ## Background
 
