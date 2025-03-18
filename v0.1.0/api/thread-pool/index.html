@@ -12,13 +12,13 @@
         <meta name="author" content="Development Seed">
       
       
-        <link rel="canonical" href="https://developmentseed.org/async-tiff/latest/api/tile/">
+        <link rel="canonical" href="https://developmentseed.org/async-tiff/latest/api/thread-pool/">
       
       
-        <link rel="prev" href="../ifd/">
+        <link rel="prev" href="../decoder/">
       
       
-        <link rel="next" href="../geo/">
+        <link rel="next" href="../store/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -26,7 +26,7 @@
     
     
       
-        <title>Tile - async-tiff</title>
+        <title>Thread Pool - async-tiff</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#tile" class="md-skip">
+        <a href="#thread-pool" class="md-skip">
           Skip to content
         </a>
       
@@ -133,7 +133,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Tile
+              Thread Pool
             
           </span>
         </div>
@@ -408,31 +408,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Tile
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../tile/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -442,86 +421,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#async_tiff.Tile" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;Tile
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label=" Tile">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.Tile.compressed_bytes" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;compressed_bytes
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.Tile.compression_method" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;compression_method
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.Tile.x" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;x
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.Tile.y" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;y
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.Tile.decode_async" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;decode_async
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -575,10 +474,31 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../thread-pool/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Thread Pool
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -588,6 +508,50 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#async_tiff.ThreadPool" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ThreadPool
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" ThreadPool">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#async_tiff.ThreadPool.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__init__
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -855,55 +819,19 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#async_tiff.Tile" class="md-nav__link">
+  <a href="#async_tiff.ThreadPool" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;Tile
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ThreadPool
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" Tile">
+    <nav class="md-nav" aria-label=" ThreadPool">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#async_tiff.Tile.compressed_bytes" class="md-nav__link">
+  <a href="#async_tiff.ThreadPool.__init__" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;compressed_bytes
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.Tile.compression_method" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;compression_method
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.Tile.x" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;x
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.Tile.y" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;y
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.Tile.decode_async" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;decode_async
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__init__
     </span>
   </a>
   
@@ -936,24 +864,24 @@
   
 
 
-<h1 id="tile">Tile<a class="headerlink" href="#tile" title="Permanent link">&para;</a></h1>
+<h1 id="thread-pool">Thread Pool<a class="headerlink" href="#thread-pool" title="Permanent link">&para;</a></h1>
 
 
 <div class="doc doc-object doc-class">
 
 
 
-<h2 id="async_tiff.Tile" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">async_tiff.Tile</span>
+<h2 id="async_tiff.ThreadPool" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">async_tiff.ThreadPool</span>
 
 
-<a href="#async_tiff.Tile" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#async_tiff.ThreadPool" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
     <div class="doc doc-contents first">
 
 
-        <p>A representation of a TIFF image tile.</p>
+        <p>A Rust-managed thread pool.</p>
 
 
 
@@ -971,155 +899,22 @@
 
 
 
-<div class="doc doc-object doc-attribute">
-
-
-
-<h3 id="async_tiff.Tile.compressed_bytes" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">compressed_bytes</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#async_tiff.Tile.compressed_bytes" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">compressed_bytes</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" title="collections.abc.Buffer" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Buffer">Buffer</a></span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>The compressed bytes underlying this tile.</p>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h3 id="async_tiff.Tile.compression_method" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">compression_method</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#async_tiff.Tile.compression_method" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">compression_method</span><span class="p">:</span> <span class="n"><span title="async_tiff.enums.CompressionMethod">CompressionMethod</span></span> <span class="o">|</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>The compression method used by this tile.</p>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h3 id="async_tiff.Tile.x" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">x</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#async_tiff.Tile.x" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">x</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>The column index this tile represents.</p>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h3 id="async_tiff.Tile.y" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">y</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#async_tiff.Tile.y" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">y</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>The row index this tile represents.</p>
-    </div>
-
-</div>
-
 
 
 <div class="doc doc-object doc-function">
 
 
-<h3 id="async_tiff.Tile.decode_async" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">decode_async</span>
+<h3 id="async_tiff.ThreadPool.__init__" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">__init__</span>
 
 
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-async"><code>async</code></small>
-  </span>
-
-<a href="#async_tiff.Tile.decode_async" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="nf">decode_async</span><span class="p">(</span>
-    <span class="o">*</span><span class="p">,</span>
-    <span class="n">decoder_registry</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff._decoder.DecoderRegistry" href="../decoder/#async_tiff.DecoderRegistry">DecoderRegistry</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">pool</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff._thread_pool.ThreadPool" href="../thread-pool/#async_tiff.ThreadPool">ThreadPool</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" title="collections.abc.Buffer" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Buffer">Buffer</a></span>
+<a href="#async_tiff.ThreadPool.__init__" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature codehilite"><pre><span></span><code><span class="fm">__init__</span><span class="p">(</span><span class="nf">num_threads</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Decode this tile's data.</p>
-
-
-<p><span class="doc-section-title">Other Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-          <b><code>decoder_registry</code></b>
-              (<code><a class="autorefs autorefs-internal" title="async_tiff._decoder.DecoderRegistry" href="../decoder/#async_tiff.DecoderRegistry">DecoderRegistry</a> | None</code>)
-          –
-          <div class="doc-md-description">
-            <p>the decoders to use for decompression. Defaults to None.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-          <b><code>pool</code></b>
-              (<code><a class="autorefs autorefs-internal" title="async_tiff._thread_pool.ThreadPool" href="../thread-pool/#async_tiff.ThreadPool">ThreadPool</a> | None</code>)
-          –
-          <div class="doc-md-description">
-            <p>the thread pool on which to run decompression. Defaults to None.</p>
-          </div>
-        </li>
-    </ul>
-
-
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-              <code><a class="autorefs autorefs-external" title="collections.abc.Buffer" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Buffer">Buffer</a></code>
-          –
-          <div class="doc-md-description">
-            <p>Decoded tile data as a buffer.</p>
-          </div>
-        </li>
-    </ul>
+        <p>Construct a new ThreadPool with the given number of threads.</p>
 
     </div>
 
