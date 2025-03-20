@@ -9,6 +9,7 @@ use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use bytes::buf::Reader;
 use bytes::{Buf, Bytes};
 use futures::future::{BoxFuture, FutureExt, TryFutureExt};
+#[cfg(feature = "object_store")]
 use object_store::ObjectStore;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult};
@@ -91,12 +92,13 @@ impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
 // }
 
 /// An AsyncFileReader that reads from an [`ObjectStore`] instance.
+#[cfg(feature = "object_store")]
 #[derive(Clone, Debug)]
 pub struct ObjectReader {
     store: Arc<dyn ObjectStore>,
     path: object_store::path::Path,
 }
-
+#[cfg(feature = "object_store")]
 impl ObjectReader {
     /// Creates a new [`ObjectReader`] for the provided [`ObjectStore`] and path
     ///
@@ -105,7 +107,7 @@ impl ObjectReader {
         Self { store, path }
     }
 }
-
+#[cfg(feature = "object_store")]
 impl AsyncFileReader for ObjectReader {
     fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         let range = range.start as _..range.end as _;
@@ -134,19 +136,20 @@ impl AsyncFileReader for ObjectReader {
 }
 
 /// An AsyncFileReader that reads from a URL using reqwest.
+#[cfg(feature = "reqwest")]
 #[derive(Debug, Clone)]
 pub struct ReqwestReader {
     client: reqwest::Client,
     url: reqwest::Url,
 }
-
+#[cfg(feature = "reqwest")]
 impl ReqwestReader {
     /// Construct a new ReqwestReader from a reqwest client and URL.
     pub fn new(client: reqwest::Client, url: reqwest::Url) -> Self {
         Self { client, url }
     }
 }
-
+#[cfg(feature = "reqwest")]
 impl AsyncFileReader for ReqwestReader {
     fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         let url = self.url.clone();
