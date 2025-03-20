@@ -35,10 +35,12 @@ use crate::error::{AsyncTiffError, AsyncTiffResult};
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait AsyncFileReader: Debug + Send + Sync {
     /// Retrieve the bytes in `range`
+    /// This function is called when reading in IFDs
     async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes>;
 
     /// Retrieve multiple byte ranges. The default implementation will call `get_bytes`
     /// sequentially
+    /// This function is called when reading in IFDs
     async fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> AsyncTiffResult<Vec<Bytes>> {
         let mut result = Vec::with_capacity(ranges.len());
 
@@ -48,6 +50,18 @@ pub trait AsyncFileReader: Debug + Send + Sync {
         }
 
         Ok(result)
+    }
+
+    /// Same as [`get_bytes`], but this function is called when retrieving
+    /// compressed tile data
+    async fn get_tile_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        self.get_bytes(range).await
+    }
+
+    /// Same as [`get_byte_ranges`], but this function is only called when retrieving
+    /// compressed tile data
+    async fn get_tile_byte_ranges(&self, ranges: Vec<Range<u64>>) -> AsyncTiffResult<Vec<Bytes>> {
+        self.get_byte_ranges(ranges).await
     }
 }
 
