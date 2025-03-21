@@ -24,6 +24,7 @@ pub enum AsyncTiffError {
     JPEGDecodingError(#[from] jpeg::Error),
 
     /// Error while fetching data using object store.
+    #[cfg(feature = "object_store")]
     #[error(transparent)]
     ObjectStore(#[from] object_store::Error),
 
@@ -32,6 +33,7 @@ pub enum AsyncTiffError {
     InternalTIFFError(#[from] crate::tiff::TiffError),
 
     /// Reqwest error
+    #[cfg(feature = "reqwest")] // see https://www.reddit.com/r/rust/comments/xyik51/comment/irhei39/
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
 

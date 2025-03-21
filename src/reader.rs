@@ -3,12 +3,14 @@
 use std::fmt::Debug;
 use std::io::Read;
 use std::ops::Range;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
+use async_trait::async_trait;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use bytes::buf::Reader;
 use bytes::{Buf, Bytes};
-use futures::future::{BoxFuture, FutureExt, TryFutureExt};
+use futures::future::TryFutureExt;
+#[cfg(feature = "object_store")]
 use object_store::ObjectStore;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult};
@@ -29,41 +31,50 @@ use crate::error::{AsyncTiffError, AsyncTiffResult};
 /// [`ObjectStore`]: object_store::ObjectStore
 ///
 /// [`tokio::fs::File`]: https://docs.rs/tokio/latest/tokio/fs/struct.File.html
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait AsyncFileReader: Debug + Send + Sync {
     /// Retrieve the bytes in `range`
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>>;
+    /// This function is called when reading in IFDs
+    async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes>;
 
     /// Retrieve multiple byte ranges. The default implementation will call `get_bytes`
     /// sequentially
-    fn get_byte_ranges(
-        &self,
-        ranges: Vec<Range<u64>>,
-    ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
-        async move {
-            let mut result = Vec::with_capacity(ranges.len());
+    /// This function is called when reading in IFDs
+    async fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> AsyncTiffResult<Vec<Bytes>> {
+        let mut result = Vec::with_capacity(ranges.len());
 
-            for range in ranges.into_iter() {
-                let data = self.get_bytes(range).await?;
-                result.push(data);
-            }
-
-            Ok(result)
+        for range in ranges.into_iter() {
+            let data = self.get_bytes(range).await?;
+            result.push(data);
         }
-        .boxed()
+
+        Ok(result)
+    }
+
+    /// Same as [`get_bytes`], but this function is called when retrieving
+    /// compressed tile data
+    async fn get_tile_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        self.get_bytes(range).await
+    }
+
+    /// Same as [`get_byte_ranges`], but this function is only called when retrieving
+    /// compressed tile data
+    async fn get_tile_byte_ranges(&self, ranges: Vec<Range<u64>>) -> AsyncTiffResult<Vec<Bytes>> {
+        self.get_byte_ranges(ranges).await
     }
 }
 
 /// This allows Box<dyn AsyncFileReader + '_> to be used as an AsyncFileReader,
-impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.as_ref().get_bytes(range)
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+impl AsyncFileReader for Box<dyn AsyncFileReader> {
+    async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        self.get_bytes(range).await
     }
 
-    fn get_byte_ranges(
-        &self,
-        ranges: Vec<Range<u64>>,
-    ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
-        self.as_ref().get_byte_ranges(ranges)
+    async fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> AsyncTiffResult<Vec<Bytes>> {
+        self.get_byte_ranges(ranges).await
     }
 }
 
@@ -91,12 +102,13 @@ impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
 // }
 
 /// An AsyncFileReader that reads from an [`ObjectStore`] instance.
+#[cfg(feature = "object_store")]
 #[derive(Clone, Debug)]
 pub struct ObjectReader {
     store: Arc<dyn ObjectStore>,
     path: object_store::path::Path,
 }
-
+#[cfg(feature = "object_store")]
 impl ObjectReader {
     /// Creates a new [`ObjectReader`] for the provided [`ObjectStore`] and path
     ///
@@ -105,17 +117,19 @@ impl ObjectReader {
         Self { store, path }
     }
 }
-
+#[cfg(feature = "object_store")]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl AsyncFileReader for ObjectReader {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+    async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
         let range = range.start as _..range.end as _;
         self.store
             .get_range(&self.path, range)
             .map_err(|e| e.into())
-            .boxed()
+            .await
     }
 
-    fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>>
+    async fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> AsyncTiffResult<Vec<Bytes>>
     where
         Self: Send,
     {
@@ -123,42 +137,42 @@ impl AsyncFileReader for ObjectReader {
             .into_iter()
             .map(|r| r.start as _..r.end as _)
             .collect::<Vec<_>>();
-        async move {
-            self.store
-                .get_ranges(&self.path, &ranges)
-                .await
-                .map_err(|e| e.into())
-        }
-        .boxed()
+        self.store
+            .get_ranges(&self.path, &ranges)
+            .await
+            .map_err(|e| e.into())
     }
 }
 
 /// An AsyncFileReader that reads from a URL using reqwest.
+#[cfg(feature = "reqwest")]
 #[derive(Debug, Clone)]
 pub struct ReqwestReader {
     client: reqwest::Client,
     url: reqwest::Url,
 }
-
+#[cfg(feature = "reqwest")]
 impl ReqwestReader {
     /// Construct a new ReqwestReader from a reqwest client and URL.
     pub fn new(client: reqwest::Client, url: reqwest::Url) -> Self {
         Self { client, url }
     }
 }
-
+#[cfg(feature = "reqwest")]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl AsyncFileReader for ReqwestReader {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+    async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        // }
+        // fn get_bytes<'async_trait>(&'async_trait self, range: Range<u64>) -> BoxFuture<'async_trait, AsyncTiffResult<Bytes>>
+        // {
         let url = self.url.clone();
         let client = self.client.clone();
         // HTTP range is inclusive, so we need to subtract 1 from the end
         let range = format!("bytes={}-{}", range.start, range.end - 1);
-        async move {
-            let response = client.get(url).header("Range", range).send().await?;
-            let bytes = response.bytes().await?;
-            Ok(bytes)
-        }
-        .boxed()
+        let response = client.get(url).header("Range", range).send().await?;
+        let bytes = response.bytes().await?;
+        Ok(bytes)
     }
 }
 
@@ -167,39 +181,90 @@ impl AsyncFileReader for ReqwestReader {
 pub struct PrefetchReader {
     reader: Arc<dyn AsyncFileReader>,
     buffer: Bytes,
+    cache: Arc<Mutex<(Range<u64>, Bytes)>>,
 }
 
 impl PrefetchReader {
     /// Construct a new PrefetchReader, catching the first `prefetch` bytes of the file.
     pub async fn new(reader: Arc<dyn AsyncFileReader>, prefetch: u64) -> AsyncTiffResult<Self> {
         let buffer = reader.get_bytes(0..prefetch).await?;
-        Ok(Self { reader, buffer })
+        let cache = Arc::new(Mutex::new((Range::default(), Bytes::new())));
+        Ok(Self {
+            reader,
+            buffer,
+            cache,
+        })
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl AsyncFileReader for PrefetchReader {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+    async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
         if range.start < self.buffer.len() as _ {
             if range.end < self.buffer.len() as _ {
                 let usize_range = range.start as usize..range.end as usize;
                 let result = self.buffer.slice(usize_range);
-                async { Ok(result) }.boxed()
+                Ok(result)
             } else {
                 // TODO: reuse partial internal buffer
-                self.reader.get_bytes(range)
+                self.reader.get_bytes(range).await
             }
         } else {
-            self.reader.get_bytes(range)
+            // try to get from cache or re-initialize it
+            {
+                let lock = self.cache.lock().unwrap_or_else(|e| e.into_inner());
+                if range.start >= lock.0.start
+                    && range.start < lock.0.start
+                    && range.end > lock.0.start
+                    && range.end <= lock.0.end
+                {
+                    let usize_range =
+                        (range.start - lock.0.start) as usize..(range.end - lock.0.start) as usize;
+                    return Ok(lock.1.slice(usize_range));
+                }
+            }
+            // aggressive COG caching based on the following heuristic:
+            // If we are here, it probably means we're at a full-size image,
+            // are done with the previous IFD(s), so we can evict the cache and
+            // create a new one of size (assuming bigtiff):
+            // TileOffsets is u64, TileByteCounts u32
+            // so this IFD is
+            // byte_count + byte_count/2 = 3/2*byte_count
+            // then all further IFDs is
+            // current + current/4 + current/16 + ... <= 4/3*current <- this is somewhat flawed
+            // Above two lines simplify to
+            // 4/3*(3/2byte_count) = 2*byte_count
+            // In
+            // https://isdasoil.s3.amazonaws.com/covariates/dem_30m/dem_30m.tif,
+            // this falls just short because larger overviews have more tiles to
+            // fill things up. In here we don't know how that would happen though
+            // 272420 Long8 at offset 4270 -> 2179360 bytes (2MB) -> 4358720 total ->
+            // 4362990 and last offset = 4367058, difference ~4kB
+            let byte_count = range.end - range.start;
+            let cache_range = range.start..range.start + 2 * byte_count;
+            let cache = self.reader.get_bytes(cache_range.clone()).await?;
+            {
+                let mut lock = self.cache.lock().map_err(|_e| {
+                    AsyncTiffError::General("Reader cache Mutex poisoned".to_string())
+                })?;
+                *lock = (cache_range, cache.clone());
+            }
+            Ok(cache.slice(0..byte_count as usize))
         }
     }
 
-    fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>>
+    async fn get_tile_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        self.reader.get_bytes(range).await
+    }
+
+    async fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> AsyncTiffResult<Vec<Bytes>>
     where
         Self: Send,
     {
         // In practice, get_byte_ranges is only used for fetching tiles, which are unlikely to
         // overlap a metadata prefetch.
-        self.reader.get_byte_ranges(ranges)
+        self.reader.get_byte_ranges(ranges).await
     }
 }
 
