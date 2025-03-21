@@ -779,7 +779,7 @@ impl ImageFileDirectory {
         let range = self
             .get_tile_byte_range(x, y)
             .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
-        let compressed_bytes = reader.get_bytes(range).await?;
+        let compressed_bytes = reader.get_tile_bytes(range).await?;
         Ok(Tile {
             x,
             y,
@@ -810,7 +810,7 @@ impl ImageFileDirectory {
             .collect::<AsyncTiffResult<Vec<_>>>()?;
 
         // 2: Fetch using `get_ranges
-        let buffers = reader.get_byte_ranges(byte_ranges).await?;
+        let buffers = reader.get_tile_byte_ranges(byte_ranges).await?;
 
         // 3: Create tile objects
         let mut tiles = vec![];

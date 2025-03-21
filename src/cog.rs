@@ -56,6 +56,7 @@ impl TIFF {
     }
 }
 
+#[cfg(feature = "object_store")]
 #[cfg(test)]
 mod test {
     use std::io::BufReader;
