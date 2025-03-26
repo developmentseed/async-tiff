@@ -809,7 +809,7 @@ impl ImageFileDirectory {
             })
             .collect::<AsyncTiffResult<Vec<_>>>()?;
 
-        // 2: Fetch using `get_ranges
+        // 2: Fetch using `get_image_byte_ranges`
         let buffers = reader.get_image_byte_ranges(byte_ranges).await?;
 
         // 3: Create tile objects

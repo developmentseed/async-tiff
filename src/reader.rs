@@ -20,11 +20,16 @@ use crate::error::{AsyncTiffError, AsyncTiffResult};
 ///
 /// Notes:
 ///
-/// 1. There is a default implementation for types that implement [`tokio::io::AsyncRead`]
-///    and [`tokio::io::AsyncSeek`], for example [`tokio::fs::File`].
+/// 1. There are distinct traits for accessing "metadata bytes" and "image bytes". The requests for
+///    "metadata bytes" from `get_metadata_bytes` will be called from `TIFF.open`, while parsing
+///    IFDs. Requests for "image bytes" from `get_image_bytes` and `get_image_byte_ranges` will be
+///    called while fetching data from TIFF tiles or strips.
 ///
 /// 2. [`ObjectReader`], available when the `object_store` crate feature
 ///    is enabled, implements this interface for [`ObjectStore`].
+///
+/// 3. You can use [`TokioReader`] to implement [`AsyncFileReader`] for types that implement
+///    [`tokio::io::AsyncRead`] and [`tokio::io::AsyncSeek`], for example [`tokio::fs::File`].
 ///
 /// [`ObjectStore`]: object_store::ObjectStore
 ///
