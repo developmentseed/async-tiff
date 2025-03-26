@@ -13,6 +13,11 @@ use futures::TryFutureExt;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult};
 
+#[cfg(all(not(feature = "tokio"), feature = "async_mutex"))]
+use async_mutex::Mutex;
+#[cfg(feature = "tokio")]
+use tokio::sync::Mutex;
+
 /// The asynchronous interface used to read COG files
 ///
 /// This was derived from the Parquet
@@ -30,12 +35,15 @@ use crate::error::{AsyncTiffError, AsyncTiffResult};
 ///
 /// [`tokio::fs::File`]: https://docs.rs/tokio/latest/tokio/fs/struct.File.html
 pub trait AsyncFileReader: Debug + Send + Sync {
-    /// Retrieve the bytes in `range`
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>>;
+    /// Retrieve the bytes in `range` as part of a request for header metadata.
+    fn get_metadata_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>>;
 
-    /// Retrieve multiple byte ranges. The default implementation will call `get_bytes`
-    /// sequentially
-    fn get_byte_ranges(
+    /// Retrieve the bytes in `range` as part of a request for image data, not header metadata.
+    fn get_image_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>>;
+
+    /// Retrieve multiple byte ranges as part of a request for image data, not header metadata. The
+    /// default implementation will call `get_image_bytes` sequentially
+    fn get_image_byte_ranges(
         &self,
         ranges: Vec<Range<u64>>,
     ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
@@ -43,7 +51,7 @@ pub trait AsyncFileReader: Debug + Send + Sync {
             let mut result = Vec::with_capacity(ranges.len());
 
             for range in ranges.into_iter() {
-                let data = self.get_bytes(range).await?;
+                let data = self.get_image_bytes(range).await?;
                 result.push(data);
             }
 
@@ -55,15 +63,19 @@ pub trait AsyncFileReader: Debug + Send + Sync {
 
 /// This allows Box<dyn AsyncFileReader + '_> to be used as an AsyncFileReader,
 impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.as_ref().get_bytes(range)
+    fn get_metadata_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        self.as_ref().get_metadata_bytes(range)
     }
 
-    fn get_byte_ranges(
+    fn get_image_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        self.as_ref().get_image_bytes(range)
+    }
+
+    fn get_image_byte_ranges(
         &self,
         ranges: Vec<Range<u64>>,
     ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
-        self.as_ref().get_byte_ranges(ranges)
+        self.as_ref().get_image_byte_ranges(ranges)
     }
 }
 
@@ -89,31 +101,36 @@ impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> Toki
     pub fn new(inner: T) -> Self {
         Self(tokio::sync::Mutex::new(inner))
     }
+
+    async fn make_range_request(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        use std::io::SeekFrom;
+        use tokio::io::{AsyncReadExt, AsyncSeekExt};
+
+        let mut file = self.0.lock().await;
+
+        file.seek(SeekFrom::Start(range.start)).await?;
+
+        let to_read = range.end - range.start;
+        let mut buffer = Vec::with_capacity(to_read as usize);
+        let read = file.read(&mut buffer).await? as u64;
+        if read != to_read {
+            return Err(AsyncTiffError::EndOfFile(to_read, read));
+        }
+
+        Ok(buffer.into())
+    }
 }
 
 #[cfg(feature = "tokio")]
 impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> AsyncFileReader
     for TokioReader<T>
 {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        use std::io::SeekFrom;
-        use tokio::io::{AsyncReadExt, AsyncSeekExt};
+    fn get_metadata_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        self.make_range_request(range).boxed()
+    }
 
-        async move {
-            let mut file = self.0.lock().await;
-
-            file.seek(SeekFrom::Start(range.start)).await?;
-
-            let to_read = range.end - range.start;
-            let mut buffer = Vec::with_capacity(to_read as usize);
-            let read = file.read(&mut buffer).await? as u64;
-            if read != to_read {
-                return Err(AsyncTiffError::EndOfFile(to_read, read));
-            }
-
-            Ok(buffer.into())
-        }
-        .boxed()
+    fn get_image_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        self.make_range_request(range).boxed()
     }
 }
 
@@ -133,19 +150,30 @@ impl ObjectReader {
     pub fn new(store: Arc<dyn object_store::ObjectStore>, path: object_store::path::Path) -> Self {
         Self { store, path }
     }
-}
 
-#[cfg(feature = "object_store")]
-impl AsyncFileReader for ObjectReader {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+    async fn make_range_request(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
         let range = range.start as _..range.end as _;
         self.store
             .get_range(&self.path, range)
             .map_err(|e| e.into())
-            .boxed()
+            .await
+    }
+}
+
+#[cfg(feature = "object_store")]
+impl AsyncFileReader for ObjectReader {
+    fn get_metadata_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        self.make_range_request(range).boxed()
     }
 
-    fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>>
+    fn get_image_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        self.make_range_request(range).boxed()
+    }
+
+    fn get_image_byte_ranges(
+        &self,
+        ranges: Vec<Range<u64>>,
+    ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>>
     where
         Self: Send,
     {
@@ -177,11 +205,8 @@ impl ReqwestReader {
     pub fn new(client: reqwest::Client, url: reqwest::Url) -> Self {
         Self { client, url }
     }
-}
 
-#[cfg(feature = "reqwest")]
-impl AsyncFileReader for ReqwestReader {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+    fn make_range_request(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         let url = self.url.clone();
         let client = self.client.clone();
         // HTTP range is inclusive, so we need to subtract 1 from the end
@@ -195,44 +220,170 @@ impl AsyncFileReader for ReqwestReader {
     }
 }
 
-/// An AsyncFileReader that caches the first `prefetch` bytes of a file.
+#[cfg(feature = "reqwest")]
+impl AsyncFileReader for ReqwestReader {
+    fn get_metadata_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        self.make_range_request(range)
+    }
+
+    fn get_image_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        self.make_range_request(range)
+    }
+}
+
+impl AsyncFileReader for Bytes {
+    fn get_image_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        self.get_metadata_bytes(range)
+    }
+
+    fn get_metadata_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        if range.end <= self.len() as _ {
+            let usize_range = range.start as usize..range.end as usize;
+            async { Ok(self.slice(usize_range)) }.boxed()
+        } else {
+            let range_len = range.end - range.start;
+            let range_read = range_len - (range.end - self.len() as u64);
+            async move { Err(AsyncTiffError::EndOfFile(range_len, range_read)) }.boxed()
+        }
+    }
+}
+
+/// An AsyncFileReader that caches the first `prefetch` bytes of a file. Also
+/// holds a cache for out-of-prefetch metadata.
+///
+/// When a request is out-of-bounds, an estimate of the remaining
+/// `tile_offsets`+`tile_byte_counts` array is made as
+/// `(2*len+4*len.isqrt()).max(prefetch)`, where `len` is the length of the
+/// requested range and `prefetch` is the size of the prefetch buffer.
+///
+/// # Examples
+///
+/// ```
+/// # futures::executor::block_on( async { // https://stackoverflow.com/a/64597248/14681457
+/// # use async_tiff::error::AsyncTiffError;
+/// # use async_tiff::reader::{AsyncFileReader, PrefetchReader};
+/// # use bytes::Bytes;
+/// # use std::sync::Arc;
+/// #
+/// # let file = Bytes::from_static(&[42u8; 128 * 1024]);
+/// #
+/// // create a reader that prefetches the first 16 kB
+/// let reader = PrefetchReader::new(Arc::new(file), 16 * 1024).await?;
+///
+/// // get some data from the prefetch
+/// assert_eq!(*reader.get_metadata_bytes(42..1312).await?, [42; 1312 - 42]);
+///
+/// const start: u64 = 16 * 1024;
+/// const len: u64 = 16 * 1024;
+/// // get some data from outside the prefetch range
+/// assert_eq!(
+///     *reader.get_metadata_bytes(start..start + len).await?,
+///     [42; 16 * 1024]
+/// );
+///
+/// // this is now also (exactly) cached
+/// assert_eq!(
+///     *reader
+///         .get_metadata_bytes(start..start + 2 * (len + 2 * len.isqrt()))
+///         .await?,
+///     [42; 2 * (len + 2 * len.isqrt()) as usize]
+/// );
+///
+/// // this will not check the cache
+/// reader.get_image_bytes(start..start + len).await?;
+///
+/// # Ok::<(),AsyncTiffError>(())
+/// # });
+/// ```
+#[cfg(any(feature = "tokio", feature = "async_mutex"))]
 #[derive(Debug)]
 pub struct PrefetchReader {
     reader: Arc<dyn AsyncFileReader>,
     buffer: Bytes,
+    tile_info_cache: Mutex<(Range<u64>, Bytes)>,
 }
 
+#[cfg(any(feature = "tokio", feature = "async_mutex"))]
 impl PrefetchReader {
     /// Construct a new PrefetchReader, catching the first `prefetch` bytes of the file.
     pub async fn new(reader: Arc<dyn AsyncFileReader>, prefetch: u64) -> AsyncTiffResult<Self> {
-        let buffer = reader.get_bytes(0..prefetch).await?;
-        Ok(Self { reader, buffer })
+        let buffer = reader.get_metadata_bytes(0..prefetch).await?;
+        let tile_info_cache = Mutex::new((0..0, Bytes::new()));
+        Ok(Self {
+            reader,
+            buffer,
+            tile_info_cache,
+        })
     }
 }
 
+#[cfg(any(feature = "tokio", feature = "async_mutex"))]
 impl AsyncFileReader for PrefetchReader {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        if range.start < self.buffer.len() as _ {
-            if range.end < self.buffer.len() as _ {
-                let usize_range = range.start as usize..range.end as usize;
-                let result = self.buffer.slice(usize_range);
-                async { Ok(result) }.boxed()
-            } else {
-                // TODO: reuse partial internal buffer
-                self.reader.get_bytes(range)
-            }
+    fn get_metadata_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        // check prefetch
+        if range.end < self.buffer.len() as _ {
+            let usize_range = range.start as usize..range.end as usize;
+            let result = self.buffer.slice(usize_range);
+            async { Ok(result) }.boxed()
         } else {
-            self.reader.get_bytes(range)
+            async move {
+                {
+                    // check cache
+                    let lock = self.tile_info_cache.lock().await;
+                    if range.start >= lock.0.start && range.end <= lock.0.end {
+                        let usize_range = (range.start - lock.0.start) as usize
+                            ..(range.end - lock.0.start) as usize;
+                        return Ok(lock.1.slice(usize_range));
+                    }
+                }
+                // determine new cache size
+                let range_len = range.end - range.start;
+                // estimate (for bigtiff):
+                // each overview is 1/4 the previous =geometric series=> 4/3*range_len
+                // assume request was TileOffsets =Long8+Long=> 3/2*4/3*range_len = 2*range_len
+                //
+                // add edge of one overview down:
+                // n_tiles0 = range_len/8
+                // n_tiles1 = 1/4*n_tiles0
+                // edge_tiles1 ≈ √n_tiles1 = √range_len/√2⁶ = √range_len/(4√2)
+                // each edge is 1/2 the previous =geometric series=> 2*edge_tiles1 = √range_len/(2√2)
+                // edge_bytes = 8*√range_len/(2√2) = 4/√2*√range_len
+                // Long8+Long => 3/2*4/√2*√range_len = 6/√2*√range_len ≈ 4*√range_len
+                //
+                // 2*range_len+4*√range_len
+                let estimate = (2 * range_len + 4 * range_len.isqrt()).max(self.buffer.len() as _);
+                let new_c_range = range.start..range.start + estimate;
+
+                // put in new cache
+                let res = self.reader.get_metadata_bytes(new_c_range.clone()).await?;
+                {
+                    let mut lock = self.tile_info_cache.lock().await;
+                    *lock = (new_c_range, res.clone());
+                }
+
+                // yay
+                Ok(res.slice(0..range_len as _))
+            }
+            .boxed()
         }
     }
 
-    fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>>
+    fn get_image_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        // In practice, get_image_bytes is only used for fetching tiles, which are unlikely
+        // to overlap a metadata prefetch.
+        self.reader.get_image_bytes(range)
+    }
+
+    fn get_image_byte_ranges(
+        &self,
+        ranges: Vec<Range<u64>>,
+    ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>>
     where
         Self: Send,
     {
-        // In practice, get_byte_ranges is only used for fetching tiles, which are unlikely to
-        // overlap a metadata prefetch.
-        self.reader.get_byte_ranges(ranges)
+        // In practice, get_image_byte_ranges is only used for fetching tiles, which are unlikely
+        // to overlap a metadata prefetch.
+        self.reader.get_image_byte_ranges(ranges)
     }
 }
 
@@ -293,7 +444,7 @@ impl AsyncCursor {
     pub(crate) async fn read(&mut self, length: u64) -> AsyncTiffResult<EndianAwareReader> {
         let range = self.offset as _..(self.offset + length) as _;
         self.offset += length;
-        let bytes = self.reader.get_bytes(range).await?;
+        let bytes = self.reader.get_metadata_bytes(range).await?;
         Ok(EndianAwareReader {
             reader: bytes.reader(),
             endianness: self.endianness,
@@ -301,31 +452,37 @@ impl AsyncCursor {
     }
 
     /// Read a u8 from the cursor, advancing the internal state by 1 byte.
+    #[allow(dead_code)]
     pub(crate) async fn read_u8(&mut self) -> AsyncTiffResult<u8> {
         self.read(1).await?.read_u8()
     }
 
     /// Read a i8 from the cursor, advancing the internal state by 1 byte.
+    #[allow(dead_code)]
     pub(crate) async fn read_i8(&mut self) -> AsyncTiffResult<i8> {
         self.read(1).await?.read_i8()
     }
 
     /// Read a u16 from the cursor, advancing the internal state by 2 bytes.
+    #[allow(dead_code)]
     pub(crate) async fn read_u16(&mut self) -> AsyncTiffResult<u16> {
         self.read(2).await?.read_u16()
     }
 
     /// Read a i16 from the cursor, advancing the internal state by 2 bytes.
+    #[allow(dead_code)]
     pub(crate) async fn read_i16(&mut self) -> AsyncTiffResult<i16> {
         self.read(2).await?.read_i16()
     }
 
     /// Read a u32 from the cursor, advancing the internal state by 4 bytes.
+    #[allow(dead_code)]
     pub(crate) async fn read_u32(&mut self) -> AsyncTiffResult<u32> {
         self.read(4).await?.read_u32()
     }
 
     /// Read a i32 from the cursor, advancing the internal state by 4 bytes.
+    #[allow(dead_code)]
     pub(crate) async fn read_i32(&mut self) -> AsyncTiffResult<i32> {
         self.read(4).await?.read_i32()
     }
@@ -336,24 +493,25 @@ impl AsyncCursor {
     }
 
     /// Read a i64 from the cursor, advancing the internal state by 8 bytes.
+    #[allow(dead_code)]
     pub(crate) async fn read_i64(&mut self) -> AsyncTiffResult<i64> {
         self.read(8).await?.read_i64()
     }
 
+    #[allow(dead_code)]
     pub(crate) async fn read_f32(&mut self) -> AsyncTiffResult<f32> {
         self.read(4).await?.read_f32()
     }
 
+    #[allow(dead_code)]
     pub(crate) async fn read_f64(&mut self) -> AsyncTiffResult<f64> {
         self.read(8).await?.read_f64()
     }
 
-    #[allow(dead_code)]
     pub(crate) fn reader(&self) -> &Arc<dyn AsyncFileReader> {
         &self.reader
     }
 
-    #[allow(dead_code)]
     pub(crate) fn endianness(&self) -> Endianness {
         self.endianness
     }
@@ -367,6 +525,7 @@ impl AsyncCursor {
         self.offset = offset;
     }
 
+    #[allow(dead_code)]
     pub(crate) fn position(&self) -> u64 {
         self.offset
     }
@@ -378,6 +537,9 @@ pub(crate) struct EndianAwareReader {
 }
 
 impl EndianAwareReader {
+    pub(crate) fn new(reader: Reader<Bytes>, endianness: Endianness) -> Self {
+        Self { reader, endianness }
+    }
     /// Read a u8 from the cursor, advancing the internal state by 1 byte.
     pub(crate) fn read_u8(&mut self) -> AsyncTiffResult<u8> {
         Ok(self.reader.read_u8()?)

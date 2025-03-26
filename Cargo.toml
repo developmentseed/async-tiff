@@ -9,6 +9,7 @@ description = "Low-level asynchronous TIFF reader."
 readme = "README.md"
 
 [dependencies]
+async-mutex = { version = "1.4.0", optional = true }
 byteorder = "1"
 bytes = "1.7.0"
 flate2 = "1.0.20"
@@ -31,13 +32,15 @@ tokio = { version = "1.9", features = [
     "macros",
     "fs",
     "rt-multi-thread",
+    # "rt",
     "io-util",
 ] }
 
 [features]
-default = ["object_store", "reqwest"]
+default = ["object_store", "reqwest", "async_mutex"]
 tokio = ["dep:tokio"]
 reqwest = ["dep:reqwest"]
 object_store = ["dep:object_store"]
+async_mutex = ["dep:async-mutex"]
 
 [package.metadata.cargo-all-features]
