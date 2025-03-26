@@ -212,7 +212,12 @@ impl ReqwestReader {
         // HTTP range is inclusive, so we need to subtract 1 from the end
         let range = format!("bytes={}-{}", range.start, range.end - 1);
         async move {
-            let response = client.get(url).header("Range", range).send().await?;
+            let response = client
+                .get(url)
+                .header("Range", range)
+                .send()
+                .await?
+                .error_for_status()?;
             let bytes = response.bytes().await?;
             Ok(bytes)
         }
