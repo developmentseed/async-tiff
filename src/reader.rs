@@ -12,8 +12,6 @@ use futures::future::{BoxFuture, FutureExt};
 use futures::TryFutureExt;
 
 use crate::error::AsyncTiffResult;
-use crate::metadata::TiffMetadataReader;
-use crate::ImageFileDirectory;
 
 /// The asynchronous interface used to read COG files
 ///
@@ -32,9 +30,6 @@ use crate::ImageFileDirectory;
 ///
 /// [`tokio::fs::File`]: https://docs.rs/tokio/latest/tokio/fs/struct.File.html
 pub trait AsyncFileReader: Debug + Send + Sync {
-    /// Retrieve the bytes in `range` as part of a request for header metadata.
-    fn get_metadata(&self) -> BoxFuture<'_, AsyncTiffResult<Vec<ImageFileDirectory>>>;
-
     /// Retrieve the bytes in `range` as part of a request for image data, not header metadata.
     ///
     /// This is also used as the default implementation of [`MetadataFetch`] if not overridden.
@@ -62,10 +57,6 @@ pub trait AsyncFileReader: Debug + Send + Sync {
 
 /// This allows Box<dyn AsyncFileReader + '_> to be used as an AsyncFileReader,
 impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
-    fn get_metadata(&self) -> BoxFuture<'_, AsyncTiffResult<Vec<ImageFileDirectory>>> {
-        self.as_ref().get_metadata()
-    }
-
     fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         self.as_ref().get_bytes(range)
     }
@@ -80,10 +71,6 @@ impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
 
 /// This allows Arc<dyn AsyncFileReader + '_> to be used as an AsyncFileReader,
 impl AsyncFileReader for Arc<dyn AsyncFileReader + '_> {
-    fn get_metadata(&self) -> BoxFuture<'_, AsyncTiffResult<Vec<ImageFileDirectory>>> {
-        self.as_ref().get_metadata()
-    }
-
     fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         self.as_ref().get_bytes(range)
     }
@@ -144,15 +131,6 @@ impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> Toki
 impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> AsyncFileReader
     for TokioReader<T>
 {
-    fn get_metadata(&self) -> BoxFuture<'_, AsyncTiffResult<Vec<ImageFileDirectory>>> {
-        async move {
-            let mut tiff_metadata_reader = TiffMetadataReader::try_open(self).await?;
-            let ifds = tiff_metadata_reader.read_all_ifds(self).await?;
-            Ok(ifds)
-        }
-        .boxed()
-    }
-
     fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         self.make_range_request(range).boxed()
     }
@@ -186,15 +164,6 @@ impl ObjectReader {
 
 #[cfg(feature = "object_store")]
 impl AsyncFileReader for ObjectReader {
-    fn get_metadata(&self) -> BoxFuture<'_, AsyncTiffResult<Vec<ImageFileDirectory>>> {
-        async move {
-            let mut tiff_metadata_reader = TiffMetadataReader::try_open(self).await?;
-            let ifds = tiff_metadata_reader.read_all_ifds(self).await?;
-            Ok(ifds)
-        }
-        .boxed()
-    }
-
     fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         self.make_range_request(range).boxed()
     }
@@ -253,15 +222,6 @@ impl ReqwestReader {
 
 #[cfg(feature = "reqwest")]
 impl AsyncFileReader for ReqwestReader {
-    fn get_metadata(&self) -> BoxFuture<'_, AsyncTiffResult<Vec<ImageFileDirectory>>> {
-        async move {
-            let mut tiff_metadata_reader = TiffMetadataReader::try_open(self).await?;
-            let ifds = tiff_metadata_reader.read_all_ifds(self).await?;
-            Ok(ifds)
-        }
-        .boxed()
-    }
-
     fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         self.make_range_request(range)
     }

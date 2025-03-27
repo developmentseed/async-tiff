@@ -11,7 +11,15 @@ use crate::tiff::tags::{Tag, Type};
 use crate::tiff::{TiffError, TiffFormatError, Value};
 use crate::ImageFileDirectory;
 
-/// Read TIFF metadata from an async source.
+/// Entry point to reading TIFF metadata.
+///
+/// This is a stateful reader because we don't know how many IFDs will be encountered.
+///
+/// ```notest
+/// // fetch implements MetadataFetch
+/// let mut metadata_reader = TiffMetadataReader::try_open(&fetch).await?;
+/// let ifds = metadata_reader.read_all_ifds(&fetch).await?;
+/// ```
 pub struct TiffMetadataReader {
     endianness: Endianness,
     bigtiff: bool,
@@ -189,9 +197,9 @@ impl ImageFileDirectoryReader {
         })
     }
 
-    /// Manually read the tag with the specified idx.
+    /// Manually read the tag with the specified index.
     ///
-    /// If there are no more tags, returns `None`.
+    /// Panics if the tag index is out of range of the tag count.
     ///
     /// This can be useful if you need to access tags at a low level. You'll need to call
     /// [`ImageFileDirectory::from_tags`] on the resulting collection of tags.

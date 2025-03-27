@@ -1,8 +1,4 @@
-use std::sync::Arc;
-
-use crate::error::AsyncTiffResult;
 use crate::ifd::ImageFileDirectory;
-use crate::reader::AsyncFileReader;
 
 /// A TIFF file.
 #[derive(Debug, Clone)]
@@ -14,14 +10,6 @@ impl TIFF {
     /// Create a new TIFF from existing IFDs.
     pub fn new(ifds: Vec<ImageFileDirectory>) -> Self {
         Self { ifds }
-    }
-
-    /// Open a new TIFF file.
-    ///
-    /// This will read all the Image File Directories (IFDs) in the file.
-    pub async fn try_open(reader: Arc<dyn AsyncFileReader>) -> AsyncTiffResult<Self> {
-        let ifds = reader.get_metadata().await?;
-        Ok(Self { ifds })
     }
 
     /// Access the underlying Image File Directories.
@@ -36,7 +24,8 @@ mod test {
     use std::sync::Arc;
 
     use crate::decoder::DecoderRegistry;
-    use crate::reader::ObjectReader;
+    use crate::metadata::{PrefetchMetadataFetch, TiffMetadataReader};
+    use crate::reader::{AsyncFileReader, ObjectReader};
 
     use super::*;
     use object_store::local::LocalFileSystem;
@@ -48,11 +37,20 @@ mod test {
         let folder = "/Users/kyle/github/developmentseed/async-tiff/";
         let path = object_store::path::Path::parse("m_4007307_sw_18_060_20220803.tif").unwrap();
         let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
-        let reader = Arc::new(ObjectReader::new(store, path));
+        let reader = Arc::new(ObjectReader::new(store, path)) as Arc<dyn AsyncFileReader>;
+        let prefetch_reader = PrefetchMetadataFetch::new(reader.clone(), 32 * 1024)
+            .await
+            .unwrap();
+        let mut metadata_reader = TiffMetadataReader::try_open(&prefetch_reader)
+            .await
+            .unwrap();
+        let ifds = metadata_reader
+            .read_all_ifds(&prefetch_reader)
+            .await
+            .unwrap();
+        let tiff = TIFF::new(ifds);
 
-        let cog_reader = TIFF::try_open(reader.clone()).await.unwrap();
-
-        let ifd = &cog_reader.ifds[1];
+        let ifd = &tiff.ifds[1];
         let decoder_registry = DecoderRegistry::default();
         let tile = ifd.fetch_tile(0, 0, reader.as_ref()).await.unwrap();
         let tile = tile.decode(&decoder_registry).unwrap();
