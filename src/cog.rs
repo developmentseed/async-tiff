@@ -24,7 +24,7 @@ mod test {
     use std::sync::Arc;
 
     use crate::decoder::DecoderRegistry;
-    use crate::metadata::{PrefetchMetadataFetch, TiffMetadataReader};
+    use crate::metadata::{PrefetchBuffer, TiffMetadataReader};
     use crate::reader::{AsyncFileReader, ObjectReader};
 
     use super::*;
@@ -38,7 +38,7 @@ mod test {
         let path = object_store::path::Path::parse("m_4007307_sw_18_060_20220803.tif").unwrap();
         let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
         let reader = Arc::new(ObjectReader::new(store, path)) as Arc<dyn AsyncFileReader>;
-        let prefetch_reader = PrefetchMetadataFetch::new(reader.clone(), 32 * 1024)
+        let prefetch_reader = PrefetchBuffer::new(reader.clone(), 32 * 1024)
             .await
             .unwrap();
         let mut metadata_reader = TiffMetadataReader::try_open(&prefetch_reader)

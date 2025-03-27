@@ -25,22 +25,25 @@ impl<T: AsyncFileReader> MetadataFetch for T {
     }
 }
 
-/// A [`MetadataFetch`] that caches the first `prefetch` bytes of a file.
+/// Buffering for the first `N` bytes of a file.
+///
+/// This is designed so that the async requests made by the underlying tag reader get intercepted
+/// here and served from the existing buffer when possible.
 #[derive(Debug)]
-pub struct PrefetchMetadataFetch<F: MetadataFetch> {
+pub struct PrefetchBuffer<F: MetadataFetch> {
     fetch: F,
     buffer: Bytes,
 }
 
-impl<F: MetadataFetch> PrefetchMetadataFetch<F> {
-    /// Construct a new PrefetchMetadataFetch, catching the first `prefetch` bytes of the file.
+impl<F: MetadataFetch> PrefetchBuffer<F> {
+    /// Construct a new PrefetchBuffer, catching the first `prefetch` bytes of the file.
     pub async fn new(fetch: F, prefetch: u64) -> AsyncTiffResult<Self> {
         let buffer = fetch.fetch(0..prefetch).await?;
         Ok(Self { fetch, buffer })
     }
 }
 
-impl<F: MetadataFetch> MetadataFetch for PrefetchMetadataFetch<F> {
+impl<F: MetadataFetch> MetadataFetch for PrefetchBuffer<F> {
     fn fetch(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         if range.start < self.buffer.len() as _ {
             if range.end < self.buffer.len() as _ {

@@ -10,7 +10,7 @@
 //!
 //! use object_store::local::LocalFileSystem;
 //!
-//! use async_tiff::metadata::{PrefetchMetadataFetch, TiffMetadataReader};
+//! use async_tiff::metadata::{PrefetchBuffer, TiffMetadataReader};
 //! use async_tiff::reader::ObjectReader;
 //!
 //! // Create new Arc<dyn ObjectStore>
@@ -22,13 +22,13 @@
 //!     "tests/image_tiff/images/tiled-jpeg-rgb-u8.tif".into(),
 //! );
 //!
-//! // Use PrefetchMetadataFetch to ensure that a given number of bytes at the start of the
+//! // Use PrefetchBuffer to ensure that a given number of bytes at the start of the
 //! // file are prefetched.
 //! //
 //! // This or a similar caching layer should **always** be used and ensures that the
 //! // underlying read calls that the TiffMetadataReader makes don't translate to actual
 //! // network fetches.
-//! let prefetch_reader = PrefetchMetadataFetch::new(reader.clone(), 32 * 1024)
+//! let prefetch_reader = PrefetchBuffer::new(reader.clone(), 32 * 1024)
 //!     .await
 //!     .unwrap();
 //!
@@ -52,12 +52,12 @@
 //! [`MetadataFetch`] implementation.
 //!
 //! Thus, it is **imperative to always supply some sort of caching, prefetching, or buffering**
-//! middleware when reading metadata. [`PrefetchMetadataFetch`] is an example of this, which
+//! middleware when reading metadata. [`PrefetchBuffer`] is an example of this, which
 //! fetches the first `N` bytes out of a file.
 //!
 
 mod fetch;
 mod reader;
 
-pub use fetch::{MetadataFetch, PrefetchMetadataFetch};
+pub use fetch::{MetadataFetch, PrefetchBuffer};
 pub use reader::{ImageFileDirectoryReader, TiffMetadataReader};
