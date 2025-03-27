@@ -142,17 +142,6 @@ impl ImageFileDirectoryReader {
         let mut cursor = MetadataCursor::new(fetch, endianness);
         cursor.seek(ifd_start);
 
-        let tag_count = if bigtiff {
-            cursor.read_u64().await?
-        } else {
-            cursor.read_u16().await?.into()
-        };
-        let mut tags = HashMap::with_capacity(tag_count as usize);
-        for _ in 0..tag_count {
-            let (tag_name, tag_value) = read_tag(&mut cursor, bigtiff).await?;
-            tags.insert(tag_name, tag_value);
-        }
-
         // Tag   2 bytes
         // Type  2 bytes
         // Count:
@@ -165,8 +154,21 @@ impl ImageFileDirectoryReader {
         // The size of `tag_count` that we read above
         let tag_count_byte_size = if bigtiff { 8 } else { 2 };
 
+        let tag_count = if bigtiff {
+            cursor.read_u64().await?
+        } else {
+            cursor.read_u16().await?.into()
+        };
+
+        let mut tags = HashMap::with_capacity(tag_count as usize);
+        for tag_idx in 0..tag_count {
+            let tag_offset = ifd_start + tag_count_byte_size + (ifd_entry_byte_size * tag_idx);
+            let (tag_name, tag_value) = read_tag(fetch, tag_offset, endianness, bigtiff).await?;
+            tags.insert(tag_name, tag_value);
+        }
+
         // Reset the cursor position before reading the next ifd offset
-        cursor.seek(ifd_start + (ifd_entry_byte_size * tag_count) + tag_count_byte_size);
+        cursor.seek(ifd_start + tag_count_byte_size + (ifd_entry_byte_size * tag_count));
 
         let next_ifd_offset = if bigtiff {
             cursor.read_u64().await?
@@ -199,12 +201,18 @@ impl ImageFileDirectoryReader {
     }
 }
 
+// pub trait TagRead {
+//     fn read_tag<F: MetadataFetch>(&self, tag_offset: u64) -> AsyncTiffResult<(Tag, Value)>;
+// }
+
 /// Read a single tag from the cursor
 async fn read_tag<F: MetadataFetch>(
-    cursor: &mut MetadataCursor<'_, F>,
+    fetch: &F,
+    tag_offset: u64,
+    endianness: Endianness,
     bigtiff: bool,
 ) -> AsyncTiffResult<(Tag, Value)> {
-    let start_cursor_position = cursor.position();
+    let mut cursor = MetadataCursor::new_with_offset(fetch, endianness, tag_offset);
 
     let tag_name = Tag::from_u16_exhaustive(cursor.read_u16().await?);
 
@@ -218,11 +226,7 @@ async fn read_tag<F: MetadataFetch>(
         cursor.read_u32().await?.into()
     };
 
-    let tag_value = read_tag_value(cursor, tag_type, count, bigtiff).await?;
-
-    // TODO: better handle management of cursor state
-    let ifd_entry_size = if bigtiff { 20 } else { 12 };
-    cursor.seek(start_cursor_position + ifd_entry_size);
+    let tag_value = read_tag_value(&mut cursor, tag_type, count, bigtiff).await?;
 
     Ok((tag_name, tag_value))
 }

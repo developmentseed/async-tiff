@@ -72,6 +72,14 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         }
     }
 
+    pub fn new_with_offset(fetch: &'a F, endianness: Endianness, offset: u64) -> Self {
+        Self {
+            fetch,
+            offset,
+            endianness,
+        }
+    }
+
     pub fn with_offset(mut self, offset: u64) -> Self {
         self.offset = offset;
         self
@@ -79,10 +87,6 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
 
     pub fn seek(&mut self, offset: u64) {
         self.offset = offset;
-    }
-
-    pub fn position(&self) -> u64 {
-        self.offset
     }
 
     /// Advance cursor position by a set amount
