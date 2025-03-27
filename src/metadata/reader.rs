@@ -89,6 +89,13 @@ impl TiffMetadataReader {
         self.next_ifd_offset.is_some()
     }
 
+    /// The byte offset of the start of the next IFD.
+    ///
+    /// This will be `None` if all IFDs have already been read.
+    pub fn next_ifd_offset(&self) -> Option<u64> {
+        self.next_ifd_offset
+    }
+
     /// Read the next IFD from the file.
     ///
     /// If there are no more IFDs, returns `None`.
