@@ -351,31 +351,37 @@ impl AsyncCursor {
     }
 
     /// Read a u8 from the cursor, advancing the internal state by 1 byte.
+    #[allow(dead_code)]
     pub(crate) async fn read_u8(&mut self) -> AsyncTiffResult<u8> {
         self.read(1).await?.read_u8()
     }
 
     /// Read a i8 from the cursor, advancing the internal state by 1 byte.
+    #[allow(dead_code)]
     pub(crate) async fn read_i8(&mut self) -> AsyncTiffResult<i8> {
         self.read(1).await?.read_i8()
     }
 
     /// Read a u16 from the cursor, advancing the internal state by 2 bytes.
+    #[allow(dead_code)]
     pub(crate) async fn read_u16(&mut self) -> AsyncTiffResult<u16> {
         self.read(2).await?.read_u16()
     }
 
     /// Read a i16 from the cursor, advancing the internal state by 2 bytes.
+    #[allow(dead_code)]
     pub(crate) async fn read_i16(&mut self) -> AsyncTiffResult<i16> {
         self.read(2).await?.read_i16()
     }
 
     /// Read a u32 from the cursor, advancing the internal state by 4 bytes.
+    #[allow(dead_code)]
     pub(crate) async fn read_u32(&mut self) -> AsyncTiffResult<u32> {
         self.read(4).await?.read_u32()
     }
 
     /// Read a i32 from the cursor, advancing the internal state by 4 bytes.
+    #[allow(dead_code)]
     pub(crate) async fn read_i32(&mut self) -> AsyncTiffResult<i32> {
         self.read(4).await?.read_i32()
     }
@@ -386,24 +392,25 @@ impl AsyncCursor {
     }
 
     /// Read a i64 from the cursor, advancing the internal state by 8 bytes.
+    #[allow(dead_code)]
     pub(crate) async fn read_i64(&mut self) -> AsyncTiffResult<i64> {
         self.read(8).await?.read_i64()
     }
 
+    #[allow(dead_code)]
     pub(crate) async fn read_f32(&mut self) -> AsyncTiffResult<f32> {
         self.read(4).await?.read_f32()
     }
 
+    #[allow(dead_code)]
     pub(crate) async fn read_f64(&mut self) -> AsyncTiffResult<f64> {
         self.read(8).await?.read_f64()
     }
 
-    #[allow(dead_code)]
     pub(crate) fn reader(&self) -> &Arc<dyn AsyncFileReader> {
         &self.reader
     }
 
-    #[allow(dead_code)]
     pub(crate) fn endianness(&self) -> Endianness {
         self.endianness
     }
@@ -417,6 +424,7 @@ impl AsyncCursor {
         self.offset = offset;
     }
 
+    #[allow(dead_code)]
     pub(crate) fn position(&self) -> u64 {
         self.offset
     }
@@ -428,6 +436,9 @@ pub(crate) struct EndianAwareReader {
 }
 
 impl EndianAwareReader {
+    pub(crate) fn new(reader: Reader<Bytes>, endianness: Endianness) -> Self {
+        Self { reader, endianness }
+    }
     /// Read a u8 from the cursor, advancing the internal state by 1 byte.
     pub(crate) fn read_u8(&mut self) -> AsyncTiffResult<u8> {
         Ok(self.reader.read_u8()?)
