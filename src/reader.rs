@@ -591,7 +591,7 @@ mod test {
         let reader = TestAsyncFileReader {
             buffer: Bytes::from_static(underlying_buffer),
         };
-        let mut prefetch_reader = PrefetchReader::new(Box::new(reader), 5, 1.5).await.unwrap();
+        let mut prefetch_reader = PrefetchReader::new(Box::new(reader), 5, 1.1).await.unwrap();
 
         // Cached
         assert_eq!(
@@ -631,6 +631,16 @@ mod test {
                 .unwrap()
                 .as_ref(),
             b"abcdefghij"
+        );
+
+        // Cached
+        assert_eq!(
+            prefetch_reader
+                .get_metadata_bytes(0..15)
+                .await
+                .unwrap()
+                .as_ref(),
+            underlying_buffer
         );
     }
 }
