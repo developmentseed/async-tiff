@@ -1,57 +1,31 @@
 use std::sync::Arc;
 
 use crate::error::AsyncTiffResult;
-use crate::ifd::ImageFileDirectories;
-use crate::reader::{AsyncCursor, AsyncFileReader};
-use crate::tiff::{TiffError, TiffFormatError};
+use crate::ifd::ImageFileDirectory;
+use crate::reader::AsyncFileReader;
 
 /// A TIFF file.
 #[derive(Debug, Clone)]
 pub struct TIFF {
-    ifds: ImageFileDirectories,
+    ifds: Vec<ImageFileDirectory>,
 }
 
 impl TIFF {
+    /// Create a new TIFF from existing IFDs.
+    pub fn new(ifds: Vec<ImageFileDirectory>) -> Self {
+        Self { ifds }
+    }
+
     /// Open a new TIFF file.
     ///
     /// This will read all the Image File Directories (IFDs) in the file.
     pub async fn try_open(reader: Arc<dyn AsyncFileReader>) -> AsyncTiffResult<Self> {
-        let mut cursor = AsyncCursor::try_open_tiff(reader).await?;
-        let version = cursor.read_u16().await?;
-
-        let bigtiff = match version {
-            42 => false,
-            43 => {
-                // Read bytesize of offsets (in bigtiff it's alway 8 but provide a way to move to 16 some day)
-                if cursor.read_u16().await? != 8 {
-                    return Err(
-                        TiffError::FormatError(TiffFormatError::TiffSignatureNotFound).into(),
-                    );
-                }
-                // This constant should always be 0
-                if cursor.read_u16().await? != 0 {
-                    return Err(
-                        TiffError::FormatError(TiffFormatError::TiffSignatureNotFound).into(),
-                    );
-                }
-                true
-            }
-            _ => return Err(TiffError::FormatError(TiffFormatError::TiffSignatureInvalid).into()),
-        };
-
-        let first_ifd_location = if bigtiff {
-            cursor.read_u64().await?
-        } else {
-            cursor.read_u32().await?.into()
-        };
-
-        let ifds = ImageFileDirectories::open(&mut cursor, first_ifd_location, bigtiff).await?;
-
+        let ifds = reader.get_metadata().await?;
         Ok(Self { ifds })
     }
 
     /// Access the underlying Image File Directories.
-    pub fn ifds(&self) -> &ImageFileDirectories {
+    pub fn ifds(&self) -> &[ImageFileDirectory] {
         &self.ifds
     }
 }
@@ -78,7 +52,7 @@ mod test {
 
         let cog_reader = TIFF::try_open(reader.clone()).await.unwrap();
 
-        let ifd = &cog_reader.ifds.as_ref()[1];
+        let ifd = &cog_reader.ifds[1];
         let decoder_registry = DecoderRegistry::default();
         let tile = ifd.fetch_tile(0, 0, reader.as_ref()).await.unwrap();
         let tile = tile.decode(&decoder_registry).unwrap();
