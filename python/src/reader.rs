@@ -2,7 +2,6 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use async_tiff::error::{AsyncTiffError, AsyncTiffResult};
-use async_tiff::metadata::TiffMetadataReader;
 use async_tiff::reader::{AsyncFileReader, ObjectReader};
 use bytes::Bytes;
 use futures::future::BoxFuture;
@@ -116,15 +115,6 @@ struct ObspecReader {
 }
 
 impl AsyncFileReader for ObspecReader {
-    fn get_metadata(&self) -> BoxFuture<'_, AsyncTiffResult<Vec<async_tiff::ImageFileDirectory>>> {
-        async move {
-            let mut tiff_metadata_reader = TiffMetadataReader::try_open(self).await?;
-            let ifds = tiff_metadata_reader.read_all_ifds(self).await?;
-            Ok(ifds)
-        }
-        .boxed()
-    }
-
     fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         self.backend.get_range_wrapper(&self.path, range).boxed()
     }
