@@ -19,7 +19,7 @@ pub trait MetadataFetch {
     fn fetch(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>>;
 }
 
-impl<T: AsyncFileReader> MetadataFetch for &T {
+impl<T: AsyncFileReader> MetadataFetch for T {
     fn fetch(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         self.get_bytes(range)
     }

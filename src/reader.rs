@@ -11,7 +11,7 @@ use bytes::{Buf, Bytes};
 use futures::future::{BoxFuture, FutureExt};
 use futures::TryFutureExt;
 
-use crate::error::{AsyncTiffError, AsyncTiffResult};
+use crate::error::AsyncTiffResult;
 use crate::metadata::TiffMetadataReader;
 use crate::ImageFileDirectory;
 
@@ -22,15 +22,10 @@ use crate::ImageFileDirectory;
 ///
 /// Notes:
 ///
-/// 1. There are distinct traits for accessing "metadata bytes" and "image bytes". The requests for
-///    "metadata bytes" from `get_metadata` will be called from `TIFF.open`, while parsing
-///    IFDs. Requests for "image bytes" from `get_bytes` and `get_byte_ranges` will be
-///    called while fetching data from TIFF tiles or strips.
-///
-/// 2. [`ObjectReader`], available when the `object_store` crate feature
+/// 1. [`ObjectReader`], available when the `object_store` crate feature
 ///    is enabled, implements this interface for [`ObjectStore`].
 ///
-/// 3. You can use [`TokioReader`] to implement [`AsyncFileReader`] for types that implement
+/// 2. You can use [`TokioReader`] to implement [`AsyncFileReader`] for types that implement
 ///    [`tokio::io::AsyncRead`] and [`tokio::io::AsyncSeek`], for example [`tokio::fs::File`].
 ///
 /// [`ObjectStore`]: object_store::ObjectStore
@@ -83,6 +78,24 @@ impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
     }
 }
 
+/// This allows Arc<dyn AsyncFileReader + '_> to be used as an AsyncFileReader,
+impl AsyncFileReader for Arc<dyn AsyncFileReader + '_> {
+    fn get_metadata(&self) -> BoxFuture<'_, AsyncTiffResult<Vec<ImageFileDirectory>>> {
+        self.as_ref().get_metadata()
+    }
+
+    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        self.as_ref().get_bytes(range)
+    }
+
+    fn get_byte_ranges(
+        &self,
+        ranges: Vec<Range<u64>>,
+    ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
+        self.as_ref().get_byte_ranges(ranges)
+    }
+}
+
 /// A wrapper for things that implement [AsyncRead] and [AsyncSeek] to also implement
 /// [AsyncFileReader].
 ///
@@ -110,6 +123,8 @@ impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> Toki
         use std::io::SeekFrom;
         use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
+        use crate::error::AsyncTiffError;
+
         let mut file = self.0.lock().await;
 
         file.seek(SeekFrom::Start(range.start)).await?;
@@ -131,8 +146,8 @@ impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> Asyn
 {
     fn get_metadata(&self) -> BoxFuture<'_, AsyncTiffResult<Vec<ImageFileDirectory>>> {
         async move {
-            let mut tiff_metadata_reader = TiffMetadataReader::try_open(&self).await?;
-            let ifds = tiff_metadata_reader.read_all_ifds(&self).await?;
+            let mut tiff_metadata_reader = TiffMetadataReader::try_open(self).await?;
+            let ifds = tiff_metadata_reader.read_all_ifds(self).await?;
             Ok(ifds)
         }
         .boxed()
@@ -173,8 +188,8 @@ impl ObjectReader {
 impl AsyncFileReader for ObjectReader {
     fn get_metadata(&self) -> BoxFuture<'_, AsyncTiffResult<Vec<ImageFileDirectory>>> {
         async move {
-            let mut tiff_metadata_reader = TiffMetadataReader::try_open(&self).await?;
-            let ifds = tiff_metadata_reader.read_all_ifds(&self).await?;
+            let mut tiff_metadata_reader = TiffMetadataReader::try_open(self).await?;
+            let ifds = tiff_metadata_reader.read_all_ifds(self).await?;
             Ok(ifds)
         }
         .boxed()
@@ -240,8 +255,8 @@ impl ReqwestReader {
 impl AsyncFileReader for ReqwestReader {
     fn get_metadata(&self) -> BoxFuture<'_, AsyncTiffResult<Vec<ImageFileDirectory>>> {
         async move {
-            let mut tiff_metadata_reader = TiffMetadataReader::try_open(&self).await?;
-            let ifds = tiff_metadata_reader.read_all_ifds(&self).await?;
+            let mut tiff_metadata_reader = TiffMetadataReader::try_open(self).await?;
+            let ifds = tiff_metadata_reader.read_all_ifds(self).await?;
             Ok(ifds)
         }
         .boxed()
