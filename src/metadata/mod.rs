@@ -5,6 +5,7 @@
 //! We can use [`TiffMetadataReader::read_all_ifds`] to read all IFDs up front:
 //!
 //! ```
+//! # tokio_test::block_on(async {
 //! use std::env::current_dir;
 //! use std::sync::Arc;
 //!
@@ -42,6 +43,7 @@
 //!     .read_all_ifds(&prefetch_reader)
 //!     .await
 //!     .unwrap();
+//! # })
 //! ```
 //!
 //!

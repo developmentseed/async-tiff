@@ -33,6 +33,7 @@ tokio = { version = "1.9", features = [
     "rt-multi-thread",
     "io-util",
 ] }
+tokio-test = "0.4.4"
 
 [features]
 default = ["object_store", "reqwest"]
