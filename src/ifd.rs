@@ -37,7 +37,7 @@ impl AsRef<[ImageFileDirectory]> for ImageFileDirectories {
 
 impl ImageFileDirectories {
     pub(crate) async fn open(
-        cursor: &mut AsyncCursor,
+        cursor: &mut AsyncCursor<'_>,
         ifd_offset: u64,
         bigtiff: bool,
     ) -> AsyncTiffResult<Self> {
@@ -184,7 +184,7 @@ pub struct ImageFileDirectory {
 impl ImageFileDirectory {
     /// Read and parse the IFD starting at the given file offset
     async fn read(
-        cursor: &mut AsyncCursor,
+        cursor: &mut AsyncCursor<'_>,
         ifd_start: u64,
         bigtiff: bool,
     ) -> AsyncTiffResult<Self> {
@@ -774,7 +774,7 @@ impl ImageFileDirectory {
         &self,
         x: usize,
         y: usize,
-        reader: &dyn AsyncFileReader,
+        reader: &mut dyn AsyncFileReader,
     ) -> AsyncTiffResult<Tile> {
         let range = self
             .get_tile_byte_range(x, y)
@@ -795,7 +795,7 @@ impl ImageFileDirectory {
         &self,
         x: &[usize],
         y: &[usize],
-        reader: &dyn AsyncFileReader,
+        reader: &mut dyn AsyncFileReader,
     ) -> AsyncTiffResult<Vec<Tile>> {
         assert_eq!(x.len(), y.len(), "x and y should have same len");
 
@@ -838,7 +838,7 @@ impl ImageFileDirectory {
 }
 
 /// Read a single tag from the cursor
-async fn read_tag(cursor: &mut AsyncCursor, bigtiff: bool) -> AsyncTiffResult<(Tag, Value)> {
+async fn read_tag(cursor: &mut AsyncCursor<'_>, bigtiff: bool) -> AsyncTiffResult<(Tag, Value)> {
     let start_cursor_position = cursor.position();
 
     let tag_name = Tag::from_u16_exhaustive(cursor.read_u16().await?);
@@ -868,7 +868,7 @@ async fn read_tag(cursor: &mut AsyncCursor, bigtiff: bool) -> AsyncTiffResult<(T
 // This is derived from the upstream tiff crate:
 // https://github.com/image-rs/image-tiff/blob/6dc7a266d30291db1e706c8133357931f9e2a053/src/decoder/ifd.rs#L369-L639
 async fn read_tag_value(
-    cursor: &mut AsyncCursor,
+    cursor: &mut AsyncCursor<'_>,
     tag_type: Type,
     count: u64,
     bigtiff: bool,

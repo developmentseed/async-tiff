@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::error::AsyncTiffResult;
 use crate::ifd::ImageFileDirectories;
 use crate::reader::{AsyncCursor, AsyncFileReader};
@@ -15,7 +13,7 @@ impl TIFF {
     /// Open a new TIFF file.
     ///
     /// This will read all the Image File Directories (IFDs) in the file.
-    pub async fn try_open(reader: Arc<dyn AsyncFileReader>) -> AsyncTiffResult<Self> {
+    pub async fn try_open(reader: &mut dyn AsyncFileReader) -> AsyncTiffResult<Self> {
         let mut cursor = AsyncCursor::try_open_tiff(reader).await?;
         let version = cursor.read_u16().await?;
 
@@ -74,13 +72,13 @@ mod test {
         let folder = "/Users/kyle/github/developmentseed/async-tiff/";
         let path = object_store::path::Path::parse("m_4007307_sw_18_060_20220803.tif").unwrap();
         let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
-        let reader = Arc::new(ObjectReader::new(store, path));
+        let mut reader = Box::new(ObjectReader::new(store, path));
 
-        let cog_reader = TIFF::try_open(reader.clone()).await.unwrap();
+        let cog_reader = TIFF::try_open(reader.as_mut()).await.unwrap();
 
         let ifd = &cog_reader.ifds.as_ref()[1];
         let decoder_registry = DecoderRegistry::default();
-        let tile = ifd.fetch_tile(0, 0, reader.as_ref()).await.unwrap();
+        let tile = ifd.fetch_tile(0, 0, reader.as_mut()).await.unwrap();
         let tile = tile.decode(&decoder_registry).unwrap();
         std::fs::write("img.buf", tile).unwrap();
     }
