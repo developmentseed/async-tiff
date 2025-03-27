@@ -104,7 +104,7 @@ impl TiffMetadataReader {
         fetch: &F,
     ) -> AsyncTiffResult<Option<ImageFileDirectory>> {
         if let Some(ifd_start) = self.next_ifd_offset {
-            let mut ifd_reader =
+            let ifd_reader =
                 ImageFileDirectoryReader::open(fetch, ifd_start, self.bigtiff, self.endianness)
                     .await?;
             let ifd = ifd_reader.read(fetch).await?;
@@ -149,8 +149,6 @@ pub struct ImageFileDirectoryReader {
     ifd_entry_byte_size: u64,
     /// The number of bytes that the value for the number of tags takes up.
     tag_count_byte_size: u64,
-    /// The index of the tag to be read next
-    tag_idx: u64,
 }
 
 impl ImageFileDirectoryReader {
@@ -188,51 +186,36 @@ impl ImageFileDirectoryReader {
             tag_count,
             tag_count_byte_size,
             ifd_start_offset,
-            tag_idx: 0,
         })
     }
 
-    /// Returns `true` if there are more tags to read in this IFD
-    pub fn has_more_tags(&self) -> bool {
-        self.tag_idx < self.tag_count
-    }
-
-    /// Manually read the next tag out of the IFD.
+    /// Manually read the tag with the specified idx.
     ///
     /// If there are no more tags, returns `None`.
     ///
     /// This can be useful if you need to access tags at a low level. You'll need to call
     /// [`ImageFileDirectory::from_tags`] on the resulting collection of tags.
-    pub async fn read_next_tag<F: MetadataFetch>(
-        &mut self,
+    pub async fn read_tag<F: MetadataFetch>(
+        &self,
         fetch: &F,
-    ) -> AsyncTiffResult<Option<(Tag, Value)>> {
-        if self.tag_idx != self.tag_count {
-            let tag_offset = self.ifd_start_offset
-                + self.tag_count_byte_size
-                + (self.ifd_entry_byte_size * self.tag_idx);
-            let (tag_name, tag_value) =
-                read_tag(fetch, tag_offset, self.endianness, self.bigtiff).await?;
-            self.tag_idx += 1;
-            Ok(Some((tag_name, tag_value)))
-        } else {
-            Ok(None)
-        }
+        tag_idx: u64,
+    ) -> AsyncTiffResult<(Tag, Value)> {
+        assert!(tag_idx < self.tag_count);
+        let tag_offset =
+            self.ifd_start_offset + self.tag_count_byte_size + (self.ifd_entry_byte_size * tag_idx);
+        let (tag_name, tag_value) =
+            read_tag(fetch, tag_offset, self.endianness, self.bigtiff).await?;
+        Ok((tag_name, tag_value))
     }
 
     /// Read all tags out of this IFD.
     ///
-    /// This will read _all_ tags from this IFD, even if you've already read some of them via
-    /// [`read_next_tag`][Self::read_next_tag].
-    ///
     /// Keep in mind that you'll still need to call [`finish`][Self::finish] to get the byte offset
     /// of the next IFD.
-    pub async fn read<F: MetadataFetch>(
-        &mut self,
-        fetch: &F,
-    ) -> AsyncTiffResult<ImageFileDirectory> {
+    pub async fn read<F: MetadataFetch>(&self, fetch: &F) -> AsyncTiffResult<ImageFileDirectory> {
         let mut tags = HashMap::with_capacity(self.tag_count as usize);
-        while let Some((tag, value)) = self.read_next_tag(fetch).await? {
+        for tag_idx in 0..self.tag_count {
+            let (tag, value) = self.read_tag(fetch, tag_idx).await?;
             tags.insert(tag, value);
         }
         ImageFileDirectory::from_tags(tags)
