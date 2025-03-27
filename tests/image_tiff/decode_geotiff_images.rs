@@ -7,7 +7,7 @@ async fn test_geo_tiff() {
     let filenames = ["geo-5b.tif"];
     for filename in filenames.iter() {
         let tiff = open_tiff(filename).await;
-        let ifd = &tiff.ifds().as_ref()[0];
+        let ifd = &tiff.ifds()[0];
         dbg!(&ifd);
         assert_eq!(ifd.image_height(), 10);
         assert_eq!(ifd.image_width(), 10);
