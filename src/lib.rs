@@ -8,9 +8,10 @@ pub mod decoder;
 pub mod error;
 pub mod geo;
 mod ifd;
+pub mod metadata;
 pub mod tiff;
 mod tile;
 
 pub use cog::TIFF;
-pub use ifd::{ImageFileDirectories, ImageFileDirectory};
+pub use ifd::ImageFileDirectory;
 pub use tile::Tile;

@@ -16,14 +16,14 @@ class TIFF:
         path: str,
         *,
         store: ObjectStore | ObspecInput,
-        prefetch: int | None = 16384,
+        prefetch: int = 32768,
     ) -> TIFF:
         """Open a new TIFF.
 
         Args:
             path: The path within the store to read from.
             store: The backend to use for data fetching.
-            prefetch: The number of initial bytes to read up front. Defaults to 16384.
+            prefetch: The number of initial bytes to read up front.
 
         Returns:
             A TIFF instance.

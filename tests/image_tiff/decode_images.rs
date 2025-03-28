@@ -7,7 +7,7 @@ use crate::image_tiff::util::open_tiff;
 #[tokio::test]
 async fn cmyk_u8() {
     let tiff = open_tiff("cmyk-3c-8b.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::CMYK
@@ -18,7 +18,7 @@ async fn cmyk_u8() {
 #[tokio::test]
 async fn test_cmyk_u16() {
     let tiff = open_tiff("cmyk-3c-16b.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::CMYK
@@ -29,7 +29,7 @@ async fn test_cmyk_u16() {
 #[tokio::test]
 async fn test_cmyk_f32() {
     let tiff = open_tiff("cmyk-3c-32b-float.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::CMYK
@@ -40,7 +40,7 @@ async fn test_cmyk_f32() {
 #[tokio::test]
 async fn test_gray_u8() {
     let tiff = open_tiff("minisblack-1c-8b.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::BlackIsZero
@@ -51,7 +51,7 @@ async fn test_gray_u8() {
 #[tokio::test]
 async fn test_gray_u12() {
     let tiff = open_tiff("12bit.cropped.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::BlackIsZero
@@ -62,7 +62,7 @@ async fn test_gray_u12() {
 #[tokio::test]
 async fn test_gray_u16() {
     let tiff = open_tiff("minisblack-1c-16b.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::BlackIsZero
@@ -73,7 +73,7 @@ async fn test_gray_u16() {
 #[tokio::test]
 async fn test_gray_u32() {
     let tiff = open_tiff("gradient-1c-32b.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::BlackIsZero
@@ -84,7 +84,7 @@ async fn test_gray_u32() {
 #[tokio::test]
 async fn test_gray_u64() {
     let tiff = open_tiff("gradient-1c-64b.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::BlackIsZero
@@ -95,7 +95,7 @@ async fn test_gray_u64() {
 #[tokio::test]
 async fn test_gray_f32() {
     let tiff = open_tiff("gradient-1c-32b-float.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::BlackIsZero
@@ -106,7 +106,7 @@ async fn test_gray_f32() {
 #[tokio::test]
 async fn test_gray_f64() {
     let tiff = open_tiff("gradient-1c-64b-float.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::BlackIsZero
@@ -117,7 +117,7 @@ async fn test_gray_f64() {
 #[tokio::test]
 async fn test_rgb_u8() {
     let tiff = open_tiff("rgb-3c-8b.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::RGB
@@ -128,7 +128,7 @@ async fn test_rgb_u8() {
 #[tokio::test]
 async fn test_rgb_u12() {
     let tiff = open_tiff("12bit.cropped.rgb.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::RGB
@@ -139,7 +139,7 @@ async fn test_rgb_u12() {
 #[tokio::test]
 async fn test_rgb_u16() {
     let tiff = open_tiff("rgb-3c-16b.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::RGB
@@ -150,7 +150,7 @@ async fn test_rgb_u16() {
 #[tokio::test]
 async fn test_rgb_u32() {
     let tiff = open_tiff("gradient-3c-32b.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::RGB
@@ -161,7 +161,7 @@ async fn test_rgb_u32() {
 #[tokio::test]
 async fn test_rgb_u64() {
     let tiff = open_tiff("gradient-3c-64b.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::RGB
@@ -172,7 +172,7 @@ async fn test_rgb_u64() {
 #[tokio::test]
 async fn test_rgb_f32() {
     let tiff = open_tiff("gradient-3c-32b-float.tiff").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::RGB
@@ -183,7 +183,7 @@ async fn test_rgb_f32() {
 #[tokio::test]
 async fn test_int8() {
     let tiff = open_tiff("int8.tif").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::BlackIsZero
@@ -194,7 +194,7 @@ async fn test_int8() {
 #[tokio::test]
 async fn test_int8_rgb() {
     let tiff = open_tiff("int8_rgb.tif").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::RGB
@@ -205,7 +205,7 @@ async fn test_int8_rgb() {
 #[tokio::test]
 async fn test_int16() {
     let tiff = open_tiff("int16.tif").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::BlackIsZero
@@ -216,7 +216,7 @@ async fn test_int16() {
 #[tokio::test]
 async fn test_int16_rgb() {
     let tiff = open_tiff("int16_rgb.tif").await;
-    let ifd = &tiff.ifds().as_ref()[0];
+    let ifd = &tiff.ifds()[0];
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::RGB
@@ -231,7 +231,7 @@ async fn test_string_tags() {
     let filenames = ["minisblack-1c-16b.tiff", "rgb-3c-16b.tiff"];
     for filename in filenames.iter() {
         let tiff = open_tiff(filename).await;
-        let ifd = &tiff.ifds().as_ref()[0];
+        let ifd = &tiff.ifds()[0];
         let software = ifd.software().unwrap();
         assert_eq!(
             software,

@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::io::Read;
 use std::ops::Range;
 
 use bytes::Bytes;
@@ -7,52 +6,15 @@ use num_enum::TryFromPrimitive;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult};
 use crate::geo::{GeoKeyDirectory, GeoKeyTag};
-use crate::reader::{AsyncCursor, AsyncFileReader};
+use crate::reader::AsyncFileReader;
 use crate::tiff::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
-    SampleFormat, Tag, Type,
+    SampleFormat, Tag,
 };
 use crate::tiff::{TiffError, Value};
 use crate::tile::Tile;
 
 const DOCUMENT_NAME: u16 = 269;
-
-/// A collection of all the IFD
-// TODO: maybe separate out the primary/first image IFD out of the vec, as that one should have
-// geospatial metadata?
-#[derive(Debug, Clone)]
-pub struct ImageFileDirectories {
-    /// There's always at least one IFD in a TIFF. We store this separately
-    ifds: Vec<ImageFileDirectory>,
-    // Is it guaranteed that if masks exist that there will be one per image IFD? Or could there be
-    // different numbers of image ifds and mask ifds?
-    // mask_ifds: Option<Vec<IFD>>,
-}
-
-impl AsRef<[ImageFileDirectory]> for ImageFileDirectories {
-    fn as_ref(&self) -> &[ImageFileDirectory] {
-        &self.ifds
-    }
-}
-
-impl ImageFileDirectories {
-    pub(crate) async fn open(
-        cursor: &mut AsyncCursor<'_>,
-        ifd_offset: u64,
-        bigtiff: bool,
-    ) -> AsyncTiffResult<Self> {
-        let mut next_ifd_offset = Some(ifd_offset);
-
-        let mut ifds = vec![];
-        while let Some(offset) = next_ifd_offset {
-            let ifd = ImageFileDirectory::read(cursor, offset, bigtiff).await?;
-            next_ifd_offset = ifd.next_ifd_offset();
-            ifds.push(ifd);
-        }
-
-        Ok(Self { ifds })
-    }
-}
 
 /// An ImageFileDirectory representing Image content
 // The ordering of these tags matches the sorted order in TIFF spec Appendix A
@@ -177,69 +139,11 @@ pub struct ImageFileDirectory {
     // no_data
     // gdal_metadata
     pub(crate) other_tags: HashMap<Tag, Value>,
-
-    pub(crate) next_ifd_offset: Option<u64>,
 }
 
 impl ImageFileDirectory {
-    /// Read and parse the IFD starting at the given file offset
-    async fn read(
-        cursor: &mut AsyncCursor<'_>,
-        ifd_start: u64,
-        bigtiff: bool,
-    ) -> AsyncTiffResult<Self> {
-        cursor.seek(ifd_start);
-
-        let tag_count = if bigtiff {
-            cursor.read_u64().await?
-        } else {
-            cursor.read_u16().await?.into()
-        };
-        let mut tags = HashMap::with_capacity(tag_count as usize);
-        for _ in 0..tag_count {
-            let (tag_name, tag_value) = read_tag(cursor, bigtiff).await?;
-            tags.insert(tag_name, tag_value);
-        }
-
-        // Tag   2 bytes
-        // Type  2 bytes
-        // Count:
-        //  - bigtiff: 8 bytes
-        //  - else: 4 bytes
-        // Value:
-        //  - bigtiff: 8 bytes either a pointer the value itself
-        //  - else: 4 bytes either a pointer the value itself
-        let ifd_entry_byte_size = if bigtiff { 20 } else { 12 };
-        // The size of `tag_count` that we read above
-        let tag_count_byte_size = if bigtiff { 8 } else { 2 };
-
-        // Reset the cursor position before reading the next ifd offset
-        cursor.seek(ifd_start + (ifd_entry_byte_size * tag_count) + tag_count_byte_size);
-
-        let next_ifd_offset = if bigtiff {
-            cursor.read_u64().await?
-        } else {
-            cursor.read_u32().await?.into()
-        };
-
-        // If the ifd_offset is 0, stop
-        let next_ifd_offset = if next_ifd_offset == 0 {
-            None
-        } else {
-            Some(next_ifd_offset)
-        };
-
-        Self::from_tags(tags, next_ifd_offset)
-    }
-
-    fn next_ifd_offset(&self) -> Option<u64> {
-        self.next_ifd_offset
-    }
-
-    fn from_tags(
-        mut tag_data: HashMap<Tag, Value>,
-        next_ifd_offset: Option<u64>,
-    ) -> AsyncTiffResult<Self> {
+    /// Create a new ImageFileDirectory from tag data
+    pub fn from_tags(tag_data: HashMap<Tag, Value>) -> AsyncTiffResult<Self> {
         let mut new_subfile_type = None;
         let mut image_width = None;
         let mut image_height = None;
@@ -281,7 +185,10 @@ impl ImageFileDirectory {
 
         let mut other_tags = HashMap::new();
 
-        tag_data.drain().try_for_each(|(tag, value)| {
+        // for x in tag_data.into_iter() {
+
+        // }
+        tag_data.into_iter().try_for_each(|(tag, value)| {
             match tag {
                 Tag::NewSubfileType => new_subfile_type = Some(value.into_u32()?),
                 Tag::ImageWidth => image_width = Some(value.into_u32()?),
@@ -485,7 +392,6 @@ impl ImageFileDirectory {
             model_pixel_scale,
             model_tiepoint,
             other_tags,
-            next_ifd_offset,
         })
     }
 
@@ -779,7 +685,7 @@ impl ImageFileDirectory {
         let range = self
             .get_tile_byte_range(x, y)
             .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
-        let compressed_bytes = reader.get_image_bytes(range).await?;
+        let compressed_bytes = reader.get_bytes(range).await?;
         Ok(Tile {
             x,
             y,
@@ -809,8 +715,8 @@ impl ImageFileDirectory {
             })
             .collect::<AsyncTiffResult<Vec<_>>>()?;
 
-        // 2: Fetch using `get_image_byte_ranges`
-        let buffers = reader.get_image_byte_ranges(byte_ranges).await?;
+        // 2: Fetch using `get_byte_ranges`
+        let buffers = reader.get_byte_ranges(byte_ranges).await?;
 
         // 3: Create tile objects
         let mut tiles = vec![];

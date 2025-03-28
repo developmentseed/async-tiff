@@ -115,15 +115,11 @@ struct ObspecReader {
 }
 
 impl AsyncFileReader for ObspecReader {
-    fn get_metadata_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         self.backend.get_range_wrapper(&self.path, range).boxed()
     }
 
-    fn get_image_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.backend.get_range_wrapper(&self.path, range).boxed()
-    }
-
-    fn get_image_byte_ranges(
+    fn get_byte_ranges(
         &self,
         ranges: Vec<Range<u64>>,
     ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {

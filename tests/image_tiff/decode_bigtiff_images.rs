@@ -13,7 +13,7 @@ async fn test_big_tiff() {
     ];
     for filename in filenames.iter() {
         let tiff = open_tiff(filename).await;
-        let ifd = &tiff.ifds().as_ref()[0];
+        let ifd = &tiff.ifds()[0];
         assert_eq!(ifd.image_height(), 64);
         assert_eq!(ifd.image_width(), 64);
         assert_eq!(
