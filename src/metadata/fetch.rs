@@ -117,7 +117,7 @@ impl<'a, F: MetadataFetch + Send + Sync> PrefetchBuffer<'a, F> {
     }
 }
 
-impl<'a, F: MetadataFetch + Send + Sync> MetadataFetch for PrefetchBuffer<'a, F> {
+impl<F: MetadataFetch + Send + Sync> MetadataFetch for PrefetchBuffer<'_, F> {
     fn fetch(&mut self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         if range.end <= self.buffer_length() as _ {
             async { Ok(self.buffer_slice(range)) }.boxed()

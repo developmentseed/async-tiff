@@ -109,7 +109,7 @@ impl TiffMetadataReader {
     /// If there are no more IFDs, returns `None`.
     pub async fn read_next_ifd<F: MetadataFetch>(
         &mut self,
-        fetch: &F,
+        fetch: &mut F,
     ) -> AsyncTiffResult<Option<ImageFileDirectory>> {
         if let Some(ifd_start) = self.next_ifd_offset {
             let ifd_reader =
@@ -127,7 +127,7 @@ impl TiffMetadataReader {
     /// Read all IFDs from the file.
     pub async fn read_all_ifds<F: MetadataFetch>(
         &mut self,
-        fetch: &F,
+        fetch: &mut F,
     ) -> AsyncTiffResult<Vec<ImageFileDirectory>> {
         let mut ifds = vec![];
         while let Some(ifd) = self.read_next_ifd(fetch).await? {
@@ -162,7 +162,7 @@ pub struct ImageFileDirectoryReader {
 impl ImageFileDirectoryReader {
     /// Read and parse the IFD starting at the given file offset
     pub async fn open<F: MetadataFetch>(
-        fetch: &F,
+        fetch: &mut F,
         ifd_start_offset: u64,
         bigtiff: bool,
         endianness: Endianness,
@@ -205,7 +205,7 @@ impl ImageFileDirectoryReader {
     /// [`ImageFileDirectory::from_tags`] on the resulting collection of tags.
     pub async fn read_tag<F: MetadataFetch>(
         &self,
-        fetch: &F,
+        fetch: &mut F,
         tag_idx: u64,
     ) -> AsyncTiffResult<(Tag, Value)> {
         assert!(tag_idx < self.tag_count);
@@ -220,7 +220,10 @@ impl ImageFileDirectoryReader {
     ///
     /// Keep in mind that you'll still need to call [`finish`][Self::finish] to get the byte offset
     /// of the next IFD.
-    pub async fn read<F: MetadataFetch>(&self, fetch: &F) -> AsyncTiffResult<ImageFileDirectory> {
+    pub async fn read<F: MetadataFetch>(
+        &self,
+        fetch: &mut F,
+    ) -> AsyncTiffResult<ImageFileDirectory> {
         let mut tags = HashMap::with_capacity(self.tag_count as usize);
         for tag_idx in 0..self.tag_count {
             let (tag, value) = self.read_tag(fetch, tag_idx).await?;
@@ -230,7 +233,7 @@ impl ImageFileDirectoryReader {
     }
 
     /// Finish this reader, reading the byte offset of the next IFD
-    pub async fn finish<F: MetadataFetch>(self, fetch: &F) -> AsyncTiffResult<Option<u64>> {
+    pub async fn finish<F: MetadataFetch>(self, fetch: &mut F) -> AsyncTiffResult<Option<u64>> {
         // The byte offset for reading the next ifd
         let next_ifd_byte_offset = self.ifd_start_offset
             + self.tag_count_byte_size
@@ -255,7 +258,7 @@ impl ImageFileDirectoryReader {
 
 /// Read a single tag from the cursor
 async fn read_tag<F: MetadataFetch>(
-    fetch: &F,
+    fetch: &mut F,
     tag_offset: u64,
     endianness: Endianness,
     bigtiff: bool,
