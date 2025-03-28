@@ -35,7 +35,8 @@ pub struct PrefetchBuffer<'a, F: MetadataFetch + Send + Sync> {
     /// Invariant: buffers are monotonically increasing buffers starting at the beginning of the
     /// file
     buffers: Vec<Bytes>,
-    /// The exponent used for deciding how much more data to fetch on overflow of the existing buffer.
+    /// The exponent used for deciding how much more data to fetch on overflow of the existing
+    /// buffer.
     ///
     /// buffer_length ^ fetch_exponent
     overflow_fetch_exponent: f64,
@@ -43,17 +44,22 @@ pub struct PrefetchBuffer<'a, F: MetadataFetch + Send + Sync> {
 
 impl<'a, F: MetadataFetch + Send + Sync> PrefetchBuffer<'a, F> {
     /// Construct a new PrefetchBuffer, catching the first `prefetch` bytes of the file.
-    pub async fn new(
-        fetch: &'a mut F,
-        prefetch: u64,
-        overflow_fetch_exponent: f64,
-    ) -> AsyncTiffResult<Self> {
+    pub async fn new(fetch: &'a mut F, prefetch: u64) -> AsyncTiffResult<Self> {
         let buffer = fetch.fetch(0..prefetch).await?;
         Ok(Self {
             fetch,
             buffers: vec![buffer],
-            overflow_fetch_exponent,
+            overflow_fetch_exponent: 1.5,
         })
+    }
+
+    /// Set the exponent used for deciding how much more data to fetch on overflow of the existing
+    /// buffer.
+    pub fn with_overflow_fetch_exponent(self, overflow_fetch_exponent: f64) -> Self {
+        Self {
+            overflow_fetch_exponent,
+            ..self
+        }
     }
 
     /// Expand the length of buffers that have been pre-fetched
@@ -255,7 +261,10 @@ mod test {
         let mut reader = TestAsyncFileReader {
             buffer: Bytes::from_static(underlying_buffer),
         };
-        let mut prefetch_reader = PrefetchBuffer::new(&mut reader, 5, 1.).await.unwrap();
+        let mut prefetch_reader = PrefetchBuffer::new(&mut reader, 5)
+            .await
+            .unwrap()
+            .with_overflow_fetch_exponent(1.);
 
         // Cached
         assert_eq!(prefetch_reader.fetch(0..3).await.unwrap().as_ref(), b"abc");

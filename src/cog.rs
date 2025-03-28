@@ -38,9 +38,7 @@ mod test {
         let path = object_store::path::Path::parse("m_4007307_sw_18_060_20220803.tif").unwrap();
         let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
         let mut reader = ObjectReader::new(store, path);
-        let mut prefetch_reader = PrefetchBuffer::new(&mut reader, 32 * 1024, 1.5)
-            .await
-            .unwrap();
+        let mut prefetch_reader = PrefetchBuffer::new(&mut reader, 32 * 1024).await.unwrap();
 
         let mut metadata_reader = TiffMetadataReader::try_open(&mut prefetch_reader)
             .await
