@@ -680,7 +680,7 @@ impl ImageFileDirectory {
         &self,
         x: usize,
         y: usize,
-        reader: &dyn AsyncFileReader,
+        reader: &mut dyn AsyncFileReader,
     ) -> AsyncTiffResult<Tile> {
         let range = self
             .get_tile_byte_range(x, y)
@@ -701,7 +701,7 @@ impl ImageFileDirectory {
         &self,
         x: &[usize],
         y: &[usize],
-        reader: &dyn AsyncFileReader,
+        reader: &mut dyn AsyncFileReader,
     ) -> AsyncTiffResult<Vec<Tile>> {
         assert_eq!(x.len(), y.len(), "x and y should have same len");
 

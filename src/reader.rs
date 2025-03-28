@@ -33,12 +33,12 @@ pub trait AsyncFileReader: Debug + Send + Sync {
     /// Retrieve the bytes in `range` as part of a request for image data, not header metadata.
     ///
     /// This is also used as the default implementation of [`MetadataFetch`] if not overridden.
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>>;
+    fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>>;
 
     /// Retrieve multiple byte ranges as part of a request for image data, not header metadata. The
     /// default implementation will call `get_bytes` sequentially
     fn get_byte_ranges(
-        &self,
+        &mut self,
         ranges: Vec<Range<u64>>,
     ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
         async move {
@@ -57,83 +57,49 @@ pub trait AsyncFileReader: Debug + Send + Sync {
 
 /// This allows Box<dyn AsyncFileReader + '_> to be used as an AsyncFileReader,
 impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.as_ref().get_bytes(range)
+    fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        self.as_mut().get_bytes(range)
     }
 
     fn get_byte_ranges(
-        &self,
+        &mut self,
         ranges: Vec<Range<u64>>,
     ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
-        self.as_ref().get_byte_ranges(ranges)
-    }
-}
-
-/// This allows Arc<dyn AsyncFileReader + '_> to be used as an AsyncFileReader,
-impl AsyncFileReader for Arc<dyn AsyncFileReader + '_> {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.as_ref().get_bytes(range)
-    }
-
-    fn get_byte_ranges(
-        &self,
-        ranges: Vec<Range<u64>>,
-    ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
-        self.as_ref().get_byte_ranges(ranges)
-    }
-}
-
-/// A wrapper for things that implement [AsyncRead] and [AsyncSeek] to also implement
-/// [AsyncFileReader].
-///
-/// This wrapper is needed because `AsyncRead` and `AsyncSeek` require mutable access to seek and
-/// read data, while the `AsyncFileReader` trait requires immutable access to read data.
-///
-/// This wrapper stores the inner reader in a `Mutex`.
-///
-/// [AsyncRead]: tokio::io::AsyncRead
-/// [AsyncSeek]: tokio::io::AsyncSeek
-#[cfg(feature = "tokio")]
-#[derive(Debug)]
-pub struct TokioReader<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug>(
-    tokio::sync::Mutex<T>,
-);
-
-#[cfg(feature = "tokio")]
-impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> TokioReader<T> {
-    /// Create a new TokioReader from a reader.
-    pub fn new(inner: T) -> Self {
-        Self(tokio::sync::Mutex::new(inner))
-    }
-
-    async fn make_range_request(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
-        use std::io::SeekFrom;
-        use tokio::io::{AsyncReadExt, AsyncSeekExt};
-
-        use crate::error::AsyncTiffError;
-
-        let mut file = self.0.lock().await;
-
-        file.seek(SeekFrom::Start(range.start)).await?;
-
-        let to_read = range.end - range.start;
-        let mut buffer = Vec::with_capacity(to_read as usize);
-        let read = file.read(&mut buffer).await? as u64;
-        if read != to_read {
-            return Err(AsyncTiffError::EndOfFile(to_read, read));
-        }
-
-        Ok(buffer.into())
+        self.as_mut().get_byte_ranges(ranges)
     }
 }
 
 #[cfg(feature = "tokio")]
-impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> AsyncFileReader
-    for TokioReader<T>
+impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Sync + Debug> AsyncFileReader
+    for T
 {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.make_range_request(range).boxed()
+    fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+        make_tokio_range_request(self, range).boxed()
     }
+}
+
+#[cfg(feature = "tokio")]
+async fn make_tokio_range_request<
+    T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Sync + Debug,
+>(
+    file: &mut T,
+    range: Range<u64>,
+) -> AsyncTiffResult<Bytes> {
+    use std::io::SeekFrom;
+    use tokio::io::{AsyncReadExt, AsyncSeekExt};
+
+    use crate::error::AsyncTiffError;
+
+    file.seek(SeekFrom::Start(range.start)).await?;
+
+    let to_read = range.end - range.start;
+    let mut buffer = Vec::with_capacity(to_read as usize);
+    let read = file.read(&mut buffer).await? as u64;
+    if read != to_read {
+        return Err(AsyncTiffError::EndOfFile(to_read, read));
+    }
+
+    Ok(buffer.into())
 }
 
 /// An AsyncFileReader that reads from an [`ObjectStore`] instance.
@@ -164,11 +130,14 @@ impl ObjectReader {
 
 #[cfg(feature = "object_store")]
 impl AsyncFileReader for ObjectReader {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+    fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         self.make_range_request(range).boxed()
     }
 
-    fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>>
+    fn get_byte_ranges(
+        &mut self,
+        ranges: Vec<Range<u64>>,
+    ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>>
     where
         Self: Send,
     {
@@ -222,7 +191,7 @@ impl ReqwestReader {
 
 #[cfg(feature = "reqwest")]
 impl AsyncFileReader for ReqwestReader {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+    fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         self.make_range_request(range)
     }
 }
