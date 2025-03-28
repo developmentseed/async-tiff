@@ -31,7 +31,7 @@ impl TiffMetadataReader {
     /// the bigtiff flag.
     ///
     /// This does not read any IFD metadata.
-    pub async fn try_open<F: MetadataFetch>(fetch: &F) -> AsyncTiffResult<Self> {
+    pub async fn try_open<F: MetadataFetch>(fetch: &mut F) -> AsyncTiffResult<Self> {
         let magic_bytes = fetch.fetch(0..2).await?;
 
         // Should be b"II" for little endian or b"MM" for big endian

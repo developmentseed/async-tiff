@@ -9,7 +9,7 @@ use crate::geo::{GeoKeyDirectory, GeoKeyTag};
 use crate::reader::AsyncFileReader;
 use crate::tiff::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
-    SampleFormat, Tag,
+    SampleFormat, Tag, Type,
 };
 use crate::tiff::{TiffError, Value};
 use crate::tile::Tile;

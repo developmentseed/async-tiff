@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use bytes::buf::Reader;
-use bytes::{Buf, Bytes, BytesMut};
+use bytes::{Buf, Bytes};
 use futures::future::{BoxFuture, FutureExt};
 use futures::TryFutureExt;
 
@@ -69,26 +69,12 @@ impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
     }
 }
 
-/// This allows Arc<dyn AsyncFileReader + '_> to be used as an AsyncFileReader,
-impl AsyncFileReader for Arc<dyn AsyncFileReader + '_> {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.as_ref().get_bytes(range)
-    }
-
-    fn get_byte_ranges(
-        &self,
-        ranges: Vec<Range<u64>>,
-    ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
-        self.as_ref().get_byte_ranges(ranges)
-    }
-}
-
 #[cfg(feature = "tokio")]
 impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Sync + Debug> AsyncFileReader
     for T
 {
     fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.make_range_request(range).boxed()
+        make_tokio_range_request(self, range).boxed()
     }
 }
 
@@ -101,6 +87,8 @@ async fn make_tokio_range_request<
 ) -> AsyncTiffResult<Bytes> {
     use std::io::SeekFrom;
     use tokio::io::{AsyncReadExt, AsyncSeekExt};
+
+    use crate::error::AsyncTiffError;
 
     file.seek(SeekFrom::Start(range.start)).await?;
 
@@ -208,123 +196,6 @@ impl AsyncFileReader for ReqwestReader {
     }
 }
 
-/// An AsyncFileReader that caches the first `prefetch` bytes of a file.
-#[derive(Debug)]
-pub struct PrefetchReader {
-    reader: Box<dyn AsyncFileReader>,
-    /// Invariant: buffers are monotonically increasing buffers starting at the beginning of the
-    /// file
-    buffers: Vec<Bytes>,
-    /// The exponent used for deciding how much more data to fetch on overflow of the existing buffer.
-    ///
-    /// buffer_length ^ fetch_exponent
-    overflow_fetch_exponent: f64,
-}
-
-impl PrefetchReader {
-    /// Construct a new PrefetchReader, catching the first `prefetch` bytes of the file.
-    pub async fn new(
-        mut reader: Box<dyn AsyncFileReader>,
-        prefetch: u64,
-        overflow_fetch_exponent: f64,
-    ) -> AsyncTiffResult<Self> {
-        let buffer = reader.get_metadata_bytes(0..prefetch).await?;
-        Ok(Self {
-            reader,
-            buffers: vec![buffer],
-            overflow_fetch_exponent,
-        })
-    }
-
-    /// Expand the length of buffers that have been pre-fetched
-    ///
-    /// Returns the desired range and adds it to the cached buffers.
-    async fn expand_prefetch(&mut self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
-        let existing_buffer_length = self.buffer_length() as u64;
-        let additional_fetch =
-            (existing_buffer_length as f64).powf(self.overflow_fetch_exponent) as u64;
-
-        // Make sure that we fetch at least the entire desired range
-        let new_range =
-            existing_buffer_length..range.end.max(existing_buffer_length + additional_fetch);
-        let buffer = self.reader.get_metadata_bytes(new_range).await?;
-        self.buffers.push(buffer);
-
-        // Now extract the desired slice range
-        Ok(self.buffer_slice(range))
-    }
-
-    /// The length of all cached buffers
-    fn buffer_length(&self) -> usize {
-        self.buffers.iter().fold(0, |acc, x| acc + x.len())
-    }
-
-    /// Access the buffer range out of the cached buffers
-    ///
-    /// ## Panics
-    ///
-    /// If the range does not fall completely within the pre-cached buffers.
-    fn buffer_slice(&self, range: Range<u64>) -> Bytes {
-        // Slices of the underlying cached buffers
-        let mut output_buffers: Vec<Bytes> = vec![];
-
-        // A counter that describes the global start of the currently-iterated `buf`
-        let mut global_byte_offset: u64 = 0;
-
-        for buf in self.buffers.iter() {
-            // Subtract off the global_byte_offset and then see if it overlaps the current buffer
-            let local_range =
-                range.start.saturating_sub(global_byte_offset)..range.end - global_byte_offset;
-
-            if ranges_overlap(&local_range, &(0..buf.len() as u64)) {
-                let start = local_range.start as usize;
-                let end = (local_range.end as usize).min(buf.len());
-                output_buffers.push(buf.slice(start..end));
-            }
-
-            global_byte_offset += buf.len() as u64;
-        }
-
-        if output_buffers.len() == 1 {
-            output_buffers.into_iter().next().unwrap()
-        } else {
-            let mut result = BytesMut::with_capacity(range.end as usize - range.start as usize);
-            for output_buf in output_buffers.into_iter() {
-                result.extend_from_slice(&output_buf);
-            }
-            result.freeze()
-        }
-    }
-}
-
-impl AsyncFileReader for PrefetchReader {
-    fn get_metadata_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        if range.end <= self.buffer_length() as _ {
-            async { Ok(self.buffer_slice(range)) }.boxed()
-        } else {
-            self.expand_prefetch(range).boxed()
-        }
-    }
-
-    fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        // In practice, get_image_bytes is only used for fetching tiles, which are unlikely
-        // to overlap a metadata prefetch.
-        self.reader.get_bytes(range)
-    }
-
-    fn get_image_byte_ranges(
-        &mut self,
-        ranges: Vec<Range<u64>>,
-    ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>>
-    where
-        Self: Send,
-    {
-        // In practice, get_image_byte_ranges is only used for fetching tiles, which are unlikely
-        // to overlap a metadata prefetch.
-        self.reader.get_image_byte_ranges(ranges)
-    }
-}
-
 /// Endianness
 #[derive(Debug, Clone, Copy)]
 pub enum Endianness {
@@ -428,105 +299,5 @@ impl AsRef<[u8]> for EndianAwareReader {
 impl Read for EndianAwareReader {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.reader.read(buf)
-    }
-}
-
-// https://stackoverflow.com/a/12888920
-fn ranges_overlap(r1: &Range<u64>, r2: &Range<u64>) -> bool {
-    r1.start.max(r2.start) <= r1.end.min(r2.end)
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[derive(Debug)]
-    struct TestAsyncFileReader {
-        buffer: Bytes,
-    }
-
-    impl TestAsyncFileReader {
-        async fn get_range(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
-            assert!(range.start < self.buffer.len() as _);
-            let end = range.end.min(self.buffer.len() as _);
-            Ok(self.buffer.slice(range.start as usize..end as usize))
-        }
-    }
-
-    impl AsyncFileReader for TestAsyncFileReader {
-        fn get_metadata_bytes(
-            &mut self,
-            range: Range<u64>,
-        ) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-            self.get_range(range).boxed()
-        }
-
-        fn get_image_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-            self.get_range(range).boxed()
-        }
-    }
-
-    #[tokio::test]
-    async fn test_prefetch_overflow() {
-        let underlying_buffer = b"abcdefghijklmno";
-        let reader = TestAsyncFileReader {
-            buffer: Bytes::from_static(underlying_buffer),
-        };
-        let mut prefetch_reader = PrefetchReader::new(Box::new(reader), 5, 1.).await.unwrap();
-
-        // Cached
-        assert_eq!(
-            prefetch_reader
-                .get_metadata_bytes(0..3)
-                .await
-                .unwrap()
-                .as_ref(),
-            b"abc"
-        );
-
-        // Cached
-        assert_eq!(
-            prefetch_reader
-                .get_metadata_bytes(0..5)
-                .await
-                .unwrap()
-                .as_ref(),
-            b"abcde"
-        );
-
-        // Expand fetch
-        assert_eq!(
-            prefetch_reader
-                .get_metadata_bytes(0..10)
-                .await
-                .unwrap()
-                .as_ref(),
-            b"abcdefghij"
-        );
-
-        // Cached
-        assert_eq!(
-            prefetch_reader
-                .get_metadata_bytes(0..10)
-                .await
-                .unwrap()
-                .as_ref(),
-            b"abcdefghij"
-        );
-
-        // Cached
-        assert_eq!(
-            prefetch_reader
-                .get_metadata_bytes(0..15)
-                .await
-                .unwrap()
-                .as_ref(),
-            underlying_buffer
-        );
-
-        // Assert underlying buffers were cached
-        assert_eq!(prefetch_reader.buffers[0].as_ref(), b"abcde");
-        assert_eq!(prefetch_reader.buffers[1].as_ref(), b"fghij");
-        assert_eq!(prefetch_reader.buffers[2].as_ref(), b"klmno");
     }
 }
