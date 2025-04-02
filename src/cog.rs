@@ -25,7 +25,7 @@ mod test {
 
     use crate::decoder::DecoderRegistry;
     use crate::metadata::{PrefetchBuffer, TiffMetadataReader};
-    use crate::reader::{AsyncFileReader, ObjectReader};
+    use crate::reader::ObjectReader;
 
     use super::*;
     use object_store::local::LocalFileSystem;
@@ -37,22 +37,21 @@ mod test {
         let folder = "/Users/kyle/github/developmentseed/async-tiff/";
         let path = object_store::path::Path::parse("m_4007307_sw_18_060_20220803.tif").unwrap();
         let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
-        let reader = Arc::new(ObjectReader::new(store, path)) as Arc<dyn AsyncFileReader>;
-        let prefetch_reader = PrefetchBuffer::new(reader.clone(), 32 * 1024)
-            .await
-            .unwrap();
-        let mut metadata_reader = TiffMetadataReader::try_open(&prefetch_reader)
+        let mut reader = ObjectReader::new(store, path);
+        let mut prefetch_reader = PrefetchBuffer::new(&mut reader, 32 * 1024).await.unwrap();
+
+        let mut metadata_reader = TiffMetadataReader::try_open(&mut prefetch_reader)
             .await
             .unwrap();
         let ifds = metadata_reader
-            .read_all_ifds(&prefetch_reader)
+            .read_all_ifds(&mut prefetch_reader)
             .await
             .unwrap();
         let tiff = TIFF::new(ifds);
 
         let ifd = &tiff.ifds[1];
         let decoder_registry = DecoderRegistry::default();
-        let tile = ifd.fetch_tile(0, 0, reader.as_ref()).await.unwrap();
+        let tile = ifd.fetch_tile(0, 0, &mut reader).await.unwrap();
         let tile = tile.decode(&decoder_registry).unwrap();
         std::fs::write("img.buf", tile).unwrap();
     }

@@ -1,5 +1,4 @@
 use std::ops::Range;
-use std::sync::Arc;
 
 use async_tiff::error::{AsyncTiffError, AsyncTiffResult};
 use async_tiff::reader::{AsyncFileReader, ObjectReader};
@@ -21,12 +20,12 @@ pub(crate) enum StoreInput {
 }
 
 impl StoreInput {
-    pub(crate) fn into_async_file_reader(self, path: String) -> Arc<dyn AsyncFileReader> {
+    pub(crate) fn into_async_file_reader(self, path: String) -> Box<dyn AsyncFileReader> {
         match self {
             Self::ObjectStore(store) => {
-                Arc::new(ObjectReader::new(store.into_inner(), path.into()))
+                Box::new(ObjectReader::new(store.into_inner(), path.into()))
             }
-            Self::ObspecBackend(backend) => Arc::new(ObspecReader { backend, path }),
+            Self::ObspecBackend(backend) => Box::new(ObspecReader { backend, path }),
         }
     }
 }
@@ -115,12 +114,12 @@ struct ObspecReader {
 }
 
 impl AsyncFileReader for ObspecReader {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+    fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         self.backend.get_range_wrapper(&self.path, range).boxed()
     }
 
     fn get_byte_ranges(
-        &self,
+        &mut self,
         ranges: Vec<Range<u64>>,
     ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
         self.backend.get_ranges_wrapper(&self.path, ranges).boxed()

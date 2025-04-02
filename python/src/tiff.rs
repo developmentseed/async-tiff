@@ -15,7 +15,7 @@ use crate::PyImageFileDirectory;
 #[pyclass(name = "TIFF", frozen)]
 pub(crate) struct PyTIFF {
     tiff: TIFF,
-    reader: Arc<dyn AsyncFileReader>,
+    reader: Box<dyn AsyncFileReader>,
 }
 
 #[pymethods]
@@ -29,13 +29,15 @@ impl PyTIFF {
         store: StoreInput,
         prefetch: u64,
     ) -> PyResult<Bound<'py, PyAny>> {
-        let reader = store.into_async_file_reader(path);
+        let mut reader = store.into_async_file_reader(path);
 
         let cog_reader = future_into_py(py, async move {
-            let metadata_fetch = PrefetchBuffer::new(reader.clone(), prefetch).await.unwrap();
-            let mut metadata_reader = TiffMetadataReader::try_open(&metadata_fetch).await.unwrap();
+            let mut metadata_fetch = PrefetchBuffer::new(&mut reader, prefetch).await.unwrap();
+            let mut metadata_reader = TiffMetadataReader::try_open(&mut metadata_fetch)
+                .await
+                .unwrap();
             let ifds = metadata_reader
-                .read_all_ifds(&metadata_fetch)
+                .read_all_ifds(&mut metadata_fetch)
                 .await
                 .unwrap();
             let tiff = TIFF::new(ifds);
@@ -57,7 +59,7 @@ impl PyTIFF {
         y: usize,
         z: usize,
     ) -> PyResult<Bound<'py, PyAny>> {
-        let reader = self.reader.clone();
+        let reader = &self.reader;
         let ifd = self
             .tiff
             .ifds()
@@ -67,7 +69,7 @@ impl PyTIFF {
             // TODO: avoid this clone; add Arc to underlying rust code?
             .clone();
         future_into_py(py, async move {
-            let tile = ifd.fetch_tile(x, y, reader.as_ref()).await.unwrap();
+            let tile = ifd.fetch_tile(x, y, reader.as_mut()).await.unwrap();
             Ok(PyTile::new(tile))
         })
     }
