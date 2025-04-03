@@ -9,6 +9,7 @@ use std::sync::Arc;
 use jpeg::UnsupportedFeature;
 
 use super::ifd::Value;
+use super::tags::Predictor;
 use super::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, SampleFormat, Tag,
 };
@@ -152,6 +153,7 @@ pub enum TiffUnsupportedError {
     UnknownInterpretation,
     UnknownCompressionMethod,
     UnsupportedCompressionMethod(CompressionMethod),
+    UnsupportedPredictor(Predictor),
     UnsupportedSampleDepth(u8),
     UnsupportedSampleFormat(Vec<SampleFormat>),
     // UnsupportedColorType(ColorType),
@@ -192,6 +194,9 @@ impl fmt::Display for TiffUnsupportedError {
             UnknownCompressionMethod => write!(fmt, "Unknown compression method."),
             UnsupportedCompressionMethod(method) => {
                 write!(fmt, "Compression method {:?} is unsupported", method)
+            }
+            UnsupportedPredictor(p) => {
+                write!(fmt, "Predictor {p:?} is not supported")
             }
             UnsupportedSampleDepth(samples) => {
                 write!(fmt, "{} samples per pixel is unsupported.", samples)

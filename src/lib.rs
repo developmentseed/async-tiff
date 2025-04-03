@@ -9,6 +9,7 @@ pub mod error;
 pub mod geo;
 mod ifd;
 pub mod metadata;
+pub mod predictor;
 pub mod tiff;
 mod tile;
 

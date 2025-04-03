@@ -15,6 +15,10 @@ pub enum AsyncTiffError {
     #[error("General error: {0}")]
     General(String),
 
+    /// Tile index error
+    #[error("Tile index out of bounds: {0}, {1}")]
+    TileIndexError(u32, u32),
+
     /// IO Error.
     #[error(transparent)]
     IOError(#[from] std::io::Error),

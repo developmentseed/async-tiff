@@ -226,7 +226,7 @@ impl ImageFileDirectoryReader {
             let (tag, value) = self.read_tag(fetch, tag_idx).await?;
             tags.insert(tag, value);
         }
-        ImageFileDirectory::from_tags(tags)
+        ImageFileDirectory::from_tags(tags, self.endianness)
     }
 
     /// Finish this reader, reading the byte offset of the next IFD
@@ -623,10 +623,13 @@ async fn read_tag_value<F: MetadataFetch>(
 
 #[cfg(test)]
 mod test {
+    use crate::{
+        metadata::{reader::read_tag, MetadataFetch},
+        reader::Endianness,
+        tiff::{tags::Tag, Value},
+    };
     use bytes::Bytes;
     use futures::FutureExt;
-
-    use super::*;
 
     impl MetadataFetch for Bytes {
         fn fetch(
