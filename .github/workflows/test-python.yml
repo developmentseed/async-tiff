@@ -56,10 +56,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install a specific version of uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v6
         with:
-          enable-cache: true
-          version: "0.5.x"
+          version: "latest"
 
       - name: uv sync
         working-directory: python
