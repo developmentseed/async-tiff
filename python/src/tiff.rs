@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_tiff::metadata::{PrefetchBuffer, TiffMetadataReader};
 use async_tiff::reader::AsyncFileReader;
 use async_tiff::TIFF;
-use pyo3::exceptions::PyIndexError;
+use pyo3::exceptions::{PyFileNotFoundError, PyIndexError};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use pyo3_async_runtimes::tokio::future_into_py;
@@ -32,7 +32,9 @@ impl PyTIFF {
         let reader = store.into_async_file_reader(path);
 
         let cog_reader = future_into_py(py, async move {
-            let metadata_fetch = PrefetchBuffer::new(reader.clone(), prefetch).await.unwrap();
+            let metadata_fetch = PrefetchBuffer::new(reader.clone(), prefetch)
+                .await
+                .map_err(|err| PyFileNotFoundError::new_err(err.to_string()))?;
             let mut metadata_reader = TiffMetadataReader::try_open(&metadata_fetch).await.unwrap();
             let ifds = metadata_reader
                 .read_all_ifds(&metadata_fetch)
