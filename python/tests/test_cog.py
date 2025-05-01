@@ -1,6 +1,6 @@
 from time import time
 
-from async_tiff import enums, TIFF, ImageFileDirectory
+from async_tiff import TIFF, enums
 from async_tiff.store import S3Store
 
 
