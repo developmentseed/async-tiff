@@ -60,10 +60,6 @@ jobs:
         with:
           version: "latest"
 
-      - name: uv sync
-        working-directory: python
-        run: uv sync --no-install-package geoindex-rs
-
       - name: maturin venv Build
         working-directory: python
         run: uv run maturin develop
