@@ -345,7 +345,7 @@ async fn read_tag_value<F: MetadataFetch>(
             Type::BYTE | Type::UNDEFINED => Value::Byte(data.read_u8()?),
             Type::SBYTE => Value::Signed(data.read_i8()? as i32),
             Type::SHORT => Value::Short(data.read_u16()?),
-            Type::SSHORT => Value::Signed(data.read_i16()? as i32),
+            Type::SSHORT => Value::SignedShort(data.read_i16()?),
             Type::LONG => Value::Unsigned(data.read_u32()?),
             Type::SLONG => Value::Signed(data.read_i32()?),
             Type::FLOAT => Value::Float(data.read_f32()?),
@@ -446,7 +446,7 @@ async fn read_tag_value<F: MetadataFetch>(
             Type::SSHORT => {
                 let mut v = Vec::new();
                 for _ in 0..count {
-                    v.push(Value::Signed(i32::from(data.read_i16()?)));
+                    v.push(Value::SignedShort(data.read_i16()?));
                 }
                 return Ok(Value::List(v));
             }
