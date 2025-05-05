@@ -157,6 +157,7 @@ impl Value {
                 }
                 Ok(new_vec)
             }
+            Short(val) => Ok(vec![val.into()]),
             Unsigned(val) => Ok(vec![val]),
             UnsignedBig(val) => Ok(vec![u32::try_from(val)?]),
             Rational(numerator, denominator) => Ok(vec![numerator, denominator]),
