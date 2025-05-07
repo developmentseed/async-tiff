@@ -659,8 +659,8 @@ mod test {
         ([1,1, 0, 2, 0,0,0,1,  0, 0, 0, 0], Endianness::BigEndian,    Value::Ascii     ("".into()         )),
         ([1,1, 3, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::Short       (42              )),
         ([1,1, 0, 3, 0,0,0,1,  0,42, 0, 0], Endianness::BigEndian,    Value::Short       (42              )),
-        ([1,1, 8, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::SignedShort (42              )), // signedshort
-        ([1,1, 0, 8, 0,0,0,1,  0,42, 0, 0], Endianness::BigEndian,    Value::SignedShort (42              )), // signedshort
+        ([1,1, 8, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::SignedShort (42              )),
+        ([1,1, 0, 8, 0,0,0,1,  0,42, 0, 0], Endianness::BigEndian,    Value::SignedShort (42              )),
         ([1,1, 4, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::Unsigned  (42                )),
         ([1,1, 0, 4, 0,0,0,1,  0, 0, 0,42], Endianness::BigEndian,    Value::Unsigned  (42                )),
         ([1,1, 9, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::Signed    (42                )),
@@ -702,8 +702,8 @@ mod test {
         ([1,1,  0, 2, 0,0,0,0,0,0,0,1,  0, 0, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    Value::Ascii      ("".into())         ),
         ([1,1,  3, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::Short      (42)                ),
         ([1,1,  0, 3, 0,0,0,0,0,0,0,1,  0,42, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    Value::Short      (42)                ),
-        ([1,1,  8, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::SignedShort(42)                ),  //sshort
-        ([1,1,  0, 8, 0,0,0,0,0,0,0,1,  0,42, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    Value::SignedShort(42)                ),  //sshort
+        ([1,1,  8, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::SignedShort(42)                ),
+        ([1,1,  0, 8, 0,0,0,0,0,0,0,1,  0,42, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    Value::SignedShort(42)                ),
         ([1,1,  4, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::Unsigned   (42)                ),
         ([1,1,  0, 4, 0,0,0,0,0,0,0,1,  0, 0, 0,42, 0, 0, 0, 0], Endianness::BigEndian,    Value::Unsigned   (42)                ),
         ([1,1,  9, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::Signed     (42)                ),
@@ -757,8 +757,8 @@ mod test {
         ([1,1, 0, 2, 0,0,0,4, 42,42,42, 0], Endianness::BigEndian,    Value::Ascii("***".into())),
         ([1,1, 3, 0, 2,0,0,0, 42, 0,42, 0], Endianness::LittleEndian, Value::List(vec![Value::Short       (42); 2]) ),
         ([1,1, 0, 3, 0,0,0,2,  0,42, 0,42], Endianness::BigEndian,    Value::List(vec![Value::Short       (42); 2]) ),
-        ([1,1, 8, 0, 2,0,0,0, 42, 0,42, 0], Endianness::LittleEndian, Value::List(vec![Value::SignedShort (42); 2]) ), //sshort i16
-        ([1,1, 0, 8, 0,0,0,2,  0,42, 0,42], Endianness::BigEndian,    Value::List(vec![Value::SignedShort (42); 2]) ), //sshort i16
+        ([1,1, 8, 0, 2,0,0,0, 42, 0,42, 0], Endianness::LittleEndian, Value::List(vec![Value::SignedShort (42); 2]) ),
+        ([1,1, 0, 8, 0,0,0,2,  0,42, 0,42], Endianness::BigEndian,    Value::List(vec![Value::SignedShort (42); 2]) ),
         ([1,1, 0, 2, 0,0,0,4, b'A',b'B',b'C',0], Endianness::BigEndian, Value::Ascii("ABC".into())),
         // others don't fit, neither 8-types and we special-case IFD
         ];
@@ -794,8 +794,8 @@ mod test {
         ([1,1, 0, 2, 0,0,0,0,0,0,0,8, 42,42,42,42,42,42,42, 0], Endianness::BigEndian,    Value::Ascii                      ("*******".into()       )),
         ([1,1, 3, 0, 4,0,0,0,0,0,0,0, 42, 0,42, 0,42, 0,42, 0], Endianness::LittleEndian, Value::List(vec![Value::Short       (42)              ; 4])),
         ([1,1, 0, 3, 0,0,0,0,0,0,0,4,  0,42, 0,42, 0,42, 0,42], Endianness::BigEndian,    Value::List(vec![Value::Short       (42)              ; 4])),
-        ([1,1, 8, 0, 4,0,0,0,0,0,0,0, 42, 0,42, 0,42, 0,42, 0], Endianness::LittleEndian, Value::List(vec![Value::SignedShort (42)              ; 4])), //sshort i16
-        ([1,1, 0, 8, 0,0,0,0,0,0,0,4,  0,42, 0,42, 0,42, 0,42], Endianness::BigEndian,    Value::List(vec![Value::SignedShort (42)              ; 4])), //sshort i16
+        ([1,1, 8, 0, 4,0,0,0,0,0,0,0, 42, 0,42, 0,42, 0,42, 0], Endianness::LittleEndian, Value::List(vec![Value::SignedShort (42)              ; 4])),
+        ([1,1, 0, 8, 0,0,0,0,0,0,0,4,  0,42, 0,42, 0,42, 0,42], Endianness::BigEndian,    Value::List(vec![Value::SignedShort (42)              ; 4])),
         ([1,1, 4, 0, 2,0,0,0,0,0,0,0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Unsigned  (42)                ; 2])),
         ([1,1, 0, 4, 0,0,0,0,0,0,0,2,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian,    Value::List(vec![Value::Unsigned  (42)                ; 2])),
         ([1,1, 9, 0, 2,0,0,0,0,0,0,0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Signed    (42)                ; 2])),
