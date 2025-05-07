@@ -525,7 +525,7 @@ async fn read_tag_value<F: MetadataFetch>(
         Type::SSHORT => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::Signed(cursor.read_i16().await? as i32))
+                v.push(Value::SignedShort(cursor.read_i16().await?))
             }
             Ok(Value::List(v))
         }
@@ -837,8 +837,8 @@ mod test {
         (vec![1,1, 0, 2, 0,0,0,5,  0, 0, 0,12, 42,42,42,42, 0],          Endianness::BigEndian   ,                  Value::Ascii      ("****".into()      )    ),
         (vec![1,1, 3, 0, 3,0,0,0, 12, 0, 0, 0, 42, 0,42, 0,42, 0],       Endianness::LittleEndian, Value::List(vec![Value::Short      (42                 );3])),
         (vec![1,1, 0, 3, 0,0,0,3,  0, 0, 0,12,  0,42, 0,42, 0,42],       Endianness::BigEndian   , Value::List(vec![Value::Short      (42                 );3])),
-        (vec![1,1, 8, 0, 3,0,0,0, 12, 0, 0, 0, 42, 0,42, 0,42, 0],       Endianness::LittleEndian, Value::List(vec![Value::Signed     (42                 );3])), // Type::SSHORT    ),
-        (vec![1,1, 0, 8, 0,0,0,3,  0, 0, 0,12,  0,42, 0,42, 0,42],       Endianness::BigEndian   , Value::List(vec![Value::Signed     (42                 );3])), // Type::SSHORT    ),
+        (vec![1,1, 8, 0, 3,0,0,0, 12, 0, 0, 0, 42, 0,42, 0,42, 0],       Endianness::LittleEndian, Value::List(vec![Value::SignedShort(42                 );3])),
+        (vec![1,1, 0, 8, 0,0,0,3,  0, 0, 0,12,  0,42, 0,42, 0,42],       Endianness::BigEndian   , Value::List(vec![Value::SignedShort(42                 );3])),
         (vec![1,1, 4, 0, 2,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Unsigned   (42                 );2])),
         (vec![1,1, 0, 4, 0,0,0,2,  0, 0, 0,12,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   , Value::List(vec![Value::Unsigned   (42                 );2])),
         (vec![1,1, 9, 0, 2,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Signed     (42                 );2])),
@@ -891,8 +891,8 @@ mod test {
         (vec![1,1,  0, 2, 0,0,0,0,0,0,0,9,  0, 0, 0, 0, 0, 0, 0,20, 42,42,42,42,42,42,42,42, 0],                      Endianness::BigEndian   ,                  Value::Ascii      ("********".into() )    ),
         (vec![1,1,  3, 0, 5,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0,42, 0,42, 0,42, 0,42, 0],                   Endianness::LittleEndian, Value::List(vec![Value::Short      (42                );5])),
         (vec![1,1,  0, 3, 0,0,0,0,0,0,0,5,  0, 0, 0, 0, 0, 0, 0,20,  0,42, 0,42, 0,42, 0,42, 0,42],                   Endianness::BigEndian   , Value::List(vec![Value::Short      (42                );5])),
-        (vec![1,1,  8, 0, 5,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0,42, 0,42, 0,42, 0,42, 0],                   Endianness::LittleEndian, Value::List(vec![Value::Signed     (42                );5])), //TagType::SSHORT    ),
-        (vec![1,1,  0, 8, 0,0,0,0,0,0,0,5,  0, 0, 0, 0, 0, 0, 0,20,  0,42, 0,42, 0,42, 0,42, 0,42],                   Endianness::BigEndian   , Value::List(vec![Value::Signed     (42                );5])), //TagType::SSHORT    ),
+        (vec![1,1,  8, 0, 5,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0,42, 0,42, 0,42, 0,42, 0],                   Endianness::LittleEndian, Value::List(vec![Value::SignedShort(42                );5])),
+        (vec![1,1,  0, 8, 0,0,0,0,0,0,0,5,  0, 0, 0, 0, 0, 0, 0,20,  0,42, 0,42, 0,42, 0,42, 0,42],                   Endianness::BigEndian   , Value::List(vec![Value::SignedShort(42                );5])),
         (vec![1,1,  4, 0, 3,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0],             Endianness::LittleEndian, Value::List(vec![Value::Unsigned   (42                );3])),
         (vec![1,1,  0, 4, 0,0,0,0,0,0,0,3,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42],             Endianness::BigEndian   , Value::List(vec![Value::Unsigned   (42                );3])),
         (vec![1,1,  9, 0, 3,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0],             Endianness::LittleEndian, Value::List(vec![Value::Signed     (42                );3])),
