@@ -52,6 +52,7 @@ impl Value {
 
     pub fn into_u16(self) -> TiffResult<u16> {
         match self {
+            Byte(val) => Ok(val.into()),
             Short(val) => Ok(val),
             Unsigned(val) => Ok(u16::try_from(val)?),
             UnsignedBig(val) => Ok(u16::try_from(val)?),
@@ -73,6 +74,7 @@ impl Value {
 
     pub fn into_u32(self) -> TiffResult<u32> {
         match self {
+            Byte(val) => Ok(val.into()),
             Short(val) => Ok(val.into()),
             Unsigned(val) => Ok(val),
             UnsignedBig(val) => Ok(u32::try_from(val)?),
@@ -98,6 +100,7 @@ impl Value {
 
     pub fn into_u64(self) -> TiffResult<u64> {
         match self {
+            Byte(val) => Ok(val.into()),
             Short(val) => Ok(val.into()),
             Unsigned(val) => Ok(val.into()),
             UnsignedBig(val) => Ok(val),
@@ -157,6 +160,7 @@ impl Value {
                 }
                 Ok(new_vec)
             }
+            Byte(val) => Ok(vec![val.into()]),
             Short(val) => Ok(vec![val.into()]),
             Unsigned(val) => Ok(vec![val]),
             UnsignedBig(val) => Ok(vec![u32::try_from(val)?]),
@@ -183,10 +187,7 @@ impl Value {
                 Ok(new_vec)
             }
             Byte(val) => Ok(vec![val]),
-
-            val => Err(TiffError::FormatError(
-                TiffFormatError::UnsignedIntegerExpected(val),
-            )),
+            val => Err(TiffError::FormatError(TiffFormatError::ByteExpected(val))),
         }
     }
 
@@ -199,6 +200,7 @@ impl Value {
                 }
                 Ok(new_vec)
             }
+            Byte(val) => Ok(vec![val.into()]),
             Short(val) => Ok(vec![val]),
             val => Err(TiffError::FormatError(TiffFormatError::ShortExpected(val))),
         }
