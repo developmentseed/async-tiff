@@ -2,7 +2,8 @@ use bytes::Bytes;
 
 use crate::decoder::DecoderRegistry;
 use crate::error::AsyncTiffResult;
-use crate::tiff::tags::{CompressionMethod, PhotometricInterpretation};
+use crate::predictor::{fix_endianness, unpredict_float, unpredict_hdiff, PredictorInfo};
+use crate::tiff::tags::{CompressionMethod, PhotometricInterpretation, Predictor};
 use crate::tiff::{TiffError, TiffUnsupportedError};
 
 /// A TIFF Tile response.
@@ -11,10 +12,14 @@ use crate::tiff::{TiffError, TiffUnsupportedError};
 /// so that sync and async operations can be separated and non-blocking.
 ///
 /// This is returned by `fetch_tile`.
+///
+/// A strip of a stripped tiff is an image-width, rows-per-strip tile.
 #[derive(Debug)]
 pub struct Tile {
     pub(crate) x: usize,
     pub(crate) y: usize,
+    pub(crate) predictor: Predictor,
+    pub(crate) predictor_info: PredictorInfo,
     pub(crate) compressed_bytes: Bytes,
     pub(crate) compression_method: CompressionMethod,
     pub(crate) photometric_interpretation: PhotometricInterpretation,
@@ -68,10 +73,24 @@ impl Tile {
                 TiffUnsupportedError::UnsupportedCompressionMethod(self.compression_method),
             ))?;
 
-        decoder.decode_tile(
+        let decoded_tile = decoder.decode_tile(
             self.compressed_bytes.clone(),
             self.photometric_interpretation,
             self.jpeg_tables.as_deref(),
-        )
+        )?;
+
+        match self.predictor {
+            Predictor::None => Ok(fix_endianness(
+                decoded_tile,
+                self.predictor_info.endianness(),
+                self.predictor_info.bits_per_sample(),
+            )),
+            Predictor::Horizontal => {
+                unpredict_hdiff(decoded_tile, &self.predictor_info, self.x as _)
+            }
+            Predictor::FloatingPoint => {
+                unpredict_float(decoded_tile, &self.predictor_info, self.x as _, self.y as _)
+            }
+        }
     }
 }

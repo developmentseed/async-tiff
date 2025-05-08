@@ -6,7 +6,8 @@ use num_enum::TryFromPrimitive;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult};
 use crate::geo::{GeoKeyDirectory, GeoKeyTag};
-use crate::reader::AsyncFileReader;
+use crate::predictor::PredictorInfo;
+use crate::reader::{AsyncFileReader, Endianness};
 use crate::tiff::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat, Tag,
@@ -21,6 +22,8 @@ const DOCUMENT_NAME: u16 = 269;
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct ImageFileDirectory {
+    pub(crate) endianness: Endianness,
+
     pub(crate) new_subfile_type: Option<u32>,
 
     /// The number of columns in the image, i.e., the number of pixels per row.
@@ -143,7 +146,10 @@ pub struct ImageFileDirectory {
 
 impl ImageFileDirectory {
     /// Create a new ImageFileDirectory from tag data
-    pub fn from_tags(tag_data: HashMap<Tag, Value>) -> AsyncTiffResult<Self> {
+    pub fn from_tags(
+        tag_data: HashMap<Tag, Value>,
+        endianness: Endianness,
+    ) -> AsyncTiffResult<Self> {
         let mut new_subfile_type = None;
         let mut image_width = None;
         let mut image_height = None;
@@ -349,6 +355,7 @@ impl ImageFileDirectory {
             PlanarConfiguration::Chunky
         };
         Ok(Self {
+            endianness,
             new_subfile_type,
             image_width: image_width.expect("image_width not found"),
             image_height: image_height.expect("image_height not found"),
@@ -689,6 +696,8 @@ impl ImageFileDirectory {
         Ok(Tile {
             x,
             y,
+            predictor: self.predictor.unwrap_or(Predictor::None),
+            predictor_info: PredictorInfo::from_ifd(self),
             compressed_bytes,
             compression_method: self.compression,
             photometric_interpretation: self.photometric_interpretation,
@@ -704,6 +713,8 @@ impl ImageFileDirectory {
         reader: &dyn AsyncFileReader,
     ) -> AsyncTiffResult<Vec<Tile>> {
         assert_eq!(x.len(), y.len(), "x and y should have same len");
+
+        let predictor_info = PredictorInfo::from_ifd(self);
 
         // 1: Get all the byte ranges for all tiles
         let byte_ranges = x
@@ -724,6 +735,8 @@ impl ImageFileDirectory {
             let tile = Tile {
                 x,
                 y,
+                predictor: self.predictor.unwrap_or(Predictor::None),
+                predictor_info,
                 compressed_bytes,
                 compression_method: self.compression,
                 photometric_interpretation: self.photometric_interpretation,
