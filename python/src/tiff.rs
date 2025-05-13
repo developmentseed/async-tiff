@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_tiff::metadata::{PrefetchBuffer, TiffMetadataReader};
 use async_tiff::reader::AsyncFileReader;
 use async_tiff::TIFF;
-use pyo3::exceptions::{PyFileNotFoundError, PyIndexError};
+use pyo3::exceptions::{PyFileNotFoundError, PyIndexError, PyTypeError};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use pyo3_async_runtimes::tokio::future_into_py;
@@ -69,7 +69,11 @@ impl PyTIFF {
             // TODO: avoid this clone; add Arc to underlying rust code?
             .clone();
         future_into_py(py, async move {
-            let tile = ifd.fetch_tile(x, y, reader.as_ref()).await.unwrap();
+            let tile = ifd
+                .fetch_tile(x, y, reader.as_ref())
+                .await
+                .map_err(|err| PyTypeError::new_err(err.to_string()))?;
+
             Ok(PyTile::new(tile))
         })
     }
@@ -91,7 +95,10 @@ impl PyTIFF {
             // TODO: avoid this clone; add Arc to underlying rust code?
             .clone();
         future_into_py(py, async move {
-            let tiles = ifd.fetch_tiles(&x, &y, reader.as_ref()).await.unwrap();
+            let tiles = ifd
+                .fetch_tiles(&x, &y, reader.as_ref())
+                .await
+                .map_err(|err| PyTypeError::new_err(err.to_string()))?;
             let py_tiles = tiles.into_iter().map(PyTile::new).collect::<Vec<_>>();
             Ok(py_tiles)
         })
