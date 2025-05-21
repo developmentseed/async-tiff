@@ -25,7 +25,7 @@ tokio = { version = "1.43.0", optional = true, default-features = false, feature
 weezl = "0.1.0"
 
 [dev-dependencies]
-object_store = "0.12"
+object_store = { version = "0.12", features = ["http"] }
 tiff = "0.9.1"
 tokio = { version = "1.9", features = [
     "macros",
