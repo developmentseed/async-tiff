@@ -280,7 +280,7 @@ pub(crate) fn unpredict_float(
                 64 => rev_predict_f64(in_buf, out_buf, predictor_info.samples_per_pixel as _),
                 _ => {
                     return Err(AsyncTiffError::General(format!(
-                        "thou shalt not predict f{bit_depth:?}"
+                        "No predictor support for f{bit_depth:?}"
                     )))
                 }
             }
@@ -303,7 +303,7 @@ pub(crate) fn unpredict_float(
                 64 => rev_predict_f64(in_buf, &mut out_row, predictor_info.samples_per_pixel as _),
                 _ => {
                     return Err(AsyncTiffError::General(format!(
-                        "thou shalt not predict f{bit_depth:?}"
+                        "No predictor support for f{bit_depth:?}"
                     )))
                 }
             }
