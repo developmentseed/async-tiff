@@ -1,10 +1,39 @@
-use async_tiff::tiff::tags::{
-    CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
-    SampleFormat,
+use async_tiff::{
+    reader::Endianness,
+    tiff::tags::{
+        CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor,
+        ResolutionUnit, SampleFormat,
+    },
 };
 use pyo3::prelude::*;
 use pyo3::types::{PyString, PyTuple};
 use pyo3::{intern, IntoPyObjectExt};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[pyclass(eq, eq_int, name = "Endianness")]
+#[repr(u16)]
+pub(crate) enum PyEndianness {
+    LittleEndian = 0x4949, // b"II"
+    BigEndian = 0x4D4D,    // b"MM"
+}
+
+impl From<Endianness> for PyEndianness {
+    fn from(value: Endianness) -> Self {
+        match value {
+            Endianness::LittleEndian => Self::LittleEndian,
+            Endianness::BigEndian => Self::BigEndian,
+        }
+    }
+}
+
+impl From<PyEndianness> for Endianness {
+    fn from(value: PyEndianness) -> Self {
+        match value {
+            PyEndianness::LittleEndian => Self::LittleEndian,
+            PyEndianness::BigEndian => Self::BigEndian,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct PyCompressionMethod(CompressionMethod);
