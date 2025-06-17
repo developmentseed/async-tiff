@@ -6,18 +6,23 @@ from ._thread_pool import ThreadPool
 
 class Tile:
     """A representation of a TIFF image tile."""
+
     @property
     def x(self) -> int:
         """The column index this tile represents."""
+
     @property
     def y(self) -> int:
         """The row index this tile represents."""
+
     @property
     def compressed_bytes(self) -> Buffer:
         """The compressed bytes underlying this tile."""
+
     @property
     def compression_method(self) -> CompressionMethod | int:
         """The compression method used by this tile."""
+
     async def decode_async(
         self,
         *,

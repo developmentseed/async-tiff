@@ -1,4 +1,5 @@
 from .enums import (
+    Endianness,
     CompressionMethod,
     PhotometricInterpretation,
     PlanarConfiguration,
@@ -11,6 +12,8 @@ from ._geo import GeoKeyDirectory
 Value = int | float | str | tuple[int, int] | list[Value]
 
 class ImageFileDirectory:
+    @property
+    def endianness(self) -> Endianness: ...
     @property
     def new_subfile_type(self) -> int | None: ...
     @property
@@ -30,6 +33,7 @@ class ImageFileDirectory:
         An `int` will be returned if the compression is not one of the values in
         `CompressionMethod`.
         """
+
     @property
     def photometric_interpretation(self) -> PhotometricInterpretation: ...
     @property

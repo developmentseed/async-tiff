@@ -28,6 +28,7 @@ class TIFF:
         Returns:
             A TIFF instance.
         """
+
     @property
     def ifds(self) -> list[ImageFileDirectory]:
         """Access the underlying IFDs of this TIFF.
@@ -35,6 +36,7 @@ class TIFF:
         Each ImageFileDirectory (IFD) represents one of the internal "sub images" of
         this file.
         """
+
     async def fetch_tile(self, x: int, y: int, z: int) -> Tile:
         """Fetch a single tile.
 
@@ -46,6 +48,7 @@ class TIFF:
         Returns:
             Tile response.
         """
+
     async def fetch_tiles(self, x: list[int], y: list[int], z: int) -> list[Tile]:
         """Fetch multiple tiles concurrently.
 

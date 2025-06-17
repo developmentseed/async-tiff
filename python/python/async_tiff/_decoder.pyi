@@ -5,6 +5,7 @@ from .enums import CompressionMethod
 
 class Decoder(Protocol):
     """A custom Python-provided decompression algorithm."""
+
     # In the future, we could pass in photometric interpretation and jpeg tables as
     # well.
     @staticmethod
@@ -13,6 +14,7 @@ class Decoder(Protocol):
 
 class DecoderRegistry:
     """A registry holding multiple decoder methods."""
+
     def __init__(
         self, custom_decoders: dict[CompressionMethod | int, Decoder] | None = None
     ) -> None:
