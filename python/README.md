@@ -83,4 +83,3 @@ primary_ifd.bits_per_sample[0]
 tile = await tiff.fetch_tile(0, 0, 0)
 decoded_bytes = await tile.decode_async()
 ```
-

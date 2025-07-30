@@ -1,0 +1,54 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+# Default to Python 3
+default_language_version:
+  python: python3
+
+# Optionally both commit and push
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.0
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+
+  # pre-push rust formatting, linting and testing
+  # install these "manually" with `pre-commit install -t pre-push`
+  # otherwise they are ignored
+  # https://pre-commit.com/#confining-hooks-to-run-at-certain-stages
+  - repo: local
+    hooks:
+      - id: rust-fmt
+        name: cargo fmt
+        entry: cargo fmt --all -- --check
+        language: system
+        types: [rust]
+        stages: [pre-push]
+
+      - id: rust-clippy
+        name: cargo clippy
+        entry: cargo clippy --all --all-features --tests -- -D warnings
+        language: system
+        types: [rust]
+        stages: [pre-push]
+        pass_filenames: false
+
+      - id: rust-test
+        name: cargo test
+        entry: cargo test --all --all-features
+        language: system
+        types: [rust]
+        stages: [pre-push]
+        pass_filenames: false
