@@ -40,21 +40,21 @@ impl AffineTransform {
         self.5
     }
 
-    /// Construct a new Affine Transform from the IFD
-    pub fn from_ifd(ifd: &ImageFileDirectory) -> Option<Self> {
-        if let (Some(model_pixel_scale), Some(model_tiepoint)) =
-            (&ifd.model_pixel_scale, &ifd.model_tiepoint)
-        {
-            Some(Self::new(
-                model_pixel_scale[0],
-                0.0,
-                model_tiepoint[3],
-                0.0,
-                -model_pixel_scale[1],
-                model_tiepoint[4],
-            ))
-        } else {
-            None
-        }
-    }
+    // /// Construct a new Affine Transform from the IFD
+    // pub fn from_ifd(ifd: &ImageFileDirectory) -> Option<Self> {
+    //     if let (Some(model_pixel_scale), Some(model_tiepoint)) =
+    //         (&ifd.model_pixel_scale, &ifd.model_tiepoint)
+    //     {
+    //         Some(Self::new(
+    //             model_pixel_scale[0],
+    //             0.0,
+    //             model_tiepoint[3],
+    //             0.0,
+    //             -model_pixel_scale[1],
+    //             model_tiepoint[4],
+    //         ))
+    //     } else {
+    //         None
+    //     }
+    // }
 }

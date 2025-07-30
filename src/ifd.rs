@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::ops::Range;
 
 use bytes::Bytes;
@@ -6,6 +7,7 @@ use num_enum::TryFromPrimitive;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult};
 use crate::geo::{GeoKeyDirectory, GeoKeyTag};
+use crate::metadata::ExtraTagsRegistry;
 use crate::predictor::PredictorInfo;
 use crate::reader::{AsyncFileReader, Endianness};
 use crate::tiff::tags::{
@@ -133,10 +135,7 @@ pub struct ImageFileDirectory {
 
     pub(crate) copyright: Option<String>,
 
-    // Geospatial tags
-    pub(crate) geo_key_directory: Option<GeoKeyDirectory>,
-    pub(crate) model_pixel_scale: Option<Vec<f64>>,
-    pub(crate) model_tiepoint: Option<Vec<f64>>,
+    pub(crate) extra_tags: ExtraTagsRegistry,
 
     // GDAL tags
     // no_data
@@ -149,6 +148,7 @@ impl ImageFileDirectory {
     pub fn from_tags(
         tag_data: HashMap<Tag, Value>,
         endianness: Endianness,
+        extra_tags_registry: ExtraTagsRegistry,
     ) -> AsyncTiffResult<Self> {
         let mut new_subfile_type = None;
         let mut image_width = None;
@@ -183,11 +183,6 @@ impl ImageFileDirectory {
         let mut sample_format = None;
         let mut jpeg_tables = None;
         let mut copyright = None;
-        let mut geo_key_directory_data = None;
-        let mut model_pixel_scale = None;
-        let mut model_tiepoint = None;
-        let mut geo_ascii_params: Option<String> = None;
-        let mut geo_double_params: Option<Vec<f64>> = None;
 
         let mut other_tags = HashMap::new();
 
@@ -252,13 +247,6 @@ impl ImageFileDirectory {
                 Tag::JPEGTables => jpeg_tables = Some(value.into_u8_vec()?.into()),
                 Tag::Copyright => copyright = Some(value.into_string()?),
 
-                // Geospatial tags
-                // http://geotiff.maptools.org/spec/geotiff2.4.html
-                Tag::GeoKeyDirectoryTag => geo_key_directory_data = Some(value.into_u16_vec()?),
-                Tag::ModelPixelScaleTag => model_pixel_scale = Some(value.into_f64_vec()?),
-                Tag::ModelTiepointTag => model_tiepoint = Some(value.into_f64_vec()?),
-                Tag::GeoAsciiParamsTag => geo_ascii_params = Some(value.into_string()?),
-                Tag::GeoDoubleParamsTag => geo_double_params = Some(value.into_f64_vec()?),
                 // Tag::GdalNodata
                 // Tags for which the tiff crate doesn't have a hard-coded enum variant
                 Tag::Unknown(DOCUMENT_NAME) => document_name = Some(value.into_string()?),
@@ -268,81 +256,6 @@ impl ImageFileDirectory {
             };
             Ok::<_, TiffError>(())
         })?;
-
-        let mut geo_key_directory = None;
-
-        // We need to actually parse the GeoKeyDirectory after parsing all other tags because the
-        // GeoKeyDirectory relies on `GeoAsciiParamsTag` having been parsed.
-        if let Some(data) = geo_key_directory_data {
-            let mut chunks = data.chunks(4);
-
-            let header = chunks
-                .next()
-                .expect("If the geo key directory exists, a header should exist.");
-            let key_directory_version = header[0];
-            assert_eq!(key_directory_version, 1);
-
-            let key_revision = header[1];
-            assert_eq!(key_revision, 1);
-
-            let _key_minor_revision = header[2];
-            let number_of_keys = header[3];
-
-            let mut tags = HashMap::with_capacity(number_of_keys as usize);
-            for _ in 0..number_of_keys {
-                let chunk = chunks
-                    .next()
-                    .expect("There should be a chunk for each key.");
-
-                let key_id = chunk[0];
-                let tag_name =
-                    GeoKeyTag::try_from_primitive(key_id).expect("Unknown GeoKeyTag id: {key_id}");
-
-                let tag_location = chunk[1];
-                let count = chunk[2];
-                let value_offset = chunk[3];
-
-                if tag_location == 0 {
-                    tags.insert(tag_name, Value::Short(value_offset));
-                } else if Tag::from_u16_exhaustive(tag_location) == Tag::GeoAsciiParamsTag {
-                    // If the tag_location points to the value of Tag::GeoAsciiParamsTag, then we
-                    // need to extract a subslice from GeoAsciiParamsTag
-
-                    let geo_ascii_params = geo_ascii_params
-                        .as_ref()
-                        .expect("GeoAsciiParamsTag exists but geo_ascii_params does not.");
-                    let value_offset = value_offset as usize;
-                    let mut s = &geo_ascii_params[value_offset..value_offset + count as usize];
-
-                    // It seems that this string subslice might always include the final |
-                    // character?
-                    if s.ends_with('|') {
-                        s = &s[0..s.len() - 1];
-                    }
-
-                    tags.insert(tag_name, Value::Ascii(s.to_string()));
-                } else if Tag::from_u16_exhaustive(tag_location) == Tag::GeoDoubleParamsTag {
-                    // If the tag_location points to the value of Tag::GeoDoubleParamsTag, then we
-                    // need to extract a subslice from GeoDoubleParamsTag
-
-                    let geo_double_params = geo_double_params
-                        .as_ref()
-                        .expect("GeoDoubleParamsTag exists but geo_double_params does not.");
-                    let value_offset = value_offset as usize;
-                    let value = if count == 1 {
-                        Value::Double(geo_double_params[value_offset])
-                    } else {
-                        let x = geo_double_params[value_offset..value_offset + count as usize]
-                            .iter()
-                            .map(|val| Value::Double(*val))
-                            .collect();
-                        Value::List(x)
-                    };
-                    tags.insert(tag_name, value);
-                }
-            }
-            geo_key_directory = Some(GeoKeyDirectory::from_tags(tags)?);
-        }
 
         let samples_per_pixel = samples_per_pixel.expect("samples_per_pixel not found");
         let planar_configuration = if let Some(planar_configuration) = planar_configuration {
@@ -395,9 +308,7 @@ impl ImageFileDirectory {
                 .unwrap_or(vec![SampleFormat::Uint; samples_per_pixel as _]),
             copyright,
             jpeg_tables,
-            geo_key_directory,
-            model_pixel_scale,
-            model_tiepoint,
+            extra_tags: extra_tags_registry,
             other_tags,
         })
     }
@@ -616,23 +527,23 @@ impl ImageFileDirectory {
         self.copyright.as_deref()
     }
 
-    /// Geospatial tags
-    /// <https://web.archive.org/web/20240329145313/https://www.awaresystems.be/imaging/tiff/tifftags/geokeydirectorytag.html>
-    pub fn geo_key_directory(&self) -> Option<&GeoKeyDirectory> {
-        self.geo_key_directory.as_ref()
-    }
+    // /// Geospatial tags
+    // /// <https://web.archive.org/web/20240329145313/https://www.awaresystems.be/imaging/tiff/tifftags/geokeydirectorytag.html>
+    // pub fn geo_key_directory(&self) -> Option<&GeoKeyDirectory> {
+    //     self.geo_key_directory.as_ref()
+    // }
 
-    /// Used in interchangeable GeoTIFF files.
-    /// <https://web.archive.org/web/20240329145238/https://www.awaresystems.be/imaging/tiff/tifftags/modelpixelscaletag.html>
-    pub fn model_pixel_scale(&self) -> Option<&[f64]> {
-        self.model_pixel_scale.as_deref()
-    }
+    // /// Used in interchangeable GeoTIFF files.
+    // /// <https://web.archive.org/web/20240329145238/https://www.awaresystems.be/imaging/tiff/tifftags/modelpixelscaletag.html>
+    // pub fn model_pixel_scale(&self) -> Option<&[f64]> {
+    //     self.model_pixel_scale.as_deref()
+    // }
 
-    /// Used in interchangeable GeoTIFF files.
-    /// <https://web.archive.org/web/20240329145303/https://www.awaresystems.be/imaging/tiff/tifftags/modeltiepointtag.html>
-    pub fn model_tiepoint(&self) -> Option<&[f64]> {
-        self.model_tiepoint.as_deref()
-    }
+    // /// Used in interchangeable GeoTIFF files.
+    // /// <https://web.archive.org/web/20240329145303/https://www.awaresystems.be/imaging/tiff/tifftags/modeltiepointtag.html>
+    // pub fn model_tiepoint(&self) -> Option<&[f64]> {
+    //     self.model_tiepoint.as_deref()
+    // }
 
     /// Tags for which the tiff crate doesn't have a hard-coded enum variant.
     pub fn other_tags(&self) -> &HashMap<Tag, Value> {
