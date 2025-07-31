@@ -37,7 +37,7 @@ impl PyTIFF {
                 .map_err(|err| PyFileNotFoundError::new_err(err.to_string()))?;
             let mut metadata_reader = TiffMetadataReader::try_open(&metadata_fetch).await.unwrap();
             let ifds = metadata_reader
-                .read_all_ifds(&metadata_fetch)
+                .read_all_ifds(&metadata_fetch, Default::default())
                 .await
                 .unwrap();
             let tiff = TIFF::new(ifds);

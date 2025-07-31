@@ -17,7 +17,7 @@ pub(crate) async fn open_remote_tiff(url: &str) -> TIFF {
         .await
         .unwrap();
     let ifds = metadata_reader
-        .read_all_ifds(&prefetch_reader)
+        .read_all_ifds(&prefetch_reader, Default::default())
         .await
         .unwrap();
     TIFF::new(ifds)

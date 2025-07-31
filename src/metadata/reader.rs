@@ -4,6 +4,7 @@ use std::io::Read;
 use bytes::Bytes;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult};
+use crate::metadata::extra_tags::ExtraTagsRegistry;
 use crate::metadata::fetch::MetadataCursor;
 use crate::metadata::MetadataFetch;
 use crate::reader::Endianness;
@@ -110,12 +111,13 @@ impl TiffMetadataReader {
     pub async fn read_next_ifd<F: MetadataFetch>(
         &mut self,
         fetch: &F,
+        extra_tags_registry: ExtraTagsRegistry,
     ) -> AsyncTiffResult<Option<ImageFileDirectory>> {
         if let Some(ifd_start) = self.next_ifd_offset {
             let ifd_reader =
                 ImageFileDirectoryReader::open(fetch, ifd_start, self.bigtiff, self.endianness)
                     .await?;
-            let ifd = ifd_reader.read(fetch).await?;
+            let ifd = ifd_reader.read(fetch, extra_tags_registry).await?;
             let next_ifd_offset = ifd_reader.finish(fetch).await?;
             self.next_ifd_offset = next_ifd_offset;
             Ok(Some(ifd))
@@ -128,9 +130,14 @@ impl TiffMetadataReader {
     pub async fn read_all_ifds<F: MetadataFetch>(
         &mut self,
         fetch: &F,
+        extra_tags_registry: ExtraTagsRegistry,
     ) -> AsyncTiffResult<Vec<ImageFileDirectory>> {
         let mut ifds = vec![];
-        while let Some(ifd) = self.read_next_ifd(fetch).await? {
+        // deep clone the extra_tags_registry so we can have different values
+        while let Some(ifd) = self
+            .read_next_ifd(fetch, extra_tags_registry.deep_clone())
+            .await?
+        {
             ifds.push(ifd);
         }
         Ok(ifds)
@@ -220,13 +227,17 @@ impl ImageFileDirectoryReader {
     ///
     /// Keep in mind that you'll still need to call [`finish`][Self::finish] to get the byte offset
     /// of the next IFD.
-    pub async fn read<F: MetadataFetch>(&self, fetch: &F) -> AsyncTiffResult<ImageFileDirectory> {
+    pub async fn read<F: MetadataFetch>(
+        &self,
+        fetch: &F,
+        extra_tags_registry: ExtraTagsRegistry,
+    ) -> AsyncTiffResult<ImageFileDirectory> {
         let mut tags = HashMap::with_capacity(self.tag_count as usize);
         for tag_idx in 0..self.tag_count {
             let (tag, value) = self.read_tag(fetch, tag_idx).await?;
             tags.insert(tag, value);
         }
-        ImageFileDirectory::from_tags(tags, self.endianness)
+        ImageFileDirectory::from_tags(tags, self.endianness, extra_tags_registry)
     }
 
     /// Finish this reader, reading the byte offset of the next IFD
