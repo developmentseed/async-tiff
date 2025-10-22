@@ -332,3 +332,76 @@ impl Read for EndianAwareReader {
         self.reader.read(buf)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std::sync::Arc;
+
+    use object_store::http::HttpBuilder;
+
+    use super::*;
+    use crate::metadata::{ImageFileDirectoryReader, PrefetchBuffer, TiffMetadataReader};
+    use crate::reader::{AsyncFileReader, ObjectReader};
+
+    #[tokio::test]
+    async fn tmp2() {
+        dbg!("hello world");
+        let store = Arc::new(
+            HttpBuilder::new()
+                .with_url("https://storage.googleapis.com")
+                .build()
+                .unwrap(),
+        );
+        dbg!("constructed store");
+        let path = object_store::path::Path::parse(
+            "earthenginepartners-hansen/GLCLU2000-2020/v2/2000/50N_120W.tif",
+        )
+        .unwrap();
+        let reader = Arc::new(ObjectReader::new(store, path)) as Arc<dyn AsyncFileReader>;
+        dbg!("constructed reader");
+        let prefetch_reader = PrefetchBuffer::new(reader.clone(), 1024 * 1024)
+            .await
+            .unwrap();
+        dbg!("constructed prefetch reader");
+        let mut metadata_reader = TiffMetadataReader::try_open(&prefetch_reader)
+            .await
+            .unwrap();
+        dbg!("constructed metadata reader");
+        let ifds = metadata_reader
+            .read_all_ifds(&prefetch_reader)
+            .await
+            .unwrap();
+        // let mut ifds = vec![];
+        // let ifd_start = metadata_reader.next_ifd_offset().unwrap();
+        // dbg!(ifd_start);
+
+        // let ifd_reader = ImageFileDirectoryReader::open(
+        //     &prefetch_reader,
+        //     ifd_start,
+        //     metadata_reader.bigtiff(),
+        //     metadata_reader.endianness(),
+        // )
+        // .await
+        // .unwrap();
+        // ifd_reader.read(&prefetch_reader).await.unwrap();
+        // dbg!("ifd", ifd);
+        // let next_ifd_offset = ifd_reader.finish(fetch).await?;
+        // self.next_ifd_offset = next_ifd_offset;
+        // Ok(Some(ifd))
+
+        // let ifd1 = metadata_reader
+        //     .read_next_ifd(&prefetch_reader)
+        //     .await
+        //     .unwrap();
+        // while let Some(ifd) = metadata_reader
+        //     .read_next_ifd(&prefetch_reader)
+        //     .await
+        //     .unwrap()
+        // {
+        //     ifds.push(ifd);
+        // }
+
+        dbg!("read all ifds");
+        // let tiff = TIFF::new(ifds);
+    }
+}

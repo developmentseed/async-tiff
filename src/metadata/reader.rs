@@ -211,8 +211,8 @@ impl ImageFileDirectoryReader {
         assert!(tag_idx < self.tag_count);
         let tag_offset =
             self.ifd_start_offset + self.tag_count_byte_size + (self.ifd_entry_byte_size * tag_idx);
-        let (tag_name, tag_value) =
-            read_tag(fetch, tag_offset, self.endianness, self.bigtiff).await?;
+        let fut = read_tag(fetch, tag_offset, self.endianness, self.bigtiff);
+        let (tag_name, tag_value) = fut.await?;
         Ok((tag_name, tag_value))
     }
 
@@ -222,6 +222,10 @@ impl ImageFileDirectoryReader {
     /// of the next IFD.
     pub async fn read<F: MetadataFetch>(&self, fetch: &F) -> AsyncTiffResult<ImageFileDirectory> {
         let mut tags = HashMap::with_capacity(self.tag_count as usize);
+        // dbg!(self.tag_count);
+        // let tag_idx = 5;
+        // let (tag, value) = self.read_tag(fetch, tag_idx).await?;
+        // tags.insert(tag, value);
         for tag_idx in 0..self.tag_count {
             let (tag, value) = self.read_tag(fetch, tag_idx).await?;
             tags.insert(tag, value);
@@ -262,7 +266,8 @@ async fn read_tag<F: MetadataFetch>(
 ) -> AsyncTiffResult<(Tag, Value)> {
     let mut cursor = MetadataCursor::new_with_offset(fetch, endianness, tag_offset);
 
-    let tag_name = Tag::from_u16_exhaustive(cursor.read_u16().await?);
+    let tag_name_code = cursor.read_u16().await?;
+    let tag_name = Tag::from_u16_exhaustive(tag_name_code);
 
     let tag_type_code = cursor.read_u16().await?;
     let tag_type = Type::from_u16(tag_type_code).expect(
