@@ -17,7 +17,6 @@ classifiers = [
 features = ["pyo3/extension-module"]
 module-name = "async_tiff._async_tiff"
 python-source = "python"
-exclude = ["python/async_tiff/store"]
 
 [tool.uv]
 dev-dependencies = [
