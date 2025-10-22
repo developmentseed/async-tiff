@@ -128,6 +128,9 @@ jobs:
         with:
           python-version: 3.13
           architecture: ${{ matrix.platform.target }}
+      - name: Remove symlink (not supported in Windows wheels)
+        run: Remove-Item -Path python/python/async_tiff/store -Force
+        shell: pwsh
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
