@@ -54,15 +54,24 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python versions
-        run: uv python install 3.9 3.10 3.11 3.12 3.13 pypy3.10
+        run: uv python install 3.10 3.13 pypy3.10
 
-      - name: Build wheels
+      - name: Build abi3-py311 wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13 -i pypy3.10 --manifest-path python/Cargo.toml
+          args: --release --out dist -i 3.13 --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
           manylinux: ${{ matrix.platform.manylinux }}
+
+      - name: Build version-specific wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist -i 3.10 -i pypy3.10 --features extension-module --manifest-path python/Cargo.toml
+          sccache: "true"
+          manylinux: ${{ matrix.platform.manylinux }}
+
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -94,15 +103,24 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python versions
-        run: uv python install 3.9 3.10 3.11 3.12 3.13 pypy3.10
+        run: uv python install 3.10 3.13 pypy3.10
 
-      - name: Build wheels
+      - name: Build abi3-py311 wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13 -i pypy3.10 --manifest-path python/Cargo.toml
+          args: --release --out dist -i 3.13 --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
           manylinux: musllinux_1_2
+
+      - name: Build version-specific wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist -i 3.10 -i pypy3.10 --features extension-module --manifest-path python/Cargo.toml
+          sccache: "true"
+          manylinux: musllinux_1_2
+
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -131,12 +149,21 @@ jobs:
       - name: Remove symlink (not supported in Windows wheels)
         run: Remove-Item -Path python/python/async_tiff/store -Force
         shell: pwsh
-      - name: Build wheels
+
+      - name: Build abi3-py311 wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13 --manifest-path python/Cargo.toml
+          args: --release --out dist -i 3.13 --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
+
+      - name: Build version-specific wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist -i 3.10 --features extension-module --manifest-path python/Cargo.toml
+          sccache: "true"
+
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -164,14 +191,22 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python versions
-        run: uv python install 3.9 3.10 3.11 3.12 3.13 pypy3.10
+        run: uv python install 3.10 3.13 pypy3.10
 
-      - name: Build wheels
+      - name: Build abi3-py311 wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.9 -i 3.10 -i 3.11 -i 3.12 -i 3.13 -i pypy3.10 --manifest-path python/Cargo.toml
+          args: --release --out dist -i 3.13 --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
+
+      - name: Build version-specific wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist -i 3.10 -i pypy3.10 --features extension-module --manifest-path python/Cargo.toml
+          sccache: "true"
+
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -205,7 +240,7 @@ jobs:
     #   # IMPORTANT: this permission is mandatory for trusted publishing
     #   id-token: write
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [linux, musllinux, macos]
+    needs: [linux, musllinux, windows, macos]
     steps:
       - uses: actions/download-artifact@v4
         with:

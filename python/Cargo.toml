@@ -16,6 +16,10 @@ rust-version = "1.75"
 name = "_async_tiff"
 crate-type = ["cdylib"]
 
+[features]
+abi3-py311 = ["pyo3/abi3-py311"]
+extension-module = ["pyo3/extension-module"]
+
 [dependencies]
 async-tiff = { path = "../" }
 bytes = "1.10.1"
