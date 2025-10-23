@@ -14,6 +14,9 @@ pub(crate) async fn open_tiff(filename: &str) -> TIFF {
     let reader = Arc::new(ObjectReader::new(store.clone(), path.as_str().into()))
         as Arc<dyn AsyncFileReader>;
     let mut metadata_reader = TiffMetadataReader::try_open(&reader).await.unwrap();
-    let ifds = metadata_reader.read_all_ifds(&reader).await.unwrap();
+    let ifds = metadata_reader
+        .read_all_ifds(&reader, Default::default())
+        .await
+        .unwrap();
     TIFF::new(ifds)
 }
