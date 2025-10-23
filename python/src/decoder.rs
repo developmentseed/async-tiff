@@ -60,14 +60,16 @@ impl PyDecoder {
     }
 }
 
-impl<'py> FromPyObject<'py> for PyDecoder {
-    fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
-        if !ob.hasattr(intern!(ob.py(), "__call__"))? {
+impl<'py> FromPyObject<'_, 'py> for PyDecoder {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if !obj.hasattr(intern!(obj.py(), "__call__"))? {
             return Err(PyTypeError::new_err(
                 "Expected callable object for custom decoder.",
             ));
         }
-        Ok(Self(ob.clone().unbind()))
+        Ok(Self(obj.as_unbound().clone_ref(obj.py())))
     }
 }
 
