@@ -55,12 +55,12 @@ impl PyTile {
     }
 
     #[pyo3(signature = (*, decoder_registry=None, pool=None))]
-    fn decode_async(
+    fn decode_async<'py>(
         &mut self,
-        py: Python,
+        py: Python<'py>,
         decoder_registry: Option<&PyDecoderRegistry>,
         pool: Option<&PyThreadPool>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Bound<'py, PyAny>> {
         let decoder_registry = decoder_registry
             .map(|r| r.inner().clone())
             .unwrap_or_else(|| get_default_decoder_registry(py));
@@ -69,13 +69,12 @@ impl PyTile {
             .unwrap_or_else(|| get_default_pool(py))?;
         let tile = self.0.take().unwrap();
 
-        let result = future_into_py(py, async move {
+        future_into_py(py, async move {
             let decoded_bytes = pool
                 .spawn_async(move || tile.decode(&decoder_registry))
                 .await
                 .unwrap();
             Ok(PyBytes::new(decoded_bytes))
-        })?;
-        Ok(result.unbind())
+        })
     }
 }

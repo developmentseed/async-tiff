@@ -36,11 +36,11 @@ impl StoreInput {
 /// https://developmentseed.org/obspec/latest/api/get/#obspec.GetRangeAsync
 /// https://developmentseed.org/obspec/latest/api/get/#obspec.GetRangesAsync
 #[derive(Debug)]
-pub(crate) struct ObspecBackend(PyObject);
+pub(crate) struct ObspecBackend(Py<PyAny>);
 
 impl ObspecBackend {
     async fn get_range(&self, path: &str, range: Range<u64>) -> PyResult<PyBytes> {
-        let future = Python::with_gil(|py| {
+        let future = Python::attach(|py| {
             let kwargs = PyDict::new(py);
             kwargs.set_item(intern!(py, "path"), path)?;
             kwargs.set_item(intern!(py, "start"), range.start)?;
@@ -52,14 +52,14 @@ impl ObspecBackend {
             into_future(coroutine.bind(py).clone())
         })?;
         let result = future.await?;
-        Python::with_gil(|py| result.extract(py))
+        Python::attach(|py| result.extract(py))
     }
 
     async fn get_ranges(&self, path: &str, ranges: &[Range<u64>]) -> PyResult<Vec<PyBytes>> {
         let starts = ranges.iter().map(|r| r.start).collect::<Vec<_>>();
         let ends = ranges.iter().map(|r| r.end).collect::<Vec<_>>();
 
-        let future = Python::with_gil(|py| {
+        let future = Python::attach(|py| {
             let kwargs = PyDict::new(py);
             kwargs.set_item(intern!(py, "path"), path)?;
             kwargs.set_item(intern!(py, "starts"), starts)?;
@@ -71,7 +71,7 @@ impl ObspecBackend {
             into_future(coroutine.bind(py).clone())
         })?;
         let result = future.await?;
-        Python::with_gil(|py| result.extract(py))
+        Python::attach(|py| result.extract(py))
     }
 
     async fn get_range_wrapper(&self, path: &str, range: Range<u64>) -> AsyncTiffResult<Bytes> {

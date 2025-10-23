@@ -8,13 +8,13 @@ use bytes::Bytes;
 use pyo3::exceptions::PyTypeError;
 use pyo3::intern;
 use pyo3::prelude::*;
-use pyo3::sync::GILOnceCell;
+use pyo3::sync::PyOnceLock;
 use pyo3::types::{PyDict, PyTuple};
 use pyo3_bytes::PyBytes;
 
 use crate::enums::PyCompressionMethod;
 
-static DEFAULT_DECODER_REGISTRY: GILOnceCell<Arc<DecoderRegistry>> = GILOnceCell::new();
+static DEFAULT_DECODER_REGISTRY: PyOnceLock<Arc<DecoderRegistry>> = PyOnceLock::new();
 
 pub fn get_default_decoder_registry(py: Python<'_>) -> Arc<DecoderRegistry> {
     let registry =
@@ -49,7 +49,7 @@ impl PyDecoderRegistry {
 }
 
 #[derive(Debug)]
-pub(crate) struct PyDecoder(PyObject);
+pub(crate) struct PyDecoder(Py<PyAny>);
 
 impl PyDecoder {
     fn call(&self, py: Python, buffer: Bytes) -> PyResult<PyBytes> {
@@ -78,7 +78,7 @@ impl Decoder for PyDecoder {
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
     ) -> AsyncTiffResult<Bytes> {
-        let decoded_buffer = Python::with_gil(|py| self.call(py, buffer))
+        let decoded_buffer = Python::attach(|py| self.call(py, buffer))
             .map_err(|err| AsyncTiffError::General(err.to_string()))?;
         Ok(decoded_buffer.into_inner())
     }
