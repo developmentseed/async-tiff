@@ -25,10 +25,10 @@ async-tiff = { path = "../" }
 bytes = "1.10.1"
 futures = "0.3.31"
 object_store = "0.12"
-pyo3 = { version = "0.26.0", features = ["macros"] }
-pyo3-async-runtimes = "0.26"
-pyo3-bytes = "0.4"
-pyo3-object_store = "0.6.0"
+pyo3 = { version = "0.27.0", features = ["macros"] }
+pyo3-async-runtimes = "0.27"
+pyo3-bytes = "0.5"
+pyo3-object_store = "0.7.0"
 rayon = "1.11.0"
 tokio-rayon = "2.1.0"
 thiserror = "1"

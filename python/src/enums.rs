@@ -21,9 +21,11 @@ impl From<PyCompressionMethod> for CompressionMethod {
     }
 }
 
-impl<'py> FromPyObject<'py> for PyCompressionMethod {
-    fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
-        Ok(Self(CompressionMethod::from_u16_exhaustive(ob.extract()?)))
+impl<'py> FromPyObject<'_, 'py> for PyCompressionMethod {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
+        Ok(Self(CompressionMethod::from_u16_exhaustive(obj.extract()?)))
     }
 }
 

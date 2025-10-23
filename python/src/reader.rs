@@ -95,13 +95,15 @@ impl ObspecBackend {
     }
 }
 
-impl<'py> FromPyObject<'py> for ObspecBackend {
-    fn extract_bound(ob: &Bound<'py, PyAny>) -> PyResult<Self> {
-        let py = ob.py();
-        if ob.hasattr(intern!(py, "get_range_async"))?
-            && ob.hasattr(intern!(py, "get_ranges_async"))?
+impl<'py> FromPyObject<'_, 'py> for ObspecBackend {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
+        let py = obj.py();
+        if obj.hasattr(intern!(py, "get_range_async"))?
+            && obj.hasattr(intern!(py, "get_ranges_async"))?
         {
-            Ok(Self(ob.clone().unbind()))
+            Ok(Self(obj.as_unbound().clone_ref(py)))
         } else {
             Err(PyTypeError::new_err("Expected obspec-compatible class with `get_range_async` and `get_ranges_async` method."))
         }
