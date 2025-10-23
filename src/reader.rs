@@ -228,7 +228,7 @@ impl AsyncFileReader for ReqwestReader {
 }
 
 /// Endianness
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Endianness {
     /// Little Endian
     LittleEndian,

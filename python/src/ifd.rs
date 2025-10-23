@@ -4,8 +4,8 @@ use async_tiff::ImageFileDirectory;
 use pyo3::prelude::*;
 
 use crate::enums::{
-    PyCompressionMethod, PyPhotometricInterpretation, PyPlanarConfiguration, PyPredictor,
-    PyResolutionUnit, PySampleFormat,
+    PyCompressionMethod, PyEndianness, PyPhotometricInterpretation, PyPlanarConfiguration,
+    PyPredictor, PyResolutionUnit, PySampleFormat,
 };
 use crate::geo::PyGeoKeyDirectory;
 use crate::value::PyValue;
@@ -15,6 +15,11 @@ pub(crate) struct PyImageFileDirectory(ImageFileDirectory);
 
 #[pymethods]
 impl PyImageFileDirectory {
+    #[getter]
+    pub fn endianness(&self) -> PyEndianness {
+        self.0.endianness().into()
+    }
+
     #[getter]
     pub fn new_subfile_type(&self) -> Option<u32> {
         self.0.new_subfile_type()
