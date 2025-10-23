@@ -12,13 +12,13 @@
         <meta name="author" content="Development Seed">
       
       
-        <link rel="canonical" href="https://developmentseed.org/async-tiff/latest/api/store/http/">
+        <link rel="canonical" href="https://developmentseed.org/async-tiff/latest/api/store/local/">
       
       
-        <link rel="prev" href="../azure/">
+        <link rel="prev" href="../http/">
       
       
-        <link rel="next" href="../local/">
+        <link rel="next" href="../memory/">
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
@@ -26,7 +26,7 @@
     
     
       
-        <title>HTTP - async-tiff</title>
+        <title>Local - async-tiff</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#http" class="md-skip">
+        <a href="#local" class="md-skip">
           Skip to content
         </a>
       
@@ -133,7 +133,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              HTTP
+              Local
             
           </span>
         </div>
@@ -630,6 +630,28 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../http/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    HTTP
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -646,7 +668,7 @@
           
   
   <span class="md-ellipsis">
-    HTTP
+    Local
     
   </span>
   
@@ -658,7 +680,7 @@
         
   
   <span class="md-ellipsis">
-    HTTP
+    Local
     
   </span>
   
@@ -681,44 +703,26 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore" class="md-nav__link">
+  <a href="#async_tiff.store.LocalStore" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;HTTPStore
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;LocalStore
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" HTTPStore">
+    <nav class="md-nav" aria-label=" LocalStore">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.client_options" class="md-nav__link">
+  <a href="#async_tiff.store.LocalStore.prefix" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;client_options
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;prefix
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.retry_config" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;retry_config
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.url" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;url
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.__init__" class="md-nav__link">
+  <a href="#async_tiff.store.LocalStore.__init__" class="md-nav__link">
     <span class="md-ellipsis">
       <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__init__
     </span>
@@ -727,7 +731,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.from_url" class="md-nav__link">
+  <a href="#async_tiff.store.LocalStore.from_url" class="md-nav__link">
     <span class="md-ellipsis">
       <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;from_url
     </span>
@@ -744,28 +748,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../local/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Local
-    
-  </span>
-  
-
-      </a>
     </li>
   
 
@@ -857,44 +839,26 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore" class="md-nav__link">
+  <a href="#async_tiff.store.LocalStore" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;HTTPStore
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;LocalStore
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" HTTPStore">
+    <nav class="md-nav" aria-label=" LocalStore">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.client_options" class="md-nav__link">
+  <a href="#async_tiff.store.LocalStore.prefix" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;client_options
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;prefix
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.retry_config" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;retry_config
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.url" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;url
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.__init__" class="md-nav__link">
+  <a href="#async_tiff.store.LocalStore.__init__" class="md-nav__link">
     <span class="md-ellipsis">
       <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__init__
     </span>
@@ -903,7 +867,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.from_url" class="md-nav__link">
+  <a href="#async_tiff.store.LocalStore.from_url" class="md-nav__link">
     <span class="md-ellipsis">
       <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;from_url
     </span>
@@ -938,24 +902,31 @@
   
 
 
-<h1 id="http">HTTP<a class="headerlink" href="#http" title="Permanent link">&para;</a></h1>
+<h1 id="local">Local<a class="headerlink" href="#local" title="Permanent link">&para;</a></h1>
 
 
 <div class="doc doc-object doc-class">
 
 
 
-<h2 id="async_tiff.store.HTTPStore" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">async_tiff.store.HTTPStore</span>
+<h2 id="async_tiff.store.LocalStore" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">async_tiff.store.LocalStore</span>
 
 
-<a href="#async_tiff.store.HTTPStore" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#async_tiff.store.LocalStore" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
     <div class="doc doc-contents first">
 
 
-        <p>Configure a connection to a generic HTTP server.</p>
+        <p>An ObjectStore interface to local filesystem storage.</p>
+<p>Can optionally be created with a directory prefix.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="n">store</span> <span class="o">=</span> <span class="n">LocalStore</span><span class="p">()</span>
+<span class="n">store</span> <span class="o">=</span> <span class="n">LocalStore</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;/path/to/directory&quot;</span><span class="p">)</span>
+<span class="n">store</span> <span class="o">=</span> <span class="n">LocalStore</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">))</span>
+</code></pre></div>
 
 
 
@@ -977,67 +948,21 @@
 
 
 
-<h3 id="async_tiff.store.HTTPStore.client_options" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">client_options</span>
+<h3 id="async_tiff.store.LocalStore.prefix" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">prefix</span>
 
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
   </span>
 
-<a href="#async_tiff.store.HTTPStore.client_options" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">client_options</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._client.ClientConfig" href="../config/#async_tiff.store.ClientConfig">ClientConfig</a></span> <span class="o">|</span> <span class="kc">None</span>
+<a href="#async_tiff.store.LocalStore.prefix" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature codehilite"><pre><span></span><code><span class="n">prefix</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a></span> <span class="o">|</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Get the store's client configuration.</p>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h3 id="async_tiff.store.HTTPStore.retry_config" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">retry_config</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#async_tiff.store.HTTPStore.retry_config" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">retry_config</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._retry.RetryConfig" href="../config/#async_tiff.store.RetryConfig">RetryConfig</a></span> <span class="o">|</span> <span class="kc">None</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Get the store's retry configuration.</p>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h3 id="async_tiff.store.HTTPStore.url" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">url</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#async_tiff.store.HTTPStore.url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Get the base url of this store.</p>
+        <p>Get the prefix applied to all operations in this store, if any.</p>
     </div>
 
 </div>
@@ -1047,36 +972,34 @@
 <div class="doc doc-object doc-function">
 
 
-<h3 id="async_tiff.store.HTTPStore.__init__" class="doc doc-heading">
+<h3 id="async_tiff.store.LocalStore.__init__" class="doc doc-heading">
             <span class="doc doc-object-name doc-function-name">__init__</span>
 
 
-<a href="#async_tiff.store.HTTPStore.__init__" class="headerlink" title="Permanent link">&para;</a></h3>
+<a href="#async_tiff.store.LocalStore.__init__" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="doc-signature codehilite"><pre><span></span><code><span class="fm">__init__</span><span class="p">(</span>
-    <span class="nf">url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span>
+    <span class="nf">prefix</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="n"><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
-    <span class="n">client_options</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._client.ClientConfig" href="../config/#async_tiff.store.ClientConfig">ClientConfig</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">retry_config</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._retry.RetryConfig" href="../config/#async_tiff.store.RetryConfig">RetryConfig</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">automatic_cleanup</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">mkdir</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Construct a new HTTPStore from a URL.</p>
-<p>Any path on the URL will be assigned as the <code>prefix</code> for the store. So if you
-pass <code>https://example.com/path/to/directory</code>, the store will be created with a
-prefix of <code>path/to/directory</code>, and all further operations will use paths
-relative to that prefix.</p>
+        <p>Create a new LocalStore.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
     <ul>
         <li class="doc-section-item field-body">
-            <b><code>url</code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>)
+            <b><code>prefix</code></b>
+              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a> | None</code>, default:
+                  <code>None</code>
+)
           –
           <div class="doc-md-description">
-            <p>The base URL to use for the store.</p>
+            <p>Use the specified prefix applied to all paths. Defaults to <code>None</code>.</p>
           </div>
         </li>
     </ul>
@@ -1085,31 +1008,22 @@ relative to that prefix.</p>
 <p><span class="doc-section-title">Other Parameters:</span></p>
     <ul>
         <li class="doc-section-item field-body">
-          <b><code>client_options</code></b>
-              (<code><a class="autorefs autorefs-internal" title="async_tiff.store._client.ClientConfig" href="../config/#async_tiff.store.ClientConfig">ClientConfig</a> | None</code>)
+          <b><code>automatic_cleanup</code></b>
+              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>)
           –
           <div class="doc-md-description">
-            <p>HTTP Client options. Defaults to None.</p>
+            <p>if <code>True</code>, enables automatic cleanup of empty directories
+when deleting files. Defaults to False.</p>
           </div>
         </li>
         <li class="doc-section-item field-body">
-          <b><code>retry_config</code></b>
-              (<code><a class="autorefs autorefs-internal" title="async_tiff.store._retry.RetryConfig" href="../config/#async_tiff.store.RetryConfig">RetryConfig</a> | None</code>)
+          <b><code>mkdir</code></b>
+              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>)
           –
           <div class="doc-md-description">
-            <p>Retry configuration. Defaults to None.</p>
-          </div>
-        </li>
-    </ul>
-
-
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-              <code>None</code>
-          –
-          <div class="doc-md-description">
-            <p>HTTPStore</p>
+            <p>if <code>True</code> and <code>prefix</code> is not <code>None</code>, the directory at <code>prefix</code> will
+attempt to be created. Note that this root directory will not be cleaned
+up, even if <code>automatic_cleanup</code> is <code>True</code>.</p>
           </div>
         </li>
     </ul>
@@ -1121,7 +1035,7 @@ relative to that prefix.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="async_tiff.store.HTTPStore.from_url" class="doc doc-heading">
+<h3 id="async_tiff.store.LocalStore.from_url" class="doc doc-heading">
             <span class="doc doc-object-name doc-function-name">from_url</span>
 
 
@@ -1129,19 +1043,24 @@ relative to that prefix.</p>
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
   </span>
 
-<a href="#async_tiff.store.HTTPStore.from_url" class="headerlink" title="Permanent link">&para;</a></h3>
+<a href="#async_tiff.store.LocalStore.from_url" class="headerlink" title="Permanent link">&para;</a></h3>
 <div class="doc-signature codehilite"><pre><span></span><code><span class="nf">from_url</span><span class="p">(</span>
-    <span class="n">url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span>
-    <span class="o">*</span><span class="p">,</span>
-    <span class="n">client_options</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._client.ClientConfig" href="../config/#async_tiff.store.ClientConfig">ClientConfig</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">retry_config</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._retry.RetryConfig" href="../config/#async_tiff.store.RetryConfig">RetryConfig</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">automatic_cleanup</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">mkdir</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">=</span> <span class="kc">False</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="typing_extensions.Self">Self</span></span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Construct a new HTTPStore from a URL.</p>
-<p>This is an alias of <a class="autorefs autorefs-external" href="https://developmentseed.org/obstore/latest/api/store/http/#obstore.store.HTTPStore.__init__"><code>HTTPStore.__init__</code></a>.</p>
+        <p>Construct a new LocalStore from a <code>file://</code> URL.</p>
+<p><strong>Examples:</strong></p>
+<p>Construct a new store pointing to the root of your filesystem:
+<div class="highlight"><pre><span></span><code><span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;file:///&quot;</span>
+<span class="n">store</span> <span class="o">=</span> <span class="n">LocalStore</span><span class="o">.</span><span class="n">from_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+</code></pre></div></p>
+<p>Construct a new store with a directory prefix:
+<div class="highlight"><pre><span></span><code><span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;file:///Users/kyle/&quot;</span>
+<span class="n">store</span> <span class="o">=</span> <span class="n">LocalStore</span><span class="o">.</span><span class="n">from_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+</code></pre></div></p>
 
     </div>
 

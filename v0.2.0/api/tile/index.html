@@ -12,28 +12,28 @@
         <meta name="author" content="Development Seed">
       
       
-        <link rel="canonical" href="https://developmentseed.org/async-tiff/latest/api/store/http/">
+        <link rel="canonical" href="https://developmentseed.org/async-tiff/latest/api/tile/">
       
       
-        <link rel="prev" href="../azure/">
+        <link rel="prev" href="../ifd/">
       
       
-        <link rel="next" href="../local/">
+        <link rel="next" href="../geo/">
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.5">
     
     
       
-        <title>HTTP - async-tiff</title>
+        <title>Tile - async-tiff</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.8608ea7d.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.8608ea7d.min.css">
       
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -52,11 +52,11 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-      <link rel="stylesheet" href="../../../overrides/stylesheets/extra.css">
+      <link rel="stylesheet" href="../../overrides/stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#http" class="md-skip">
+        <a href="#tile" class="md-skip">
           Skip to content
         </a>
       
@@ -97,12 +97,12 @@
             <div class="md-banner__inner md-grid md-typeset">
               
   You're not viewing the latest version.
-  <a href="../../../..">
+  <a href="../../..">
     <strong>Click here to go to latest.</strong>
   </a>
 
             </div>
-            <script>var el=document.querySelector("[data-md-component=outdated]"),base=new URL("../../.."),outdated=__md_get("__outdated",sessionStorage,base);!0===outdated&&el&&(el.hidden=!1)</script>
+            <script>var el=document.querySelector("[data-md-component=outdated]"),base=new URL("../.."),outdated=__md_get("__outdated",sessionStorage,base);!0===outdated&&el&&(el.hidden=!1)</script>
           </aside>
         
       </div>
@@ -114,9 +114,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="async-tiff" class="md-header__button md-logo" aria-label="async-tiff" data-md-component="logo">
+    <a href="../.." title="async-tiff" class="md-header__button md-logo" aria-label="async-tiff" data-md-component="logo">
       
-  <img src="../../../assets/logo_no_text.png" alt="logo">
+  <img src="../../assets/logo_no_text.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -133,7 +133,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              HTTP
+              Tile
             
           </span>
         </div>
@@ -263,9 +263,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="async-tiff" class="md-nav__button md-logo" aria-label="async-tiff" data-md-component="logo">
+    <a href="../.." title="async-tiff" class="md-nav__button md-logo" aria-label="async-tiff" data-md-component="logo">
       
-  <img src="../../../assets/logo_no_text.png" alt="logo">
+  <img src="../../assets/logo_no_text.png" alt="logo">
 
     </a>
     async-tiff
@@ -292,7 +292,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -367,7 +367,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tiff/" class="md-nav__link">
+      <a href="../tiff/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -389,233 +389,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../../ifd/" class="md-nav__link">
+      <a href="../ifd/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     IFD
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tile/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Tile
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../geo/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Geospatial tags
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../decoder/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Decoder
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../thread-pool/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Thread Pool
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" checked>
-        
-          
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
-              
-  
-  <span class="md-ellipsis">
-    async-tiff.store
-    
-  </span>
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2_7">
-            <span class="md-nav__icon md-icon"></span>
-            async-tiff.store
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../aws/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    AWS S3
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../gcs/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Google Cloud Storage
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../azure/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Microsoft Azure
     
   </span>
   
@@ -646,7 +424,7 @@
           
   
   <span class="md-ellipsis">
-    HTTP
+    Tile
     
   </span>
   
@@ -658,7 +436,7 @@
         
   
   <span class="md-ellipsis">
-    HTTP
+    Tile
     
   </span>
   
@@ -681,55 +459,55 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore" class="md-nav__link">
+  <a href="#async_tiff.Tile" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;HTTPStore
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;Tile
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" HTTPStore">
+    <nav class="md-nav" aria-label=" Tile">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.client_options" class="md-nav__link">
+  <a href="#async_tiff.Tile.compressed_bytes" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;client_options
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;compressed_bytes
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.retry_config" class="md-nav__link">
+  <a href="#async_tiff.Tile.compression_method" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;retry_config
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;compression_method
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.url" class="md-nav__link">
+  <a href="#async_tiff.Tile.x" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;url
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;x
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.__init__" class="md-nav__link">
+  <a href="#async_tiff.Tile.y" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__init__
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;y
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.from_url" class="md-nav__link">
+  <a href="#async_tiff.Tile.decode_async" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;from_url
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;decode_async
     </span>
   </a>
   
@@ -756,7 +534,227 @@
   
   
     <li class="md-nav__item">
-      <a href="../local/" class="md-nav__link">
+      <a href="../geo/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Geospatial tags
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decoder/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Decoder
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../thread-pool/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Thread Pool
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_7" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../store/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    async-tiff.store
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
+            <span class="md-nav__icon md-icon"></span>
+            async-tiff.store
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../store/aws/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AWS S3
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../store/gcs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Google Cloud Storage
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../store/azure/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Microsoft Azure
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../store/http/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    HTTP
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../store/local/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -778,7 +776,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../memory/" class="md-nav__link">
+      <a href="../store/memory/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -800,7 +798,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../config/" class="md-nav__link">
+      <a href="../store/config/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -857,55 +855,55 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore" class="md-nav__link">
+  <a href="#async_tiff.Tile" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;HTTPStore
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;Tile
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" HTTPStore">
+    <nav class="md-nav" aria-label=" Tile">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.client_options" class="md-nav__link">
+  <a href="#async_tiff.Tile.compressed_bytes" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;client_options
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;compressed_bytes
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.retry_config" class="md-nav__link">
+  <a href="#async_tiff.Tile.compression_method" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;retry_config
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;compression_method
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.url" class="md-nav__link">
+  <a href="#async_tiff.Tile.x" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;url
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;x
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.__init__" class="md-nav__link">
+  <a href="#async_tiff.Tile.y" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__init__
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;y
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.from_url" class="md-nav__link">
+  <a href="#async_tiff.Tile.decode_async" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;from_url
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;decode_async
     </span>
   </a>
   
@@ -938,24 +936,24 @@
   
 
 
-<h1 id="http">HTTP<a class="headerlink" href="#http" title="Permanent link">&para;</a></h1>
+<h1 id="tile">Tile<a class="headerlink" href="#tile" title="Permanent link">&para;</a></h1>
 
 
 <div class="doc doc-object doc-class">
 
 
 
-<h2 id="async_tiff.store.HTTPStore" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">async_tiff.store.HTTPStore</span>
+<h2 id="async_tiff.Tile" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">async_tiff.Tile</span>
 
 
-<a href="#async_tiff.store.HTTPStore" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#async_tiff.Tile" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
     <div class="doc doc-contents first">
 
 
-        <p>Configure a connection to a generic HTTP server.</p>
+        <p>A representation of a TIFF image tile.</p>
 
 
 
@@ -977,21 +975,21 @@
 
 
 
-<h3 id="async_tiff.store.HTTPStore.client_options" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">client_options</span>
+<h3 id="async_tiff.Tile.compressed_bytes" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">compressed_bytes</span>
 
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
   </span>
 
-<a href="#async_tiff.store.HTTPStore.client_options" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">client_options</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._client.ClientConfig" href="../config/#async_tiff.store.ClientConfig">ClientConfig</a></span> <span class="o">|</span> <span class="kc">None</span>
+<a href="#async_tiff.Tile.compressed_bytes" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature codehilite"><pre><span></span><code><span class="n">compressed_bytes</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" title="collections.abc.Buffer" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Buffer">Buffer</a></span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Get the store's client configuration.</p>
+        <p>The compressed bytes underlying this tile.</p>
     </div>
 
 </div>
@@ -1000,21 +998,21 @@
 
 
 
-<h3 id="async_tiff.store.HTTPStore.retry_config" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">retry_config</span>
+<h3 id="async_tiff.Tile.compression_method" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">compression_method</span>
 
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
   </span>
 
-<a href="#async_tiff.store.HTTPStore.retry_config" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">retry_config</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._retry.RetryConfig" href="../config/#async_tiff.store.RetryConfig">RetryConfig</a></span> <span class="o">|</span> <span class="kc">None</span>
+<a href="#async_tiff.Tile.compression_method" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature codehilite"><pre><span></span><code><span class="n">compression_method</span><span class="p">:</span> <span class="n"><span title="async_tiff.enums.CompressionMethod">CompressionMethod</span></span> <span class="o">|</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Get the store's retry configuration.</p>
+        <p>The compression method used by this tile.</p>
     </div>
 
 </div>
@@ -1023,21 +1021,44 @@
 
 
 
-<h3 id="async_tiff.store.HTTPStore.url" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">url</span>
+<h3 id="async_tiff.Tile.x" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">x</span>
 
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
   </span>
 
-<a href="#async_tiff.store.HTTPStore.url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
+<a href="#async_tiff.Tile.x" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature codehilite"><pre><span></span><code><span class="n">x</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Get the base url of this store.</p>
+        <p>The column index this tile represents.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="async_tiff.Tile.y" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">y</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#async_tiff.Tile.y" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature codehilite"><pre><span></span><code><span class="n">y</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The row index this tile represents.</p>
     </div>
 
 </div>
@@ -1047,57 +1068,43 @@
 <div class="doc doc-object doc-function">
 
 
-<h3 id="async_tiff.store.HTTPStore.__init__" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">__init__</span>
+<h3 id="async_tiff.Tile.decode_async" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">decode_async</span>
 
 
-<a href="#async_tiff.store.HTTPStore.__init__" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="fm">__init__</span><span class="p">(</span>
-    <span class="nf">url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span>
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+<a href="#async_tiff.Tile.decode_async" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature codehilite"><pre><span></span><code><span class="nf">decode_async</span><span class="p">(</span>
     <span class="o">*</span><span class="p">,</span>
-    <span class="n">client_options</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._client.ClientConfig" href="../config/#async_tiff.store.ClientConfig">ClientConfig</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">retry_config</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._retry.RetryConfig" href="../config/#async_tiff.store.RetryConfig">RetryConfig</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+    <span class="n">decoder_registry</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff._decoder.DecoderRegistry" href="../decoder/#async_tiff.DecoderRegistry">DecoderRegistry</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">pool</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff._thread_pool.ThreadPool" href="../thread-pool/#async_tiff.ThreadPool">ThreadPool</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" title="collections.abc.Buffer" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Buffer">Buffer</a></span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Construct a new HTTPStore from a URL.</p>
-<p>Any path on the URL will be assigned as the <code>prefix</code> for the store. So if you
-pass <code>https://example.com/path/to/directory</code>, the store will be created with a
-prefix of <code>path/to/directory</code>, and all further operations will use paths
-relative to that prefix.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-            <b><code>url</code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>The base URL to use for the store.</p>
-          </div>
-        </li>
-    </ul>
+        <p>Decode this tile's data.</p>
 
 
 <p><span class="doc-section-title">Other Parameters:</span></p>
     <ul>
         <li class="doc-section-item field-body">
-          <b><code>client_options</code></b>
-              (<code><a class="autorefs autorefs-internal" title="async_tiff.store._client.ClientConfig" href="../config/#async_tiff.store.ClientConfig">ClientConfig</a> | None</code>)
+          <b><code>decoder_registry</code></b>
+              (<code><a class="autorefs autorefs-internal" title="async_tiff._decoder.DecoderRegistry" href="../decoder/#async_tiff.DecoderRegistry">DecoderRegistry</a> | None</code>)
           –
           <div class="doc-md-description">
-            <p>HTTP Client options. Defaults to None.</p>
+            <p>the decoders to use for decompression. Defaults to None.</p>
           </div>
         </li>
         <li class="doc-section-item field-body">
-          <b><code>retry_config</code></b>
-              (<code><a class="autorefs autorefs-internal" title="async_tiff.store._retry.RetryConfig" href="../config/#async_tiff.store.RetryConfig">RetryConfig</a> | None</code>)
+          <b><code>pool</code></b>
+              (<code><a class="autorefs autorefs-internal" title="async_tiff._thread_pool.ThreadPool" href="../thread-pool/#async_tiff.ThreadPool">ThreadPool</a> | None</code>)
           –
           <div class="doc-md-description">
-            <p>Retry configuration. Defaults to None.</p>
+            <p>the thread pool on which to run decompression. Defaults to None.</p>
           </div>
         </li>
     </ul>
@@ -1106,42 +1113,13 @@ relative to that prefix.</p>
 <p><span class="doc-section-title">Returns:</span></p>
     <ul>
         <li class="doc-section-item field-body">
-              <code>None</code>
+              <code><a class="autorefs autorefs-external" title="collections.abc.Buffer" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Buffer">Buffer</a></code>
           –
           <div class="doc-md-description">
-            <p>HTTPStore</p>
+            <p>Decoded tile data as a buffer.</p>
           </div>
         </li>
     </ul>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="async_tiff.store.HTTPStore.from_url" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">from_url</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
-  </span>
-
-<a href="#async_tiff.store.HTTPStore.from_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="nf">from_url</span><span class="p">(</span>
-    <span class="n">url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span>
-    <span class="o">*</span><span class="p">,</span>
-    <span class="n">client_options</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._client.ClientConfig" href="../config/#async_tiff.store.ClientConfig">ClientConfig</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">retry_config</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._retry.RetryConfig" href="../config/#async_tiff.store.RetryConfig">RetryConfig</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="typing_extensions.Self">Self</span></span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Construct a new HTTPStore from a URL.</p>
-<p>This is an alias of <a class="autorefs autorefs-external" href="https://developmentseed.org/obstore/latest/api/store/http/#obstore.store.HTTPStore.__init__"><code>HTTPStore.__init__</code></a>.</p>
 
     </div>
 
@@ -1238,10 +1216,10 @@ relative to that prefix.</p>
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../../..", "features": ["content.code.annotate", "content.code.copy", "navigation.indexes", "navigation.instant", "navigation.tracking", "search.suggest", "search.share"], "search": "../../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"alias": true, "provider": "mike"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.annotate", "content.code.copy", "navigation.indexes", "navigation.instant", "navigation.tracking", "search.suggest", "search.share"], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"alias": true, "provider": "mike"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.f1b6f286.min.js"></script>
+      <script src="../../assets/javascripts/bundle.f1b6f286.min.js"></script>
       
     
   </body>

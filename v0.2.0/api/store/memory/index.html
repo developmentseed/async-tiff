@@ -12,13 +12,13 @@
         <meta name="author" content="Development Seed">
       
       
-        <link rel="canonical" href="https://developmentseed.org/async-tiff/latest/api/store/http/">
+        <link rel="canonical" href="https://developmentseed.org/async-tiff/latest/api/store/memory/">
       
       
-        <link rel="prev" href="../azure/">
+        <link rel="prev" href="../local/">
       
       
-        <link rel="next" href="../local/">
+        <link rel="next" href="../config/">
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
@@ -26,7 +26,7 @@
     
     
       
-        <title>HTTP - async-tiff</title>
+        <title>Memory - async-tiff</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#http" class="md-skip">
+        <a href="#memory" class="md-skip">
           Skip to content
         </a>
       
@@ -133,7 +133,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              HTTP
+              Memory
             
           </span>
         </div>
@@ -630,31 +630,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    HTTP
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../http/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -664,86 +643,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;HTTPStore
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label=" HTTPStore">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.client_options" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;client_options
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.retry_config" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;retry_config
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.url" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;url
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.__init__" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__init__
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.from_url" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;from_url
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -775,10 +674,31 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../memory/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Memory
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -788,6 +708,35 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#async_tiff.store.MemoryStore" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;MemoryStore
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -857,62 +806,11 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore" class="md-nav__link">
+  <a href="#async_tiff.store.MemoryStore" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;HTTPStore
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;MemoryStore
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label=" HTTPStore">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.client_options" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;client_options
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.retry_config" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;retry_config
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.url" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;url
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.__init__" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__init__
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.store.HTTPStore.from_url" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;from_url
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -938,24 +836,27 @@
   
 
 
-<h1 id="http">HTTP<a class="headerlink" href="#http" title="Permanent link">&para;</a></h1>
+<h1 id="memory">Memory<a class="headerlink" href="#memory" title="Permanent link">&para;</a></h1>
 
 
 <div class="doc doc-object doc-class">
 
 
 
-<h2 id="async_tiff.store.HTTPStore" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">async_tiff.store.HTTPStore</span>
+<h2 id="async_tiff.store.MemoryStore" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">async_tiff.store.MemoryStore</span>
 
 
-<a href="#async_tiff.store.HTTPStore" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#async_tiff.store.MemoryStore" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
     <div class="doc doc-contents first">
 
 
-        <p>Configure a connection to a generic HTTP server.</p>
+        <p>A fully in-memory implementation of ObjectStore.</p>
+<p>Create a new in-memory store:
+<div class="highlight"><pre><span></span><code><span class="n">store</span> <span class="o">=</span> <span class="n">MemoryStore</span><span class="p">()</span>
+</code></pre></div></p>
 
 
 
@@ -973,179 +874,7 @@
 
 
 
-<div class="doc doc-object doc-attribute">
 
-
-
-<h3 id="async_tiff.store.HTTPStore.client_options" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">client_options</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#async_tiff.store.HTTPStore.client_options" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">client_options</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._client.ClientConfig" href="../config/#async_tiff.store.ClientConfig">ClientConfig</a></span> <span class="o">|</span> <span class="kc">None</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Get the store's client configuration.</p>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h3 id="async_tiff.store.HTTPStore.retry_config" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">retry_config</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#async_tiff.store.HTTPStore.retry_config" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">retry_config</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._retry.RetryConfig" href="../config/#async_tiff.store.RetryConfig">RetryConfig</a></span> <span class="o">|</span> <span class="kc">None</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Get the store's retry configuration.</p>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h3 id="async_tiff.store.HTTPStore.url" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">url</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
-  </span>
-
-<a href="#async_tiff.store.HTTPStore.url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Get the base url of this store.</p>
-    </div>
-
-</div>
-
-
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="async_tiff.store.HTTPStore.__init__" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">__init__</span>
-
-
-<a href="#async_tiff.store.HTTPStore.__init__" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="fm">__init__</span><span class="p">(</span>
-    <span class="nf">url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span>
-    <span class="o">*</span><span class="p">,</span>
-    <span class="n">client_options</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._client.ClientConfig" href="../config/#async_tiff.store.ClientConfig">ClientConfig</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">retry_config</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._retry.RetryConfig" href="../config/#async_tiff.store.RetryConfig">RetryConfig</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Construct a new HTTPStore from a URL.</p>
-<p>Any path on the URL will be assigned as the <code>prefix</code> for the store. So if you
-pass <code>https://example.com/path/to/directory</code>, the store will be created with a
-prefix of <code>path/to/directory</code>, and all further operations will use paths
-relative to that prefix.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-            <b><code>url</code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>The base URL to use for the store.</p>
-          </div>
-        </li>
-    </ul>
-
-
-<p><span class="doc-section-title">Other Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-          <b><code>client_options</code></b>
-              (<code><a class="autorefs autorefs-internal" title="async_tiff.store._client.ClientConfig" href="../config/#async_tiff.store.ClientConfig">ClientConfig</a> | None</code>)
-          –
-          <div class="doc-md-description">
-            <p>HTTP Client options. Defaults to None.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-          <b><code>retry_config</code></b>
-              (<code><a class="autorefs autorefs-internal" title="async_tiff.store._retry.RetryConfig" href="../config/#async_tiff.store.RetryConfig">RetryConfig</a> | None</code>)
-          –
-          <div class="doc-md-description">
-            <p>Retry configuration. Defaults to None.</p>
-          </div>
-        </li>
-    </ul>
-
-
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-              <code>None</code>
-          –
-          <div class="doc-md-description">
-            <p>HTTPStore</p>
-          </div>
-        </li>
-    </ul>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="async_tiff.store.HTTPStore.from_url" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">from_url</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
-  </span>
-
-<a href="#async_tiff.store.HTTPStore.from_url" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="nf">from_url</span><span class="p">(</span>
-    <span class="n">url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span>
-    <span class="o">*</span><span class="p">,</span>
-    <span class="n">client_options</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._client.ClientConfig" href="../config/#async_tiff.store.ClientConfig">ClientConfig</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">retry_config</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store._retry.RetryConfig" href="../config/#async_tiff.store.RetryConfig">RetryConfig</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><span title="typing_extensions.Self">Self</span></span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Construct a new HTTPStore from a URL.</p>
-<p>This is an alias of <a class="autorefs autorefs-external" href="https://developmentseed.org/obstore/latest/api/store/http/#obstore.store.HTTPStore.__init__"><code>HTTPStore.__init__</code></a>.</p>
-
-    </div>
-
-</div>
 
 
 
