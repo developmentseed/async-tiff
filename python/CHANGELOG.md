@@ -12,6 +12,7 @@
 - chore!: Bump minimum Python version to 3.10 by @kylebarron in https://github.com/developmentseed/async-tiff/pull/122
 - chore: Bump pyo3 to 0.26 by @kylebarron in https://github.com/developmentseed/async-tiff/pull/121
 - ci: Build abi3 wheels where possible by @kylebarron in https://github.com/developmentseed/async-tiff/pull/123
+- chore: Bump _obstore submodule for latest store creation types #125
 
 ### New Contributors
 
