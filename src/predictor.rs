@@ -168,6 +168,7 @@ pub(crate) fn unpredict_hdiff(
 // From image-tiff
 ///
 /// This should be used _after_ endianness fixing
+///
 pub fn rev_hpredict_nsamp(buf: &mut [u8], bit_depth: u16, samples: usize) {
     match bit_depth {
         0..=8 => {
