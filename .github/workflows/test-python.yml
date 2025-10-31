@@ -7,6 +7,30 @@ on:
   pull_request:
 
 jobs:
+  pre-commit:
+    name: Pre-Commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Use ruff-action so we get annotations in the GitHub UI
+      - uses: astral-sh/ruff-action@v3
+
+      - name: Cache pre-commit virtualenvs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-3|${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: run pre-commit
+        run: |
+          python -m pip install pre-commit
+          pre-commit run --all-files
+
   lint-test:
     name: Lint and Test
     runs-on: ubuntu-latest
