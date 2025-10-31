@@ -1,8 +1,8 @@
 name: Publish to crates.io
 on:
   push:
-    # Triggers when pushing tags starting with 'v'
-    tags: ["v*"]
+    # Triggers when pushing tags starting with 'rust-v'
+    tags: ["rust-v*"]
 
 jobs:
   publish:
