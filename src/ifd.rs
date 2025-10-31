@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::ops::Range;
 
 use bytes::Bytes;
@@ -6,6 +7,7 @@ use num_enum::TryFromPrimitive;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult};
 use crate::geo::{GeoKeyDirectory, GeoKeyTag};
+use crate::metadata::extra_tags::ExtraTagsRegistry;
 use crate::predictor::PredictorInfo;
 use crate::reader::{AsyncFileReader, Endianness};
 use crate::tiff::tags::{
@@ -133,6 +135,8 @@ pub struct ImageFileDirectory {
 
     pub(crate) copyright: Option<String>,
 
+    pub(crate) extra_tags: ExtraTagsRegistry,
+
     // Geospatial tags
     pub(crate) geo_key_directory: Option<GeoKeyDirectory>,
     pub(crate) model_pixel_scale: Option<Vec<f64>>,
@@ -149,6 +153,7 @@ impl ImageFileDirectory {
     pub fn from_tags(
         tag_data: HashMap<Tag, Value>,
         endianness: Endianness,
+        extra_tags_registry: ExtraTagsRegistry,
     ) -> AsyncTiffResult<Self> {
         let mut new_subfile_type = None;
         let mut image_width = None;
@@ -262,8 +267,19 @@ impl ImageFileDirectory {
                 // Tag::GdalNodata
                 // Tags for which the tiff crate doesn't have a hard-coded enum variant
                 Tag::Unknown(DOCUMENT_NAME) => document_name = Some(value.into_string()?),
-                _ => {
-                    other_tags.insert(tag, value);
+                t => {
+                    if extra_tags_registry.contains(&t) {
+                        extra_tags_registry[&t].process_tag(t, value).map_err(|e| {
+                            if let AsyncTiffError::InternalTIFFError(err) = e {
+                                err
+                            } else {
+                                // TODO fix error handling. This is bad
+                                TiffError::IntSizeError
+                            }
+                        })?;
+                    } else {
+                        other_tags.insert(tag, value);
+                    }
                 }
             };
             Ok::<_, TiffError>(())
@@ -398,6 +414,7 @@ impl ImageFileDirectory {
             geo_key_directory,
             model_pixel_scale,
             model_tiepoint,
+            extra_tags: extra_tags_registry,
             other_tags,
         })
     }
@@ -632,6 +649,11 @@ impl ImageFileDirectory {
     /// <https://web.archive.org/web/20240329145303/https://www.awaresystems.be/imaging/tiff/tifftags/modeltiepointtag.html>
     pub fn model_tiepoint(&self) -> Option<&[f64]> {
         self.model_tiepoint.as_deref()
+    }
+
+    /// the registry holding extra tags
+    pub fn extra_tags(&self) -> &ExtraTagsRegistry {
+        &self.extra_tags
     }
 
     /// Tags for which the tiff crate doesn't have a hard-coded enum variant.

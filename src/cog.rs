@@ -44,7 +44,7 @@ mod test {
             .await
             .unwrap();
         let ifds = metadata_reader
-            .read_all_ifds(&prefetch_reader)
+            .read_all_ifds(&prefetch_reader, Default::default())
             .await
             .unwrap();
         let tiff = TIFF::new(ifds);
