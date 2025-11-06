@@ -56,6 +56,26 @@ mod test {
     }
 
     #[ignore = "local file"]
+    #[tokio::test]
+    #[should_panic(expected = "Unknown GeoKeyTag id: {key_id}: TryFromPrimitiveError { number: 2062 }")]
+    async fn tmp_towg84() {
+        let folder = "/Users/kyle/github/developmentseed/async-tiff";
+        let path = object_store::path::Path::parse("USGS_13_s14w171.tif").unwrap();
+        let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
+        let reader = Arc::new(ObjectReader::new(store, path)) as Arc<dyn AsyncFileReader>;
+        let prefetch_reader = PrefetchBuffer::new(reader.clone(), 32 * 1024)
+            .await
+            .unwrap();
+        let mut metadata_reader = TiffMetadataReader::try_open(&prefetch_reader)
+            .await
+            .unwrap();
+        let _ = metadata_reader
+            .read_all_ifds(&prefetch_reader)
+            .await
+            .unwrap();
+    }
+
+    #[ignore = "local file"]
     #[test]
     fn tmp_tiff_example() {
         let path = "/Users/kyle/github/developmentseed/async-tiff/m_4007307_sw_18_060_20220803.tif";
