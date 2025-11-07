@@ -57,10 +57,7 @@ mod test {
 
     #[ignore = "local file"]
     #[tokio::test]
-    #[should_panic(
-        expected = "Unknown GeoKeyTag id: {key_id}: TryFromPrimitiveError { number: 2062 }"
-    )]
-    async fn tmp_towg84() {
+    async fn tmp_towgs84() {
         let folder = "/Users/kyle/github/developmentseed/async-tiff";
         let path = object_store::path::Path::parse("USGS_13_s14w171.tif").unwrap();
         let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
