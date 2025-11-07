@@ -37,7 +37,8 @@ pub(crate) struct PyGeoKeyDirectory {
     geog_azimuth_units: Option<u16>,
     #[pyo3(get)]
     geog_prime_meridian_long: Option<f64>,
-
+    #[pyo3(get)]
+    geog_to_wgs84: Option<Vec<f64>>,
     #[pyo3(get)]
     projected_type: Option<u16>,
     #[pyo3(get)]
@@ -117,6 +118,7 @@ impl From<PyGeoKeyDirectory> for GeoKeyDirectory {
             geog_inv_flattening: value.geog_inv_flattening,
             geog_azimuth_units: value.geog_azimuth_units,
             geog_prime_meridian_long: value.geog_prime_meridian_long,
+            geog_to_wgs84: value.geog_to_wgs84,
             projected_type: value.projected_type,
             proj_citation: value.proj_citation,
             projection: value.projection,
@@ -169,6 +171,7 @@ impl From<GeoKeyDirectory> for PyGeoKeyDirectory {
             geog_inv_flattening: value.geog_inv_flattening,
             geog_azimuth_units: value.geog_azimuth_units,
             geog_prime_meridian_long: value.geog_prime_meridian_long,
+            geog_to_wgs84: value.geog_to_wgs84,
             projected_type: value.projected_type,
             proj_citation: value.proj_citation,
             projection: value.projection,
