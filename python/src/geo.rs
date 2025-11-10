@@ -38,6 +38,8 @@ pub(crate) struct PyGeoKeyDirectory {
     #[pyo3(get)]
     geog_prime_meridian_long: Option<f64>,
     #[pyo3(get)]
+    /// Note: This is not part of the official GeoTIFF specification but is a proposed extension.
+    /// See https://trac.osgeo.org/geotiff/wiki/TOWGS84GeoKey.
     geog_to_wgs84: Option<Vec<f64>>,
     #[pyo3(get)]
     projected_type: Option<u16>,
