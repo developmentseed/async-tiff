@@ -25,7 +25,9 @@ jobs:
           persist-credentials: false
 
       - name: Run Clippy
-        run: cargo clippy --all-targets
+        run: |
+          cargo clippy --all-targets --all-features
+          cargo clippy --all-targets --all-features --manifest-path python/Cargo.toml
 
   format_check:
     runs-on: ubuntu-latest
@@ -37,4 +39,6 @@ jobs:
           persist-credentials: false
 
       - name: Run Rustfmt
-        run: cargo fmt --check -- --config imports_granularity=Module,group_imports=StdExternalCrate
+        run: |
+          cargo fmt --all --check -- --config imports_granularity=Module,group_imports=StdExternalCrate
+          cargo fmt --all --check --manifest-path python/Cargo.toml -- --config imports_granularity=Module,group_imports=StdExternalCrate
