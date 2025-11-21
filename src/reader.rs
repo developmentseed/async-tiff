@@ -108,6 +108,7 @@ impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> Toki
 
     async fn make_range_request(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
         use std::io::SeekFrom;
+
         use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
         use crate::error::AsyncTiffError;

@@ -1,6 +1,7 @@
 //! Error handling.
 
 use std::fmt::Debug;
+
 use thiserror::Error;
 
 /// Enum with all errors in this crate.

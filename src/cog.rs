@@ -23,12 +23,12 @@ mod test {
     use std::io::BufReader;
     use std::sync::Arc;
 
-    use crate::metadata::{PrefetchBuffer, TiffMetadataReader};
-    use crate::reader::{AsyncFileReader, ObjectReader};
-
-    use super::*;
     use object_store::local::LocalFileSystem;
     use tiff::decoder::{DecodingResult, Limits};
+
+    use super::*;
+    use crate::metadata::{PrefetchBuffer, TiffMetadataReader};
+    use crate::reader::{AsyncFileReader, ObjectReader};
 
     #[ignore = "local file"]
     #[tokio::test]

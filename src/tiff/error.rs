@@ -1,17 +1,13 @@
 use std::error::Error;
-use std::fmt;
 use std::fmt::Display;
-use std::io;
-use std::str;
-use std::string;
 use std::sync::Arc;
+use std::{fmt, io, str, string};
 
 use jpeg::UnsupportedFeature;
 
 use super::ifd::Value;
-use super::tags::Predictor;
 use super::tags::{
-    CompressionMethod, PhotometricInterpretation, PlanarConfiguration, SampleFormat, Tag,
+    CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, SampleFormat, Tag,
 };
 
 /// Tiff error kinds.
