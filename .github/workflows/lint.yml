@@ -1,0 +1,40 @@
+name: Lint
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: ["main"]
+
+permissions: {}
+
+# Make sure CI fails on all warnings, including Clippy lints
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  clippy_check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Run Clippy
+        run: cargo clippy --all-targets
+
+  format_check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Run Rustfmt
+        run: cargo fmt --check -- --config imports_granularity=Module,group_imports=StdExternalCrate
