@@ -14,8 +14,7 @@ mod test {
         let path =
             object_store::path::Path::parse("tests/images/geogtowgs_subset_USGS_13_s14w171.tif")
                 .unwrap();
-        let store: Arc<LocalFileSystem> =
-            Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
+        let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
         let reader = Arc::new(ObjectReader::new(store, path)) as Arc<dyn AsyncFileReader>;
         let prefetch_reader = PrefetchBuffer::new(reader.clone(), 32 * 1024)
             .await
