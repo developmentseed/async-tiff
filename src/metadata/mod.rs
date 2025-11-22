@@ -58,8 +58,10 @@
 //! fetches the first `N` bytes out of a file.
 //!
 
+pub mod cache;
 mod fetch;
 mod reader;
 
+pub use cache::ExponentialMetadataCache;
 pub use fetch::{MetadataFetch, PrefetchBuffer};
 pub use reader::{ImageFileDirectoryReader, TiffMetadataReader};
