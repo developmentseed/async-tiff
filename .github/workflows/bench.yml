@@ -1,0 +1,59 @@
+# Run performance benchmarks
+name: Benchmarks
+
+on:
+  push:
+    branches: ["main"]
+  release:
+    types: [published]
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/osgeo/gdal:ubuntu-small-3.11.5
+      options: --privileged
+
+    steps:
+      - name: Install dev dependencies and setup git
+        run: |
+          apt update
+          apt install -y build-essential cmake git libclang-dev pkg-config
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Download and extract files
+        run: |
+          gdal raster convert --co COMPRESS=LZW --co TILED=YES --co PREDICTOR=2 https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/12/S/UF/2022/6/S2B_12SUF_20220609_0_L2A/TCI.tif benches/TCI_lzw.tif
+          ls -lh benches/
+
+      - name: Setup rust toolchain, cache and cargo-codspeed binary
+        uses: moonrepo/setup-rust@v1
+        with:
+          channel: stable
+          cache: false
+          cache-target: release
+          bins: cargo-codspeed
+
+      - name: Build the benchmark target(s)
+        run: cargo codspeed build
+
+      - name: Run the benchmarks
+        if: matrix.toolchain == 'stable'
+        uses: CodSpeedHQ/action@v4
+        with:
+          mode: instrumentation
+          run: cargo codspeed run
