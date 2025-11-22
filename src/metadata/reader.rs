@@ -623,13 +623,14 @@ async fn read_tag_value<F: MetadataFetch>(
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        metadata::{reader::read_tag, MetadataFetch},
-        reader::Endianness,
-        tiff::{tags::Tag, Value},
-    };
     use bytes::Bytes;
     use futures::FutureExt;
+
+    use crate::metadata::reader::read_tag;
+    use crate::metadata::MetadataFetch;
+    use crate::reader::Endianness;
+    use crate::tiff::tags::Tag;
+    use crate::tiff::Value;
 
     impl MetadataFetch for Bytes {
         fn fetch(

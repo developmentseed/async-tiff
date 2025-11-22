@@ -3,10 +3,10 @@ use std::fmt::Debug;
 
 use bytes::{Bytes, BytesMut};
 
-use crate::error::AsyncTiffError;
+use crate::error::{AsyncTiffError, AsyncTiffResult};
+use crate::reader::Endianness;
 use crate::tiff::tags::PlanarConfiguration;
 use crate::ImageFileDirectory;
-use crate::{error::AsyncTiffResult, reader::Endianness};
 
 /// All info that may be used by a predictor
 ///
@@ -397,12 +397,9 @@ mod test {
 
     use bytes::Bytes;
 
-    use crate::{
-        predictor::{unpredict_float, unpredict_hdiff},
-        reader::Endianness,
-    };
-
     use super::*;
+    use crate::predictor::{unpredict_float, unpredict_hdiff};
+    use crate::reader::Endianness;
 
     const PRED_INFO: PredictorInfo = PredictorInfo {
         endianness: Endianness::LittleEndian,
