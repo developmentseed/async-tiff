@@ -88,31 +88,30 @@ impl SequentialCache {
 /// A MetadataFetch implementation that caches fetched data in exponentially growing chunks,
 /// sequentially from the beginning of the file.
 pub struct ExponentialMetadataCache<F: MetadataFetch> {
-    fetch: Arc<F>,
+    inner: F,
     cache: Arc<Mutex<SequentialCache>>,
 }
 
 impl<F: MetadataFetch> ExponentialMetadataCache<F> {
     /// Create a new ExponentialMetadataCache wrapping the given MetadataFetch
-    pub fn new(fetch: F) -> AsyncTiffResult<Self> {
+    pub fn new(inner: F) -> AsyncTiffResult<Self> {
         Ok(Self {
-            fetch: Arc::new(fetch),
+            inner,
             cache: Arc::new(Mutex::new(SequentialCache::new())),
         })
     }
 }
 
 fn next_fetch_size(existing_len: u64) -> u64 {
-    let min = 64 * 1024;
     if existing_len == 0 {
-        return min;
+        64 * 1024
+    } else {
+        existing_len * 2
     }
-    existing_len * 2
 }
 
 impl<F: MetadataFetch + Send + Sync> MetadataFetch for ExponentialMetadataCache<F> {
     fn fetch(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        let inner = self.fetch.clone();
         let cache = self.cache.clone();
 
         Box::pin(async move {
@@ -131,7 +130,7 @@ impl<F: MetadataFetch + Send + Sync> MetadataFetch for ExponentialMetadataCache<
 
             // Perform the fetch while holding mutex
             // (this is OK because the mutex is async)
-            let bytes = inner.fetch(fetch_range).await?;
+            let bytes = self.inner.fetch(fetch_range).await?;
 
             // Now append safely
             g.append_buffer(bytes);
