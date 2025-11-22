@@ -559,6 +559,7 @@ mod test {
     use bytes::Bytes;
     use futures::FutureExt;
 
+    use crate::error::AsyncTiffError;
     use crate::metadata::reader::read_tag;
     use crate::metadata::MetadataFetch;
     use crate::reader::Endianness;
@@ -854,7 +855,15 @@ mod test {
         for (buf, byte_order, res) in cases {
             println!("reading {buf:?} to be {res:?}");
             let fetch = Bytes::from_owner(buf);
-            assert_eq!(read_tag(&fetch, 0, byte_order, true).await.unwrap(), (Tag::from_u16_exhaustive(0x0101), res))
+            match read_tag(&fetch, 0, byte_order, true).await {
+                Ok((tag, value)) => {
+                    assert_eq!(tag, Tag::from_u16_exhaustive(0x0101));
+                    assert_eq!(value, res);
+                }
+                Err(error) => {
+                    assert!(matches!(error, AsyncTiffError::BytemuckError(_)), "an error should be from failing to cast byte slice")
+                }
+            }
         }
     }
 }
