@@ -1,12 +1,35 @@
-/// Integration tests on OME-TIFF files.
-use async_tiff::tiff::tags::PhotometricInterpretation;
+//! Integration tests on OME-TIFF files.
 
-mod util;
+use std::sync::Arc;
+
+use async_tiff::metadata::{PrefetchBuffer, TiffMetadataReader};
+use async_tiff::reader::{AsyncFileReader, ObjectReader};
+use async_tiff::tiff::tags::PhotometricInterpretation;
+use async_tiff::TIFF;
+use reqwest::Url;
+
+async fn open_remote_tiff(url: &str) -> TIFF {
+    let parsed_url = Url::parse(url).expect("failed parsing url");
+    let (store, path) = object_store::parse_url(&parsed_url).unwrap();
+
+    let reader = Arc::new(ObjectReader::new(Arc::new(store), path)) as Arc<dyn AsyncFileReader>;
+    let prefetch_reader = PrefetchBuffer::new(reader.clone(), 32 * 1024)
+        .await
+        .unwrap();
+    let mut metadata_reader = TiffMetadataReader::try_open(&prefetch_reader)
+        .await
+        .unwrap();
+    let ifds = metadata_reader
+        .read_all_ifds(&prefetch_reader)
+        .await
+        .unwrap();
+    TIFF::new(ifds)
+}
 
 #[tokio::test]
 async fn test_ome_tiff_single_channel() {
     let tiff =
-        util::open_remote_tiff("https://downloads.openmicroscopy.org/images/OME-TIFF/2016-06/bioformats-artificial/single-channel.ome.tif").await;
+        open_remote_tiff("https://downloads.openmicroscopy.org/images/OME-TIFF/2016-06/bioformats-artificial/single-channel.ome.tif").await;
 
     assert_eq!(tiff.ifds().len(), 1);
     let ifd = &tiff.ifds()[0];
