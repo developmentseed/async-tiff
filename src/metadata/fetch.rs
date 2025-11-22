@@ -121,7 +121,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
     /// Read `n` i8s from the cursor, advancing the internal state by `n` bytes.
     pub(crate) async fn read_i8_n(&mut self, n: u64) -> AsyncTiffResult<Value> {
         let (buf, _endianness) = self.read(n).await?.into_inner();
-        let values: &[i8] = bytemuck::cast_slice(&buf);
+        let values: &[i8] = bytemuck::try_cast_slice(&buf)?;
         Ok(Value::List(
             values.iter().copied().map(Value::SignedByte).collect(),
         ))
@@ -139,7 +139,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         // If the endianness matches the machine endianness, we can do a direct cast.
         if self.endianness == MACHINE_ENDIANNESS {
             let (buf, _endianness) = reader.into_inner();
-            let values: &[u16] = bytemuck::cast_slice(&buf);
+            let values: &[u16] = bytemuck::try_cast_slice(&buf)?;
             Ok(Value::List(
                 values.iter().copied().map(Value::Short).collect(),
             ))
@@ -159,7 +159,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         // If the endianness matches the machine endianness, we can do a direct cast.
         if self.endianness == MACHINE_ENDIANNESS {
             let (buf, _endianness) = reader.into_inner();
-            let values: &[i16] = bytemuck::cast_slice(&buf);
+            let values: &[i16] = bytemuck::try_cast_slice(&buf)?;
             Ok(Value::List(
                 values.iter().copied().map(Value::SignedShort).collect(),
             ))
@@ -184,7 +184,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         // If the endianness matches the machine endianness, we can do a direct cast.
         if self.endianness == MACHINE_ENDIANNESS {
             let (buf, _endianness) = reader.into_inner();
-            let values: &[u32] = bytemuck::cast_slice(&buf);
+            let values: &[u32] = bytemuck::try_cast_slice(&buf)?;
             Ok(Value::List(
                 values.iter().copied().map(Value::Unsigned).collect(),
             ))
@@ -204,7 +204,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         // If the endianness matches the machine endianness, we can do a direct cast.
         if self.endianness == MACHINE_ENDIANNESS {
             let (buf, _endianness) = reader.into_inner();
-            let values: &[u32] = bytemuck::cast_slice(&buf);
+            let values: &[u32] = bytemuck::try_cast_slice(&buf)?;
             Ok(Value::List(
                 values.iter().copied().map(Value::Ifd).collect(),
             ))
@@ -229,7 +229,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         // If the endianness matches the machine endianness, we can do a direct cast.
         if self.endianness == MACHINE_ENDIANNESS {
             let (buf, _endianness) = reader.into_inner();
-            let values: &[i32] = bytemuck::cast_slice(&buf);
+            let values: &[i32] = bytemuck::try_cast_slice(&buf)?;
             Ok(Value::List(
                 values.iter().copied().map(Value::Signed).collect(),
             ))
@@ -254,7 +254,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         // If the endianness matches the machine endianness, we can do a direct cast.
         if self.endianness == MACHINE_ENDIANNESS {
             let (buf, _endianness) = reader.into_inner();
-            let values: &[u64] = bytemuck::cast_slice(&buf);
+            let values: &[u64] = bytemuck::try_cast_slice(&buf)?;
             Ok(Value::List(
                 values.iter().copied().map(Value::UnsignedBig).collect(),
             ))
@@ -274,7 +274,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         // If the endianness matches the machine endianness, we can do a direct cast.
         if self.endianness == MACHINE_ENDIANNESS {
             let (buf, _endianness) = reader.into_inner();
-            let values: &[u64] = bytemuck::cast_slice(&buf);
+            let values: &[u64] = bytemuck::try_cast_slice(&buf)?;
             Ok(Value::List(
                 values.iter().copied().map(Value::IfdBig).collect(),
             ))
@@ -299,7 +299,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         // If the endianness matches the machine endianness, we can do a direct cast.
         if self.endianness == MACHINE_ENDIANNESS {
             let (buf, _endianness) = reader.into_inner();
-            let values: &[i64] = bytemuck::cast_slice(&buf);
+            let values: &[i64] = bytemuck::try_cast_slice(&buf)?;
             Ok(Value::List(
                 values.iter().copied().map(Value::SignedBig).collect(),
             ))
@@ -319,7 +319,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         // If the endianness matches the machine endianness, we can do a direct cast.
         if self.endianness == MACHINE_ENDIANNESS {
             let (buf, _endianness) = reader.into_inner();
-            let values: &[f32] = bytemuck::cast_slice(&buf);
+            let values: &[f32] = bytemuck::try_cast_slice(&buf)?;
             Ok(Value::List(
                 values.iter().copied().map(Value::Float).collect(),
             ))
@@ -343,7 +343,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         // If the endianness matches the machine endianness, we can do a direct cast.
         if self.endianness == MACHINE_ENDIANNESS {
             let (buf, _endianness) = reader.into_inner();
-            let values: &[f64] = bytemuck::cast_slice(&buf);
+            let values: &[f64] = bytemuck::try_cast_slice(&buf)?;
             Ok(Value::List(
                 values.iter().copied().map(Value::Double).collect(),
             ))
