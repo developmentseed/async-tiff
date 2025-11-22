@@ -37,6 +37,7 @@ pub(crate) struct PyGeoKeyDirectory {
     geog_azimuth_units: Option<u16>,
     #[pyo3(get)]
     geog_prime_meridian_long: Option<f64>,
+
     #[pyo3(get)]
     projected_type: Option<u16>,
     #[pyo3(get)]
