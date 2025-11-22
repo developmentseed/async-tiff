@@ -5,7 +5,6 @@ mod test {
 
     use async_tiff::metadata::{PrefetchBuffer, TiffMetadataReader};
     use async_tiff::reader::{AsyncFileReader, ObjectReader};
-
     use object_store::local::LocalFileSystem;
 
     #[tokio::test]
