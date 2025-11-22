@@ -71,7 +71,7 @@ impl PyTile {
 
         future_into_py(py, async move {
             let decoded_bytes = pool
-                .spawn_async(move || tile.decode(&decoder_registry))
+                .spawn_fifo_async(move || tile.decode(&decoder_registry))
                 .await
                 .unwrap();
             Ok(PyBytes::new(decoded_bytes))
