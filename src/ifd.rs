@@ -295,8 +295,15 @@ impl ImageFileDirectory {
                     .expect("There should be a chunk for each key.");
 
                 let key_id = chunk[0];
-                let tag_name =
-                    GeoKeyTag::try_from_primitive(key_id).expect("Unknown GeoKeyTag id: {key_id}");
+                let tag_name = if let Ok(tag_name) = GeoKeyTag::try_from_primitive(key_id) {
+                    tag_name
+                } else {
+                    // Skip unknown GeoKeyTag ids. Some GeoTIFFs include keys that were proposed
+                    // but not included in the GeoTIFF spec. See
+                    // https://github.com/developmentseed/async-tiff/pull/131 and
+                    // https://github.com/virtual-zarr/virtual-tiff/issues/52
+                    continue;
+                };
 
                 let tag_location = chunk[1];
                 let count = chunk[2];

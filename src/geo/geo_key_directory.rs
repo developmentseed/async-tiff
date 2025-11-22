@@ -31,7 +31,6 @@ pub(crate) enum GeoKeyTag {
     GeogInvFlattening = 2059,
     GeogAzimuthUnits = 2060,
     GeogPrimeMeridianLong = 2061,
-    GeogToWGS84 = 2062,
 
     // Projected CRS Parameter Keys
     ProjectedType = 3072,
@@ -101,7 +100,6 @@ pub struct GeoKeyDirectory {
     /// defined by its longitude relative to the international reference meridian (for the earth
     /// this is Greenwich).
     pub geog_prime_meridian_long: Option<f64>,
-    pub geog_to_wgs84: Option<Vec<f64>>,
 
     pub projected_type: Option<u16>,
     pub proj_citation: Option<String>,
@@ -155,7 +153,6 @@ impl GeoKeyDirectory {
         let mut geog_inv_flattening = None;
         let mut geog_azimuth_units = None;
         let mut geog_prime_meridian_long = None;
-        let mut geog_to_wgs84 = None;
 
         let mut projected_type = None;
         let mut proj_citation = None;
@@ -208,7 +205,6 @@ impl GeoKeyDirectory {
                 GeoKeyTag::GeogPrimeMeridianLong => {
                     geog_prime_meridian_long = Some(value.into_f64()?)
                 }
-                GeoKeyTag::GeogToWGS84 => geog_to_wgs84 = Some(value.into_f64_vec()?),
                 GeoKeyTag::ProjectedType => projected_type = Some(value.into_u16()?),
                 GeoKeyTag::ProjCitation => proj_citation = Some(value.into_string()?),
                 GeoKeyTag::Projection => projection = Some(value.into_u16()?),
@@ -268,7 +264,6 @@ impl GeoKeyDirectory {
             geog_inv_flattening,
             geog_azimuth_units,
             geog_prime_meridian_long,
-            geog_to_wgs84,
 
             projected_type,
             proj_citation,
