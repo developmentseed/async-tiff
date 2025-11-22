@@ -409,6 +409,11 @@ impl ImageFileDirectory {
         })
     }
 
+    /// The Endianness of the file
+    pub fn endianness(&self) -> Endianness {
+        self.endianness
+    }
+
     /// A general indication of the kind of data contained in this subfile.
     /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/newsubfiletype.html>
     pub fn new_subfile_type(&self) -> Option<u32> {
