@@ -1,10 +1,10 @@
-/// Integration tests on OME-TIFF files.
-use async_tiff::tiff::tags::PhotometricInterpretation;
+//! Integration tests on OME-TIFF files.
 
 use std::sync::Arc;
 
 use async_tiff::metadata::{PrefetchBuffer, TiffMetadataReader};
 use async_tiff::reader::{AsyncFileReader, ObjectReader};
+use async_tiff::tiff::tags::PhotometricInterpretation;
 use async_tiff::TIFF;
 use reqwest::Url;
 
