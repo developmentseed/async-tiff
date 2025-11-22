@@ -13,15 +13,15 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
-permissions:
-  contents: read
-
 jobs:
-  rust:
+  rust-bench:
     runs-on: ubuntu-24.04
     container:
       image: ghcr.io/osgeo/gdal:ubuntu-small-3.11.5
       options: --privileged
+    permissions:
+      contents: read # required for actions/checkout
+      id-token: write # required for OIDC authentication with CodSpeed
 
     steps:
       - name: Install dev dependencies and setup git
@@ -54,5 +54,5 @@ jobs:
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@v4
         with:
-          mode: instrumentation
+          mode: simulation
           run: cargo codspeed run
