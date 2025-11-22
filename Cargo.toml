@@ -9,6 +9,7 @@ description = "Low-level asynchronous TIFF reader."
 readme = "README.md"
 
 [dependencies]
+bytemuck = "1.24.0"
 byteorder = "1"
 bytes = "1.7.0"
 flate2 = "1.0.20"

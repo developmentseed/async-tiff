@@ -229,7 +229,7 @@ impl AsyncFileReader for ReqwestReader {
 }
 
 /// Endianness
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Endianness {
     /// Little Endian
     LittleEndian,
@@ -316,9 +316,8 @@ impl EndianAwareReader {
         }
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn into_inner(self) -> (Reader<Bytes>, Endianness) {
-        (self.reader, self.endianness)
+    pub(crate) fn into_inner(self) -> (Bytes, Endianness) {
+        (self.reader.into_inner(), self.endianness)
     }
 }
 

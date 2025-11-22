@@ -6,6 +6,13 @@ use futures::FutureExt;
 
 use crate::error::AsyncTiffResult;
 use crate::reader::{AsyncFileReader, EndianAwareReader, Endianness};
+use crate::tiff::Value;
+
+#[cfg(target_endian = "little")]
+const MACHINE_ENDIANNESS: Endianness = Endianness::LittleEndian;
+
+#[cfg(target_endian = "big")]
+const MACHINE_ENDIANNESS: Endianness = Endianness::BigEndian;
 
 /// A data source that can be used with [`TiffMetadataReader`] and [`ImageFileDirectoryReader`] to
 /// load [`ImageFileDirectory`]s.
@@ -105,14 +112,19 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         Ok(EndianAwareReader::new(bytes, self.endianness))
     }
 
-    /// Read a u8 from the cursor, advancing the internal state by 1 byte.
-    pub(crate) async fn read_u8(&mut self) -> AsyncTiffResult<u8> {
-        self.read(1).await?.read_u8()
+    /// Read `n` u8s from the cursor, advancing the internal state by `n` bytes.
+    pub(crate) async fn read_u8_n(&mut self, n: u64) -> AsyncTiffResult<Vec<u8>> {
+        let (buf, _endianness) = self.read(n).await?.into_inner();
+        Ok(buf.into())
     }
 
-    /// Read a i8 from the cursor, advancing the internal state by 1 byte.
-    pub(crate) async fn read_i8(&mut self) -> AsyncTiffResult<i8> {
-        self.read(1).await?.read_i8()
+    /// Read `n` i8s from the cursor, advancing the internal state by `n` bytes.
+    pub(crate) async fn read_i8_n(&mut self, n: u64) -> AsyncTiffResult<Value> {
+        let (buf, _endianness) = self.read(n).await?.into_inner();
+        let values: &[i8] = bytemuck::cast_slice(&buf);
+        Ok(Value::List(
+            values.iter().copied().map(Value::SignedByte).collect(),
+        ))
     }
 
     /// Read a u16 from the cursor, advancing the internal state by 2 bytes.
@@ -120,9 +132,44 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         self.read(2).await?.read_u16()
     }
 
-    /// Read a i16 from the cursor, advancing the internal state by 2 bytes.
-    pub(crate) async fn read_i16(&mut self) -> AsyncTiffResult<i16> {
-        self.read(2).await?.read_i16()
+    /// Read `n` u16s from the cursor, advancing the internal state by `n * 2` bytes.
+    pub(crate) async fn read_u16_n(&mut self, n: u64) -> AsyncTiffResult<Value> {
+        let mut reader = self.read(n * 2).await?;
+
+        // If the endianness matches the machine endianness, we can do a direct cast.
+        if self.endianness == MACHINE_ENDIANNESS {
+            let (buf, _endianness) = reader.into_inner();
+            let values: &[u16] = bytemuck::cast_slice(&buf);
+            Ok(Value::List(
+                values.iter().copied().map(Value::Short).collect(),
+            ))
+        } else {
+            let mut v = Vec::with_capacity(n as _);
+            for _ in 0..n {
+                v.push(Value::Short(reader.read_u16()?))
+            }
+            Ok(Value::List(v))
+        }
+    }
+
+    /// Read `n` i16s from the cursor, advancing the internal state by `n * 2` bytes.
+    pub(crate) async fn read_i16_n(&mut self, n: u64) -> AsyncTiffResult<Value> {
+        let mut reader = self.read(n * 2).await?;
+
+        // If the endianness matches the machine endianness, we can do a direct cast.
+        if self.endianness == MACHINE_ENDIANNESS {
+            let (buf, _endianness) = reader.into_inner();
+            let values: &[i16] = bytemuck::cast_slice(&buf);
+            Ok(Value::List(
+                values.iter().copied().map(Value::SignedShort).collect(),
+            ))
+        } else {
+            let mut v = Vec::with_capacity(n as _);
+            for _ in 0..n {
+                v.push(Value::SignedShort(reader.read_i16()?))
+            }
+            Ok(Value::List(v))
+        }
     }
 
     /// Read a u32 from the cursor, advancing the internal state by 4 bytes.
@@ -130,9 +177,69 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         self.read(4).await?.read_u32()
     }
 
+    /// Read `n` u32s from the cursor, advancing the internal state by `n * 4` bytes.
+    pub(crate) async fn read_u32_n(&mut self, n: u64) -> AsyncTiffResult<Value> {
+        let mut reader = self.read(n * 4).await?;
+
+        // If the endianness matches the machine endianness, we can do a direct cast.
+        if self.endianness == MACHINE_ENDIANNESS {
+            let (buf, _endianness) = reader.into_inner();
+            let values: &[u32] = bytemuck::cast_slice(&buf);
+            Ok(Value::List(
+                values.iter().copied().map(Value::Unsigned).collect(),
+            ))
+        } else {
+            let mut v = Vec::with_capacity(n as _);
+            for _ in 0..n {
+                v.push(Value::Unsigned(reader.read_u32()?))
+            }
+            Ok(Value::List(v))
+        }
+    }
+
+    /// Read `n` Value::IFDs from the cursor, advancing the internal state by `n * 4` bytes.
+    pub(crate) async fn read_ifd_n(&mut self, n: u64) -> AsyncTiffResult<Value> {
+        let mut reader = self.read(n * 4).await?;
+
+        // If the endianness matches the machine endianness, we can do a direct cast.
+        if self.endianness == MACHINE_ENDIANNESS {
+            let (buf, _endianness) = reader.into_inner();
+            let values: &[u32] = bytemuck::cast_slice(&buf);
+            Ok(Value::List(
+                values.iter().copied().map(Value::Ifd).collect(),
+            ))
+        } else {
+            let mut v = Vec::with_capacity(n as _);
+            for _ in 0..n {
+                v.push(Value::Ifd(reader.read_u32()?))
+            }
+            Ok(Value::List(v))
+        }
+    }
+
     /// Read a i32 from the cursor, advancing the internal state by 4 bytes.
     pub(crate) async fn read_i32(&mut self) -> AsyncTiffResult<i32> {
         self.read(4).await?.read_i32()
+    }
+
+    /// Read `n` i32s from the cursor, advancing the internal state by `n * 4` bytes.
+    pub(crate) async fn read_i32_n(&mut self, n: u64) -> AsyncTiffResult<Value> {
+        let mut reader = self.read(n * 4).await?;
+
+        // If the endianness matches the machine endianness, we can do a direct cast.
+        if self.endianness == MACHINE_ENDIANNESS {
+            let (buf, _endianness) = reader.into_inner();
+            let values: &[i32] = bytemuck::cast_slice(&buf);
+            Ok(Value::List(
+                values.iter().copied().map(Value::Signed).collect(),
+            ))
+        } else {
+            let mut v = Vec::with_capacity(n as _);
+            for _ in 0..n {
+                v.push(Value::Signed(reader.read_i32()?))
+            }
+            Ok(Value::List(v))
+        }
     }
 
     /// Read a u64 from the cursor, advancing the internal state by 8 bytes.
@@ -140,16 +247,112 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         self.read(8).await?.read_u64()
     }
 
+    /// Read `n` u64s from the cursor, advancing the internal state by `n * 8` bytes.
+    pub(crate) async fn read_u64_n(&mut self, n: u64) -> AsyncTiffResult<Value> {
+        let mut reader = self.read(n * 8).await?;
+
+        // If the endianness matches the machine endianness, we can do a direct cast.
+        if self.endianness == MACHINE_ENDIANNESS {
+            let (buf, _endianness) = reader.into_inner();
+            let values: &[u64] = bytemuck::cast_slice(&buf);
+            Ok(Value::List(
+                values.iter().copied().map(Value::UnsignedBig).collect(),
+            ))
+        } else {
+            let mut v = Vec::with_capacity(n as _);
+            for _ in 0..n {
+                v.push(Value::UnsignedBig(reader.read_u64()?))
+            }
+            Ok(Value::List(v))
+        }
+    }
+
+    /// Read `n` u64s from the cursor, advancing the internal state by `n * 8` bytes.
+    pub(crate) async fn read_ifd8_n(&mut self, n: u64) -> AsyncTiffResult<Value> {
+        let mut reader = self.read(n * 8).await?;
+
+        // If the endianness matches the machine endianness, we can do a direct cast.
+        if self.endianness == MACHINE_ENDIANNESS {
+            let (buf, _endianness) = reader.into_inner();
+            let values: &[u64] = bytemuck::cast_slice(&buf);
+            Ok(Value::List(
+                values.iter().copied().map(Value::IfdBig).collect(),
+            ))
+        } else {
+            let mut v = Vec::with_capacity(n as _);
+            for _ in 0..n {
+                v.push(Value::IfdBig(reader.read_u64()?))
+            }
+            Ok(Value::List(v))
+        }
+    }
+
     /// Read a i64 from the cursor, advancing the internal state by 8 bytes.
     pub(crate) async fn read_i64(&mut self) -> AsyncTiffResult<i64> {
         self.read(8).await?.read_i64()
     }
 
-    pub(crate) async fn read_f32(&mut self) -> AsyncTiffResult<f32> {
-        self.read(4).await?.read_f32()
+    /// Read `n` i64s from the cursor, advancing the internal state by `n * 8` bytes.
+    pub(crate) async fn read_i64_n(&mut self, n: u64) -> AsyncTiffResult<Value> {
+        let mut reader = self.read(n * 8).await?;
+
+        // If the endianness matches the machine endianness, we can do a direct cast.
+        if self.endianness == MACHINE_ENDIANNESS {
+            let (buf, _endianness) = reader.into_inner();
+            let values: &[i64] = bytemuck::cast_slice(&buf);
+            Ok(Value::List(
+                values.iter().copied().map(Value::SignedBig).collect(),
+            ))
+        } else {
+            let mut v = Vec::with_capacity(n as _);
+            for _ in 0..n {
+                v.push(Value::SignedBig(reader.read_i64()?))
+            }
+            Ok(Value::List(v))
+        }
+    }
+
+    /// Read `n` f32s from the cursor, advancing the internal state by `n * 4` bytes.
+    pub(crate) async fn read_f32_n(&mut self, n: u64) -> AsyncTiffResult<Value> {
+        let mut reader = self.read(n * 4).await?;
+
+        // If the endianness matches the machine endianness, we can do a direct cast.
+        if self.endianness == MACHINE_ENDIANNESS {
+            let (buf, _endianness) = reader.into_inner();
+            let values: &[f32] = bytemuck::cast_slice(&buf);
+            Ok(Value::List(
+                values.iter().copied().map(Value::Float).collect(),
+            ))
+        } else {
+            let mut v = Vec::with_capacity(n as _);
+            for _ in 0..n {
+                v.push(Value::Float(reader.read_f32()?))
+            }
+            Ok(Value::List(v))
+        }
     }
 
     pub(crate) async fn read_f64(&mut self) -> AsyncTiffResult<f64> {
         self.read(8).await?.read_f64()
+    }
+
+    /// Read `n` f64s from the cursor, advancing the internal state by `n * 8` bytes.
+    pub(crate) async fn read_f64_n(&mut self, n: u64) -> AsyncTiffResult<Value> {
+        let mut reader = self.read(n * 8).await?;
+
+        // If the endianness matches the machine endianness, we can do a direct cast.
+        if self.endianness == MACHINE_ENDIANNESS {
+            let (buf, _endianness) = reader.into_inner();
+            let values: &[f64] = bytemuck::cast_slice(&buf);
+            Ok(Value::List(
+                values.iter().copied().map(Value::Double).collect(),
+            ))
+        } else {
+            let mut v = Vec::with_capacity(n as _);
+            for _ in 0..n {
+                v.push(Value::Double(reader.read_f64()?))
+            }
+            Ok(Value::List(v))
+        }
     }
 }

@@ -502,62 +502,18 @@ async fn read_tag_value<F: MetadataFetch>(
         // TODO check if this could give wrong results
         // at a different endianess of file/computer.
         Type::BYTE | Type::UNDEFINED => {
-            let mut v = Vec::with_capacity(count as _);
-            for _ in 0..count {
-                v.push(Value::Byte(cursor.read_u8().await?))
-            }
-            Ok(Value::List(v))
+            let values = cursor.read_u8_n(count).await?;
+            Ok(Value::List(values.into_iter().map(Value::Byte).collect()))
         }
-        Type::SBYTE => {
-            let mut v = Vec::with_capacity(count as _);
-            for _ in 0..count {
-                v.push(Value::SignedByte(cursor.read_i8().await?))
-            }
-            Ok(Value::List(v))
-        }
-        Type::SHORT => {
-            let mut v = Vec::with_capacity(count as _);
-            for _ in 0..count {
-                v.push(Value::Short(cursor.read_u16().await?))
-            }
-            Ok(Value::List(v))
-        }
-        Type::SSHORT => {
-            let mut v = Vec::with_capacity(count as _);
-            for _ in 0..count {
-                v.push(Value::SignedShort(cursor.read_i16().await?))
-            }
-            Ok(Value::List(v))
-        }
-        Type::LONG => {
-            let mut v = Vec::with_capacity(count as _);
-            for _ in 0..count {
-                v.push(Value::Unsigned(cursor.read_u32().await?))
-            }
-            Ok(Value::List(v))
-        }
-        Type::SLONG => {
-            let mut v = Vec::with_capacity(count as _);
-            for _ in 0..count {
-                v.push(Value::Signed(cursor.read_i32().await?))
-            }
-            Ok(Value::List(v))
-        }
-        Type::FLOAT => {
-            let mut v = Vec::with_capacity(count as _);
-            for _ in 0..count {
-                v.push(Value::Float(cursor.read_f32().await?))
-            }
-            Ok(Value::List(v))
-        }
-        Type::DOUBLE => {
-            let mut v = Vec::with_capacity(count as _);
-            for _ in 0..count {
-                v.push(Value::Double(cursor.read_f64().await?))
-            }
-            Ok(Value::List(v))
-        }
+        Type::SBYTE => cursor.read_i8_n(count).await,
+        Type::SHORT => cursor.read_u16_n(count).await,
+        Type::SSHORT => cursor.read_i16_n(count).await,
+        Type::LONG => cursor.read_u32_n(count).await,
+        Type::SLONG => cursor.read_i32_n(count).await,
+        Type::FLOAT => cursor.read_f32_n(count).await,
+        Type::DOUBLE => cursor.read_f64_n(count).await,
         Type::RATIONAL => {
+            // TODO: implement batched reading, i.e. make cursor method for this like above
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
                 v.push(Value::Rational(
@@ -568,6 +524,7 @@ async fn read_tag_value<F: MetadataFetch>(
             Ok(Value::List(v))
         }
         Type::SRATIONAL => {
+            // TODO: implement batched reading, i.e. make cursor method for this like above
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
                 v.push(Value::SRational(
@@ -577,34 +534,10 @@ async fn read_tag_value<F: MetadataFetch>(
             }
             Ok(Value::List(v))
         }
-        Type::LONG8 => {
-            let mut v = Vec::with_capacity(count as _);
-            for _ in 0..count {
-                v.push(Value::UnsignedBig(cursor.read_u64().await?))
-            }
-            Ok(Value::List(v))
-        }
-        Type::SLONG8 => {
-            let mut v = Vec::with_capacity(count as _);
-            for _ in 0..count {
-                v.push(Value::SignedBig(cursor.read_i64().await?))
-            }
-            Ok(Value::List(v))
-        }
-        Type::IFD => {
-            let mut v = Vec::with_capacity(count as _);
-            for _ in 0..count {
-                v.push(Value::Ifd(cursor.read_u32().await?))
-            }
-            Ok(Value::List(v))
-        }
-        Type::IFD8 => {
-            let mut v = Vec::with_capacity(count as _);
-            for _ in 0..count {
-                v.push(Value::IfdBig(cursor.read_u64().await?))
-            }
-            Ok(Value::List(v))
-        }
+        Type::LONG8 => cursor.read_u64_n(count).await,
+        Type::SLONG8 => cursor.read_i64_n(count).await,
+        Type::IFD => cursor.read_ifd_n(count).await,
+        Type::IFD8 => cursor.read_ifd8_n(count).await,
         Type::ASCII => {
             let mut out = vec![0; count as _];
             let mut buf = cursor.read(count).await?;
