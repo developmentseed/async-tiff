@@ -17,6 +17,7 @@ class TIFF:
         *,
         store: ObjectStore | ObspecInput,
         prefetch: int = 32768,
+        multiplier: int | float = 2.0,
     ) -> TIFF:
         """Open a new TIFF.
 
@@ -24,6 +25,10 @@ class TIFF:
             path: The path within the store to read from.
             store: The backend to use for data fetching.
             prefetch: The number of initial bytes to read up front.
+            multiplier: The multiplier to use for readahead size growth. Must be
+                greater than 1.0. For example, for a value of `2.0`, the first metadata
+                read will be of size `prefetch`, and then the next read will be of size
+                `prefetch * 2`.
 
         Returns:
             A TIFF instance.

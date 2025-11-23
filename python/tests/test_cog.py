@@ -11,7 +11,7 @@ async def test_cog_s3():
     """
     path = "sentinel-s2-l2a-cogs/12/S/UF/2022/6/S2B_12SUF_20220609_0_L2A/B04.tif"
     store = S3Store("sentinel-cogs", region="us-west-2", skip_signature=True)
-    tiff = await TIFF.open(path=path, store=store, prefetch=32768)
+    tiff = await TIFF.open(path=path, store=store)
 
     ifds = tiff.ifds
     assert len(ifds) == 5
