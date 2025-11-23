@@ -87,45 +87,50 @@ impl SequentialCache {
 
 /// A MetadataFetch implementation that caches fetched data in exponentially growing chunks,
 /// sequentially from the beginning of the file.
-pub struct ExponentialMetadataCache<F: MetadataFetch> {
+pub struct ReadAheadMetadataCache<F: MetadataFetch> {
     inner: F,
     cache: Arc<Mutex<SequentialCache>>,
+
+    initial_size: u64,
+    increment_multiple: u64,
 }
 
-impl<F: MetadataFetch> ExponentialMetadataCache<F> {
-    /// Create a new ExponentialMetadataCache wrapping the given MetadataFetch
-    pub fn new(inner: F) -> AsyncTiffResult<Self> {
+impl<F: MetadataFetch> ReadAheadMetadataCache<F> {
+    /// Create a new EagerMetadataCache wrapping the given MetadataFetch
+    pub fn new(inner: F, initial_size: u64, increment_multiple: u64) -> AsyncTiffResult<Self> {
         Ok(Self {
             inner,
             cache: Arc::new(Mutex::new(SequentialCache::new())),
+            initial_size,
+            increment_multiple,
         })
     }
-}
 
-fn next_fetch_size(existing_len: u64) -> u64 {
-    if existing_len == 0 {
-        64 * 1024
-    } else {
-        existing_len * 2
+    fn next_fetch_size(&self, current_len: u64) -> u64 {
+        if current_len == 0 {
+            self.initial_size
+        } else {
+            current_len * self.increment_multiple
+        }
     }
 }
 
-impl<F: MetadataFetch + Send + Sync> MetadataFetch for ExponentialMetadataCache<F> {
+impl<F: MetadataFetch + Send + Sync> MetadataFetch for ReadAheadMetadataCache<F> {
     fn fetch(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         let cache = self.cache.clone();
 
         Box::pin(async move {
-            let mut g = cache.lock().await;
+            let mut cache = cache.lock().await;
 
             // First check if we already have the range cached
-            if g.contains(range.start..range.end) {
-                return Ok(g.slice(range));
+            if cache.contains(range.start..range.end) {
+                return Ok(cache.slice(range));
             }
 
             // Compute the correct fetch range
-            let start_len = g.len;
+            let start_len = cache.len;
             let needed = range.end.saturating_sub(start_len);
-            let fetch_size = next_fetch_size(start_len).max(needed);
+            let fetch_size = &self.next_fetch_size(start_len).max(needed);
             let fetch_range = start_len..start_len + fetch_size;
 
             // Perform the fetch while holding mutex
@@ -133,9 +138,9 @@ impl<F: MetadataFetch + Send + Sync> MetadataFetch for ExponentialMetadataCache<
             let bytes = self.inner.fetch(fetch_range).await?;
 
             // Now append safely
-            g.append_buffer(bytes);
+            cache.append_buffer(bytes);
 
-            Ok(g.slice(range))
+            Ok(cache.slice(range))
         })
     }
 }
