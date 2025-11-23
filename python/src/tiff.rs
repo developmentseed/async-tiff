@@ -9,6 +9,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyType;
 use pyo3_async_runtimes::tokio::future_into_py;
 
+use crate::error::PyAsyncTiffResult;
 use crate::reader::StoreInput;
 use crate::tile::PyTile;
 use crate::PyImageFileDirectory;
@@ -17,6 +18,20 @@ use crate::PyImageFileDirectory;
 pub(crate) struct PyTIFF {
     tiff: TIFF,
     reader: Arc<dyn AsyncFileReader>,
+}
+
+async fn open(
+    reader: Arc<dyn AsyncFileReader>,
+    prefetch: u64,
+    multiplier: f64,
+) -> PyAsyncTiffResult<PyTIFF> {
+    let metadata_fetch = ReadaheadMetadataCache::new(reader.clone())
+        .with_initial_size(prefetch)
+        .with_multiplier(multiplier);
+    let mut metadata_reader = TiffMetadataReader::try_open(&metadata_fetch).await?;
+    let ifds = metadata_reader.read_all_ifds(&metadata_fetch).await?;
+    let tiff = TIFF::new(ifds);
+    Ok(PyTIFF { tiff, reader })
 }
 
 #[pymethods]
@@ -33,18 +48,11 @@ impl PyTIFF {
     ) -> PyResult<Bound<'py, PyAny>> {
         let reader = store.into_async_file_reader(path);
 
-        let cog_reader = future_into_py(py, async move {
-            let metadata_fetch = ReadaheadMetadataCache::new(reader.clone())
-                .with_initial_size(prefetch)
-                .with_multiplier(multiplier);
-            let mut metadata_reader = TiffMetadataReader::try_open(&metadata_fetch).await.unwrap();
-            let ifds = metadata_reader
-                .read_all_ifds(&metadata_fetch)
-                .await
-                .unwrap();
-            let tiff = TIFF::new(ifds);
-            Ok(PyTIFF { tiff, reader })
-        })?;
+        let cog_reader =
+            future_into_py(
+                py,
+                async move { Ok(open(reader, prefetch, multiplier).await?) },
+            )?;
         Ok(cog_reader)
     }
 
