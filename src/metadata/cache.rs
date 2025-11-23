@@ -97,13 +97,13 @@ pub struct ReadaheadMetadataCache<F: MetadataFetch> {
 
 impl<F: MetadataFetch> ReadaheadMetadataCache<F> {
     /// Create a new ReadaheadMetadataCache wrapping the given MetadataFetch
-    pub fn new(inner: F) -> AsyncTiffResult<Self> {
-        Ok(Self {
+    pub fn new(inner: F) -> Self {
+        Self {
             inner,
             cache: Arc::new(Mutex::new(SequentialBlockCache::new())),
             initial: 32 * 1024,
             multiplier: 2.0,
-        })
+        }
     }
 
     /// Set the initial fetch size in bytes, otherwise defaults to 32 KiB

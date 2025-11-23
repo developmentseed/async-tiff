@@ -2,7 +2,8 @@
 
 use std::sync::Arc;
 
-use async_tiff::metadata::{PrefetchBuffer, TiffMetadataReader};
+use async_tiff::metadata::cache::ReadaheadMetadataCache;
+use async_tiff::metadata::TiffMetadataReader;
 use async_tiff::reader::{AsyncFileReader, ObjectReader};
 use async_tiff::tiff::tags::PhotometricInterpretation;
 use async_tiff::TIFF;
@@ -13,16 +14,9 @@ async fn open_remote_tiff(url: &str) -> TIFF {
     let (store, path) = object_store::parse_url(&parsed_url).unwrap();
 
     let reader = Arc::new(ObjectReader::new(Arc::new(store), path)) as Arc<dyn AsyncFileReader>;
-    let prefetch_reader = PrefetchBuffer::new(reader.clone(), 32 * 1024)
-        .await
-        .unwrap();
-    let mut metadata_reader = TiffMetadataReader::try_open(&prefetch_reader)
-        .await
-        .unwrap();
-    let ifds = metadata_reader
-        .read_all_ifds(&prefetch_reader)
-        .await
-        .unwrap();
+    let cached_reader = ReadaheadMetadataCache::new(reader.clone());
+    let mut metadata_reader = TiffMetadataReader::try_open(&cached_reader).await.unwrap();
+    let ifds = metadata_reader.read_all_ifds(&cached_reader).await.unwrap();
     TIFF::new(ifds)
 }
 

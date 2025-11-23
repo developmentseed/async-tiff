@@ -38,7 +38,7 @@ mod test {
         let path = object_store::path::Path::parse("m_4007307_sw_18_060_20220803.tif").unwrap();
         let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
         let reader = Arc::new(ObjectReader::new(store, path)) as Arc<dyn AsyncFileReader>;
-        let cached_reader = ReadaheadMetadataCache::new(reader.clone()).unwrap();
+        let cached_reader = ReadaheadMetadataCache::new(reader.clone());
         let mut metadata_reader = TiffMetadataReader::try_open(&cached_reader).await.unwrap();
         let ifds = metadata_reader.read_all_ifds(&cached_reader).await.unwrap();
         let tiff = TIFF::new(ifds);
