@@ -97,7 +97,16 @@ pub struct ReadAheadMetadataCache<F: MetadataFetch> {
 
 impl<F: MetadataFetch> ReadAheadMetadataCache<F> {
     /// Create a new EagerMetadataCache wrapping the given MetadataFetch
-    pub fn new(inner: F, initial_size: u64, increment_multiple: u64) -> AsyncTiffResult<Self> {
+    pub fn new(inner: F) -> AsyncTiffResult<Self> {
+        Self::with_increment_configuration(inner, 32 * 1024, 2)
+    }
+
+    /// Create a new EagerMetadataCache with custom initial size and increment multiple
+    pub fn with_increment_configuration(
+        inner: F,
+        initial_size: u64,
+        increment_multiple: u64,
+    ) -> AsyncTiffResult<Self> {
         Ok(Self {
             inner,
             cache: Arc::new(Mutex::new(SequentialCache::new())),
