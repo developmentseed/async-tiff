@@ -135,15 +135,15 @@ impl<F: MetadataFetch> ReadaheadMetadataCache<F> {
 impl<F: MetadataFetch + Send + Sync> MetadataFetch for ReadaheadMetadataCache<F> {
     fn fetch(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         Box::pin(async move {
-            let mut g = self.cache.lock().await;
+            let mut cache = self.cache.lock().await;
 
             // First check if we already have the range cached
-            if g.contains(range.start..range.end) {
-                return Ok(g.slice(range));
+            if cache.contains(range.start..range.end) {
+                return Ok(cache.slice(range));
             }
 
             // Compute the correct fetch range
-            let start_len = g.len;
+            let start_len = cache.len;
             let needed = range.end.saturating_sub(start_len);
             let fetch_size = self.next_fetch_size(start_len).max(needed);
             let fetch_range = start_len..start_len + fetch_size;
@@ -153,9 +153,9 @@ impl<F: MetadataFetch + Send + Sync> MetadataFetch for ReadaheadMetadataCache<F>
             let bytes = self.inner.fetch(fetch_range).await?;
 
             // Now append safely
-            g.append_buffer(bytes);
+            cache.append_buffer(bytes);
 
-            Ok(g.slice(range))
+            Ok(cache.slice(range))
         })
     }
 }
