@@ -106,6 +106,11 @@ impl<F: MetadataFetch> ReadaheadMetadataCache<F> {
         }
     }
 
+    /// Access the inner MetadataFetch
+    pub fn inner(&self) -> &F {
+        &self.inner
+    }
+
     /// Set the initial fetch size in bytes, otherwise defaults to 32 KiB
     pub fn with_initial_size(mut self, initial: u64) -> Self {
         self.initial = initial;
@@ -152,5 +157,81 @@ impl<F: MetadataFetch + Send + Sync> MetadataFetch for ReadaheadMetadataCache<F>
 
             Ok(g.slice(range))
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use futures::future::FutureExt;
+
+    use super::*;
+
+    struct TestFetch {
+        data: Bytes,
+        /// The number of fetches that actually reach the raw Fetch implementation
+        num_fetches: Arc<Mutex<u64>>,
+    }
+
+    impl TestFetch {
+        fn new(data: Bytes) -> Self {
+            Self {
+                data,
+                num_fetches: Arc::new(Mutex::new(0)),
+            }
+        }
+    }
+
+    impl MetadataFetch for TestFetch {
+        fn fetch(
+            &self,
+            range: Range<u64>,
+        ) -> futures::future::BoxFuture<'_, crate::error::AsyncTiffResult<Bytes>> {
+            if range.start as usize >= self.data.len() {
+                return async { Ok(Bytes::new()) }.boxed();
+            }
+
+            let end = (range.end as usize).min(self.data.len());
+            let slice = self.data.slice(range.start as _..end);
+            async move {
+                let mut g = self.num_fetches.lock().await;
+                *g += 1;
+                Ok(slice)
+            }
+            .boxed()
+        }
+    }
+
+    #[tokio::test]
+    async fn test_readahead_cache() {
+        let data = Bytes::from_static(b"abcdefghijklmnopqrstuvwxyz");
+        let fetch = TestFetch::new(data.clone());
+        let cache = ReadaheadMetadataCache::new(fetch)
+            .with_initial_size(2)
+            .with_multiplier(3.0);
+
+        // Make initial request
+        let result = cache.fetch(0..2).await.unwrap();
+        assert_eq!(result.as_ref(), b"ab");
+        assert_eq!(*cache.inner.num_fetches.lock().await, 1);
+
+        // Making a request within the cached range should not trigger a new fetch
+        let result = cache.fetch(1..2).await.unwrap();
+        assert_eq!(result.as_ref(), b"b");
+        assert_eq!(*cache.inner.num_fetches.lock().await, 1);
+
+        // Making a request that exceeds the cached range should trigger a new fetch
+        let result = cache.fetch(2..5).await.unwrap();
+        assert_eq!(result.as_ref(), b"cde");
+        assert_eq!(*cache.inner.num_fetches.lock().await, 2);
+
+        // Multiplier should be accurate: initial was 2, next was 6 (2*3), so total cached is now 8
+        let result = cache.fetch(5..8).await.unwrap();
+        assert_eq!(result.as_ref(), b"fgh");
+        assert_eq!(*cache.inner.num_fetches.lock().await, 2);
+
+        // Should work even for fetch range larger than underlying buffer
+        let result = cache.fetch(8..20).await.unwrap();
+        assert_eq!(result.as_ref(), b"ijklmnopqrst");
+        assert_eq!(*cache.inner.num_fetches.lock().await, 3);
     }
 }
