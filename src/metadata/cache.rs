@@ -11,7 +11,7 @@ use crate::error::AsyncTiffResult;
 use crate::metadata::MetadataFetch;
 
 /// Logic for managing a cache of sequential buffers
-struct SequentialCache {
+struct SequentialBlockCache {
     /// Contiguous blocks from offset 0
     ///
     /// # Invariant
@@ -22,8 +22,8 @@ struct SequentialCache {
     len: u64,
 }
 
-impl SequentialCache {
-    /// Create a new, empty SequentialCache
+impl SequentialBlockCache {
+    /// Create a new, empty SequentialBlockCache
     fn new() -> Self {
         Self {
             buffers: vec![],
@@ -55,7 +55,8 @@ impl SequentialCache {
 
             // we slice bytes out of *this* block
             let start = remaining.start as usize;
-            let end = (remaining.end - remaining.start).min(b_len - remaining.start) as usize;
+            let size = (remaining.end - remaining.start).min(b_len - remaining.start) as usize;
+            let end = start + size;
 
             let chunk = b.slice(start..end);
             out_buffers.push(chunk);
@@ -87,35 +88,49 @@ impl SequentialCache {
 
 /// A MetadataFetch implementation that caches fetched data in exponentially growing chunks,
 /// sequentially from the beginning of the file.
-pub struct ExponentialMetadataCache<F: MetadataFetch> {
+pub struct ReadaheadMetadataCache<F: MetadataFetch> {
     inner: F,
-    cache: Arc<Mutex<SequentialCache>>,
+    cache: Arc<Mutex<SequentialBlockCache>>,
+    initial: u64,
+    multiplier: f64,
 }
 
-impl<F: MetadataFetch> ExponentialMetadataCache<F> {
-    /// Create a new ExponentialMetadataCache wrapping the given MetadataFetch
+impl<F: MetadataFetch> ReadaheadMetadataCache<F> {
+    /// Create a new ReadaheadMetadataCache wrapping the given MetadataFetch
     pub fn new(inner: F) -> AsyncTiffResult<Self> {
         Ok(Self {
             inner,
-            cache: Arc::new(Mutex::new(SequentialCache::new())),
+            cache: Arc::new(Mutex::new(SequentialBlockCache::new())),
+            initial: 32 * 1024,
+            multiplier: 2.0,
         })
     }
-}
 
-fn next_fetch_size(existing_len: u64) -> u64 {
-    if existing_len == 0 {
-        64 * 1024
-    } else {
-        existing_len * 2
+    /// Set the initial fetch size in bytes, otherwise defaults to 32 KiB
+    pub fn with_initial_size(mut self, initial: u64) -> Self {
+        self.initial = initial;
+        self
+    }
+
+    /// Set the multiplier for subsequent fetch sizes, otherwise defaults to 2.0
+    pub fn with_multiplier(mut self, multiplier: f64) -> Self {
+        self.multiplier = multiplier;
+        self
+    }
+
+    fn next_fetch_size(&self, existing_len: u64) -> u64 {
+        if existing_len == 0 {
+            self.initial
+        } else {
+            (existing_len as f64 * self.multiplier).round() as u64
+        }
     }
 }
 
-impl<F: MetadataFetch + Send + Sync> MetadataFetch for ExponentialMetadataCache<F> {
+impl<F: MetadataFetch + Send + Sync> MetadataFetch for ReadaheadMetadataCache<F> {
     fn fetch(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        let cache = self.cache.clone();
-
         Box::pin(async move {
-            let mut g = cache.lock().await;
+            let mut g = self.cache.lock().await;
 
             // First check if we already have the range cached
             if g.contains(range.start..range.end) {
@@ -125,7 +140,7 @@ impl<F: MetadataFetch + Send + Sync> MetadataFetch for ExponentialMetadataCache<
             // Compute the correct fetch range
             let start_len = g.len;
             let needed = range.end.saturating_sub(start_len);
-            let fetch_size = next_fetch_size(start_len).max(needed);
+            let fetch_size = self.next_fetch_size(start_len).max(needed);
             let fetch_range = start_len..start_len + fetch_size;
 
             // Perform the fetch while holding mutex
