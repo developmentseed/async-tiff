@@ -15,5 +15,6 @@ mod tiff;
 mod tile;
 
 pub use ifd::ImageFileDirectory;
+pub use tag_value::TagValue;
 pub use tiff::TIFF;
 pub use tile::Tile;

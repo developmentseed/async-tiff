@@ -5,7 +5,7 @@ use std::{fmt, io, str, string};
 
 use jpeg::UnsupportedFeature;
 
-use crate::tag_value::Value;
+use crate::tag_value::TagValue;
 use crate::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, SampleFormat, Tag,
 };
@@ -109,12 +109,12 @@ pub enum TiffFormatError {
     RequiredTagNotFound(Tag),
     UnknownPredictor(u16),
     UnknownPlanarConfiguration(u16),
-    ByteExpected(Value),
-    SignedByteExpected(Value),
-    ShortExpected(Value),
-    SignedShortExpected(Value),
-    UnsignedIntegerExpected(Value),
-    SignedIntegerExpected(Value),
+    ByteExpected(TagValue),
+    SignedByteExpected(TagValue),
+    ShortExpected(TagValue),
+    SignedShortExpected(TagValue),
+    UnsignedIntegerExpected(TagValue),
+    SignedIntegerExpected(TagValue),
     Format(String),
     RequiredTagEmpty(Tag),
     StripTileTagConflict,
