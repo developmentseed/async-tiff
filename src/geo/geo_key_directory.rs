@@ -68,7 +68,7 @@ pub(crate) enum GeoKeyTag {
 /// Metadata defined by the GeoTIFF standard.
 ///
 /// <http://docs.opengeospatial.org/is/19-008r4/19-008r4.html#_requirements_class_geokeydirectorytag>
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GeoKeyDirectory {
     pub model_type: Option<u16>,
     pub raster_type: Option<u16>,
