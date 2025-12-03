@@ -38,35 +38,44 @@ impl SequentialBlockCache {
 
     /// Slice out the given range from the cached buffers
     fn slice(&self, range: Range<u64>) -> Bytes {
+        // The size of the output buffer
         let out_len = (range.end - range.start) as usize;
-        // guaranteed valid
+
+        // The remaining range of bytes required. This range is updated as we traverse buffers, so
+        // the indexes are relative to the current buffer.
         let mut remaining = range;
         let mut out_buffers: Vec<Bytes> = vec![];
 
-        for b in &self.buffers {
-            let b_len = b.len() as u64;
+        for buf in &self.buffers {
+            let current_buf_len = buf.len() as u64;
 
             // this block falls entirely before the desired range start
-            if remaining.start >= b_len {
-                remaining.start -= b_len;
-                remaining.end -= b_len;
+            if remaining.start >= current_buf_len {
+                remaining.start -= current_buf_len;
+                remaining.end -= current_buf_len;
                 continue;
             }
 
             // we slice bytes out of *this* block
             let start = remaining.start as usize;
-            let size = (remaining.end - remaining.start).min(b_len - remaining.start) as usize;
-            let end = start + size;
+            let length =
+                (remaining.end - remaining.start).min(current_buf_len - remaining.start) as usize;
+            let end = start + length;
 
-            let chunk = b.slice(start..end);
+            // nothing to take from this block
+            if start == end {
+                continue;
+            }
+
+            let chunk = buf.slice(start..end);
             out_buffers.push(chunk);
 
             // consumed some portion; update and potentially break
             remaining.start = 0;
-            if remaining.end <= b_len {
+            if remaining.end <= current_buf_len {
                 break;
             }
-            remaining.end -= b_len;
+            remaining.end -= current_buf_len;
         }
 
         if out_buffers.len() == 1 {
@@ -233,5 +242,35 @@ mod test {
         let result = cache.fetch(8..20).await.unwrap();
         assert_eq!(result.as_ref(), b"ijklmnopqrst");
         assert_eq!(*cache.inner.num_fetches.lock().await, 3);
+    }
+
+    #[test]
+    fn test_sequential_block_cache_empty_buffers() {
+        let mut cache = SequentialBlockCache::new();
+        cache.append_buffer(Bytes::from_static(b"012"));
+        cache.append_buffer(Bytes::from_static(b""));
+        cache.append_buffer(Bytes::from_static(b"34"));
+        cache.append_buffer(Bytes::from_static(b""));
+        cache.append_buffer(Bytes::from_static(b"5"));
+        cache.append_buffer(Bytes::from_static(b""));
+        cache.append_buffer(Bytes::from_static(b"67"));
+
+        // Range, does it exist, expected slice
+        let test_cases = [
+            (0..3, true, Bytes::from_static(b"012")),
+            (4..7, true, Bytes::from_static(b"456")),
+            (0..8, true, Bytes::from_static(b"01234567")),
+            (6..6, true, Bytes::from_static(b"")),
+            (6..9, false, Bytes::from_static(b"")),
+            (9..9, false, Bytes::from_static(b"")),
+            (8..10, false, Bytes::from_static(b"")),
+        ];
+
+        for (range, exists, expected) in test_cases {
+            assert_eq!(cache.contains(range.clone()), exists);
+            if exists {
+                assert_eq!(cache.slice(range.clone()), expected);
+            }
+        }
     }
 }
