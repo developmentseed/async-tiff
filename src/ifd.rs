@@ -4,8 +4,7 @@ use std::ops::Range;
 use bytes::Bytes;
 use num_enum::TryFromPrimitive;
 
-use crate::error::TiffError;
-use crate::error::{AsyncTiffError, AsyncTiffResult};
+use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError};
 use crate::geo::{GeoKeyDirectory, GeoKeyTag};
 use crate::predictor::PredictorInfo;
 use crate::reader::{AsyncFileReader, Endianness};

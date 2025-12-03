@@ -1,17 +1,16 @@
 //! Error handling.
 
 use std::error::Error;
+use std::fmt::Debug;
 use std::{fmt, io, str, string};
 
 use jpeg::UnsupportedFeature;
+use thiserror::Error;
 
 use crate::tag_value::TagValue;
 use crate::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, SampleFormat, Tag,
 };
-use std::fmt::Debug;
-
-use thiserror::Error;
 
 /// Enum with all errors in this crate.
 #[derive(Error, Debug)]
