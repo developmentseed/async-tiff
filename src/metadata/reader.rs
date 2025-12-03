@@ -623,22 +623,15 @@ async fn read_tag_value<F: MetadataFetch>(
 
 #[cfg(test)]
 mod test {
-    use bytes::Bytes;
-    use futures::FutureExt;
+    use async_trait::async_trait;
 
-    use crate::metadata::reader::read_tag;
-    use crate::metadata::MetadataFetch;
-    use crate::reader::Endianness;
-    use crate::tiff::tags::Tag;
-    use crate::tiff::Value;
+    use super::*;
 
+    #[async_trait]
     impl MetadataFetch for Bytes {
-        fn fetch(
-            &self,
-            range: std::ops::Range<u64>,
-        ) -> futures::future::BoxFuture<'_, crate::error::AsyncTiffResult<Bytes>> {
+        async fn fetch(&self, range: std::ops::Range<u64>) -> crate::error::AsyncTiffResult<Bytes> {
             let usize_range = range.start as usize..range.end as usize;
-            async { Ok(self.slice(usize_range)) }.boxed()
+            Ok(self.slice(usize_range))
         }
     }
 

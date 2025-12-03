@@ -3,14 +3,15 @@
 use std::ops::Range;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
-use futures::future::BoxFuture;
 use tokio::sync::Mutex;
 
 use crate::error::AsyncTiffResult;
 use crate::metadata::MetadataFetch;
 
 /// Logic for managing a cache of sequential buffers
+#[derive(Debug)]
 struct SequentialBlockCache {
     /// Contiguous blocks from offset 0
     ///
@@ -97,6 +98,7 @@ impl SequentialBlockCache {
 
 /// A MetadataFetch implementation that caches fetched data in exponentially growing chunks,
 /// sequentially from the beginning of the file.
+#[derive(Debug)]
 pub struct ReadaheadMetadataCache<F: MetadataFetch> {
     inner: F,
     cache: Arc<Mutex<SequentialBlockCache>>,
@@ -141,40 +143,38 @@ impl<F: MetadataFetch> ReadaheadMetadataCache<F> {
     }
 }
 
+#[async_trait]
 impl<F: MetadataFetch + Send + Sync> MetadataFetch for ReadaheadMetadataCache<F> {
-    fn fetch(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        Box::pin(async move {
-            let mut cache = self.cache.lock().await;
+    async fn fetch(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        let mut cache = self.cache.lock().await;
 
-            // First check if we already have the range cached
-            if cache.contains(range.start..range.end) {
-                return Ok(cache.slice(range));
-            }
+        // First check if we already have the range cached
+        if cache.contains(range.start..range.end) {
+            return Ok(cache.slice(range));
+        }
 
-            // Compute the correct fetch range
-            let start_len = cache.len;
-            let needed = range.end.saturating_sub(start_len);
-            let fetch_size = self.next_fetch_size(start_len).max(needed);
-            let fetch_range = start_len..start_len + fetch_size;
+        // Compute the correct fetch range
+        let start_len = cache.len;
+        let needed = range.end.saturating_sub(start_len);
+        let fetch_size = self.next_fetch_size(start_len).max(needed);
+        let fetch_range = start_len..start_len + fetch_size;
 
-            // Perform the fetch while holding mutex
-            // (this is OK because the mutex is async)
-            let bytes = self.inner.fetch(fetch_range).await?;
+        // Perform the fetch while holding mutex
+        // (this is OK because the mutex is async)
+        let bytes = self.inner.fetch(fetch_range).await?;
 
-            // Now append safely
-            cache.append_buffer(bytes);
+        // Now append safely
+        cache.append_buffer(bytes);
 
-            Ok(cache.slice(range))
-        })
+        Ok(cache.slice(range))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use futures::future::FutureExt;
-
     use super::*;
 
+    #[derive(Debug)]
     struct TestFetch {
         data: Bytes,
         /// The number of fetches that actually reach the raw Fetch implementation
@@ -190,23 +190,18 @@ mod test {
         }
     }
 
+    #[async_trait]
     impl MetadataFetch for TestFetch {
-        fn fetch(
-            &self,
-            range: Range<u64>,
-        ) -> futures::future::BoxFuture<'_, crate::error::AsyncTiffResult<Bytes>> {
+        async fn fetch(&self, range: Range<u64>) -> crate::error::AsyncTiffResult<Bytes> {
             if range.start as usize >= self.data.len() {
-                return async { Ok(Bytes::new()) }.boxed();
+                return Ok(Bytes::new());
             }
 
             let end = (range.end as usize).min(self.data.len());
             let slice = self.data.slice(range.start as _..end);
-            async move {
-                let mut g = self.num_fetches.lock().await;
-                *g += 1;
-                Ok(slice)
-            }
-            .boxed()
+            let mut g = self.num_fetches.lock().await;
+            *g += 1;
+            Ok(slice)
         }
     }
 
