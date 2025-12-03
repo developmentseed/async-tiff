@@ -8,7 +8,7 @@ use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
 
 use crate::error::AsyncTiffResult;
-use crate::tiff::tags::{CompressionMethod, PhotometricInterpretation};
+use crate::tags::{CompressionMethod, PhotometricInterpretation};
 use crate::tiff::{TiffError, TiffUnsupportedError};
 
 /// A registry of decoders.

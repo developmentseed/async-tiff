@@ -10,6 +10,7 @@ pub mod geo;
 mod ifd;
 pub mod metadata;
 pub mod predictor;
+pub mod tags;
 pub mod tiff;
 mod tile;
 

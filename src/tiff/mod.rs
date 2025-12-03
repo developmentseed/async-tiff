@@ -2,7 +2,6 @@
 
 mod error;
 mod ifd;
-pub mod tags;
 
 pub(crate) use error::{TiffError, TiffFormatError, TiffResult, TiffUnsupportedError};
 pub use ifd::Value;

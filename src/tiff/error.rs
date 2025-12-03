@@ -6,7 +6,7 @@ use std::{fmt, io, str, string};
 use jpeg::UnsupportedFeature;
 
 use super::ifd::Value;
-use super::tags::{
+use crate::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, SampleFormat, Tag,
 };
 

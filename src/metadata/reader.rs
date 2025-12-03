@@ -7,7 +7,7 @@ use crate::error::{AsyncTiffError, AsyncTiffResult};
 use crate::metadata::fetch::MetadataCursor;
 use crate::metadata::MetadataFetch;
 use crate::reader::Endianness;
-use crate::tiff::tags::{Tag, Type};
+use crate::tags::{Tag, Type};
 use crate::tiff::{TiffError, TiffFormatError, Value};
 use crate::{ImageFileDirectory, TIFF};
 
