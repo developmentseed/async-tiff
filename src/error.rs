@@ -42,6 +42,10 @@ pub enum AsyncTiffError {
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
 
+    /// Bytemuck error
+    #[error(transparent)]
+    BytemuckError(#[from] bytemuck::PodCastError),
+
     /// External error
     #[error(transparent)]
     External(Box<dyn std::error::Error + Send + Sync>),
