@@ -709,7 +709,6 @@ impl ImageFileDirectory {
             compression_method: self.compression,
             photometric_interpretation: self.photometric_interpretation,
             jpeg_tables: self.jpeg_tables.clone(),
-            sample_format: self.sample_format.clone(),
         })
     }
 
@@ -749,7 +748,6 @@ impl ImageFileDirectory {
                 compression_method: self.compression,
                 photometric_interpretation: self.photometric_interpretation,
                 jpeg_tables: self.jpeg_tables.clone(),
-                sample_format: self.sample_format.clone(),
             };
             tiles.push(tile);
         }
