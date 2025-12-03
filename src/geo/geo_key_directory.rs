@@ -5,7 +5,8 @@ use std::collections::HashMap;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::tiff::{TiffError, TiffResult, Value};
+use crate::error::{TiffError, TiffResult};
+use crate::tag_value::Value;
 
 /// Geospatial TIFF tag variants
 #[derive(Clone, Copy, Debug, PartialEq, TryFromPrimitive, IntoPrimitive, Eq, Hash)]

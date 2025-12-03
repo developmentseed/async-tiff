@@ -7,9 +7,8 @@ use std::io::{Cursor, Read};
 use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
 
-use crate::error::AsyncTiffResult;
+use crate::error::{AsyncTiffResult, TiffError, TiffUnsupportedError};
 use crate::tags::{CompressionMethod, PhotometricInterpretation};
-use crate::tiff::{TiffError, TiffUnsupportedError};
 
 /// A registry of decoders.
 ///

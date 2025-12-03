@@ -3,12 +3,12 @@ use std::io::Read;
 
 use bytes::Bytes;
 
-use crate::error::{AsyncTiffError, AsyncTiffResult};
+use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffFormatError};
 use crate::metadata::fetch::MetadataCursor;
 use crate::metadata::MetadataFetch;
 use crate::reader::Endianness;
+use crate::tag_value::Value;
 use crate::tags::{Tag, Type};
-use crate::tiff::{TiffError, TiffFormatError, Value};
 use crate::{ImageFileDirectory, TIFF};
 
 /// Entry point to reading TIFF metadata.

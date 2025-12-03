@@ -2,9 +2,9 @@ use bytes::Bytes;
 
 use crate::decoder::DecoderRegistry;
 use crate::error::AsyncTiffResult;
+use crate::error::{TiffError, TiffUnsupportedError};
 use crate::predictor::{fix_endianness, unpredict_float, unpredict_hdiff, PredictorInfo};
 use crate::tags::{CompressionMethod, PhotometricInterpretation, Predictor};
-use crate::tiff::{TiffError, TiffUnsupportedError};
 
 /// A TIFF Tile response.
 ///

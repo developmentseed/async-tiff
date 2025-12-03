@@ -10,8 +10,8 @@ pub mod geo;
 mod ifd;
 pub mod metadata;
 pub mod predictor;
+mod tag_value;
 pub mod tags;
-pub mod tiff;
 mod tile;
 
 pub use cog::TIFF;

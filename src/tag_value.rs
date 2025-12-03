@@ -1,14 +1,10 @@
-//! Function for reading TIFF tags
-
-#![allow(missing_docs)]
-
-use std::vec;
+use crate::error::{TiffError, TiffFormatError, TiffResult};
 
 use self::Value::{
     Ascii, Byte, Double, Float, Ifd, IfdBig, List, Rational, RationalBig, SRational, SRationalBig,
     Short, Signed, SignedBig, SignedByte, SignedShort, Unsigned, UnsignedBig,
 };
-use super::error::{TiffError, TiffFormatError, TiffResult};
+// use super::error::{TiffError, TiffFormatError, TiffResult};
 
 #[allow(unused_qualifications)]
 #[derive(Debug, Clone, PartialEq)]

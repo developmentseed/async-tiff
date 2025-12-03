@@ -4,15 +4,16 @@ use std::ops::Range;
 use bytes::Bytes;
 use num_enum::TryFromPrimitive;
 
+use crate::error::TiffError;
 use crate::error::{AsyncTiffError, AsyncTiffResult};
 use crate::geo::{GeoKeyDirectory, GeoKeyTag};
 use crate::predictor::PredictorInfo;
 use crate::reader::{AsyncFileReader, Endianness};
+use crate::tag_value::Value;
 use crate::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat, Tag,
 };
-use crate::tiff::{TiffError, Value};
 use crate::tile::Tile;
 
 const DOCUMENT_NAME: u16 = 269;
