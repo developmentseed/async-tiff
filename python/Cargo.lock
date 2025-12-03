@@ -30,6 +30,7 @@ dependencies = [
  "object_store",
  "reqwest",
  "thiserror 1.0.69",
+ "tokio",
  "weezl",
 ]
 

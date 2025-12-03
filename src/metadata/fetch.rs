@@ -2,7 +2,6 @@ use std::ops::Range;
 
 use bytes::Bytes;
 use futures::future::BoxFuture;
-use futures::FutureExt;
 
 use crate::error::AsyncTiffResult;
 use crate::reader::{AsyncFileReader, EndianAwareReader, Endianness};
@@ -22,41 +21,6 @@ pub trait MetadataFetch {
 impl<T: AsyncFileReader> MetadataFetch for T {
     fn fetch(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
         self.get_bytes(range)
-    }
-}
-
-/// Buffering for the first `N` bytes of a file.
-///
-/// This is designed so that the async requests made by the underlying tag reader get intercepted
-/// here and served from the existing buffer when possible.
-#[derive(Debug)]
-pub struct PrefetchBuffer<F: MetadataFetch> {
-    fetch: F,
-    buffer: Bytes,
-}
-
-impl<F: MetadataFetch> PrefetchBuffer<F> {
-    /// Construct a new PrefetchBuffer, catching the first `prefetch` bytes of the file.
-    pub async fn new(fetch: F, prefetch: u64) -> AsyncTiffResult<Self> {
-        let buffer = fetch.fetch(0..prefetch).await?;
-        Ok(Self { fetch, buffer })
-    }
-}
-
-impl<F: MetadataFetch> MetadataFetch for PrefetchBuffer<F> {
-    fn fetch(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        if range.start < self.buffer.len() as _ {
-            if range.end < self.buffer.len() as _ {
-                let usize_range = range.start as usize..range.end as usize;
-                let result = self.buffer.slice(usize_range);
-                async { Ok(result) }.boxed()
-            } else {
-                // TODO: reuse partial internal buffer
-                self.fetch.fetch(range)
-            }
-        } else {
-            self.fetch.fetch(range)
-        }
     }
 }
 

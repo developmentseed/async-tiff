@@ -2,6 +2,7 @@
 
 mod decoder;
 mod enums;
+mod error;
 mod geo;
 mod ifd;
 mod reader;

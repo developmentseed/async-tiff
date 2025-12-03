@@ -27,7 +27,8 @@ mod test {
     use tiff::decoder::{DecodingResult, Limits};
 
     use super::*;
-    use crate::metadata::{PrefetchBuffer, TiffMetadataReader};
+    use crate::metadata::cache::ReadaheadMetadataCache;
+    use crate::metadata::TiffMetadataReader;
     use crate::reader::{AsyncFileReader, ObjectReader};
 
     #[ignore = "local file"]
@@ -37,16 +38,9 @@ mod test {
         let path = object_store::path::Path::parse("m_4007307_sw_18_060_20220803.tif").unwrap();
         let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
         let reader = Arc::new(ObjectReader::new(store, path)) as Arc<dyn AsyncFileReader>;
-        let prefetch_reader = PrefetchBuffer::new(reader.clone(), 32 * 1024)
-            .await
-            .unwrap();
-        let mut metadata_reader = TiffMetadataReader::try_open(&prefetch_reader)
-            .await
-            .unwrap();
-        let ifds = metadata_reader
-            .read_all_ifds(&prefetch_reader)
-            .await
-            .unwrap();
+        let cached_reader = ReadaheadMetadataCache::new(reader.clone());
+        let mut metadata_reader = TiffMetadataReader::try_open(&cached_reader).await.unwrap();
+        let ifds = metadata_reader.read_all_ifds(&cached_reader).await.unwrap();
         let tiff = TIFF::new(ifds);
 
         let ifd = &tiff.ifds[1];
