@@ -30,7 +30,7 @@ use crate::error::AsyncTiffResult;
 ///
 /// [`tokio::fs::File`]: https://docs.rs/tokio/latest/tokio/fs/struct.File.html
 #[async_trait]
-pub trait AsyncFileReader: Debug + Send + Sync {
+pub trait AsyncFileReader: Debug + Send + Sync + 'static {
     /// Retrieve the bytes in `range` as part of a request for image data, not header metadata.
     ///
     /// This is also used as the default implementation of [`MetadataFetch`] if not overridden.
@@ -121,8 +121,8 @@ impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> Toki
 
 #[cfg(feature = "tokio")]
 #[async_trait]
-impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> AsyncFileReader
-    for TokioReader<T>
+impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug + 'static>
+    AsyncFileReader for TokioReader<T>
 {
     async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
         self.make_range_request(range).await

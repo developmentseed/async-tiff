@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::ops::Range;
 
 use async_trait::async_trait;
@@ -11,7 +12,7 @@ use crate::reader::{AsyncFileReader, EndianAwareReader, Endianness};
 ///
 /// Note that implementation is provided for [`AsyncFileReader`].
 #[async_trait]
-pub trait MetadataFetch {
+pub trait MetadataFetch: Debug + Send + Sync + 'static {
     /// Return a future that fetches the specified range of bytes asynchronously
     ///
     /// Note the returned type is a boxed future, often created by

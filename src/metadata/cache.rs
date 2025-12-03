@@ -11,6 +11,7 @@ use crate::error::AsyncTiffResult;
 use crate::metadata::MetadataFetch;
 
 /// Logic for managing a cache of sequential buffers
+#[derive(Debug)]
 struct SequentialBlockCache {
     /// Contiguous blocks from offset 0
     ///
@@ -97,6 +98,7 @@ impl SequentialBlockCache {
 
 /// A MetadataFetch implementation that caches fetched data in exponentially growing chunks,
 /// sequentially from the beginning of the file.
+#[derive(Debug)]
 pub struct ReadaheadMetadataCache<F: MetadataFetch> {
     inner: F,
     cache: Arc<Mutex<SequentialBlockCache>>,
@@ -172,6 +174,7 @@ impl<F: MetadataFetch + Send + Sync> MetadataFetch for ReadaheadMetadataCache<F>
 mod test {
     use super::*;
 
+    #[derive(Debug)]
     struct TestFetch {
         data: Bytes,
         /// The number of fetches that actually reach the raw Fetch implementation
