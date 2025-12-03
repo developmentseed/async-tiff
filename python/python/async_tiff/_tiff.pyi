@@ -1,10 +1,12 @@
 from typing import Protocol
-from ._tile import Tile
-from ._ifd import ImageFileDirectory
-from .store import ObjectStore
 
 # Fix exports
 from obspec._get import GetRangeAsync, GetRangesAsync
+
+from ._ifd import ImageFileDirectory
+from ._tile import Tile
+from .enums import Endianness
+from .store import ObjectStore
 
 class ObspecInput(GetRangeAsync, GetRangesAsync, Protocol):
     """Supported obspec input to reader."""
@@ -33,6 +35,10 @@ class TIFF:
         Returns:
             A TIFF instance.
         """
+
+    @property
+    def endianness(self) -> Endianness:
+        """The endianness of this TIFF file."""
     @property
     def ifds(self) -> list[ImageFileDirectory]:
         """Access the underlying IFDs of this TIFF.

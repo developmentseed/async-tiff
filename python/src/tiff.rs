@@ -9,6 +9,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyType;
 use pyo3_async_runtimes::tokio::future_into_py;
 
+use crate::enums::PyEndianness;
 use crate::error::PyAsyncTiffResult;
 use crate::reader::StoreInput;
 use crate::tile::PyTile;
@@ -29,8 +30,7 @@ async fn open(
         .with_initial_size(prefetch)
         .with_multiplier(multiplier);
     let mut metadata_reader = TiffMetadataReader::try_open(&metadata_fetch).await?;
-    let ifds = metadata_reader.read_all_ifds(&metadata_fetch).await?;
-    let tiff = TIFF::new(ifds);
+    let tiff = metadata_reader.read(&metadata_fetch).await?;
     Ok(PyTIFF { tiff, reader })
 }
 
@@ -54,6 +54,11 @@ impl PyTIFF {
                 async move { Ok(open(reader, prefetch, multiplier).await?) },
             )?;
         Ok(cog_reader)
+    }
+
+    #[getter]
+    fn endianness(&self) -> PyEndianness {
+        self.tiff.endianness().into()
     }
 
     #[getter]

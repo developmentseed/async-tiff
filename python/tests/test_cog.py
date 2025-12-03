@@ -13,6 +13,8 @@ async def test_cog_s3():
     store = S3Store("sentinel-cogs", region="us-west-2", skip_signature=True)
     tiff = await TIFF.open(path=path, store=store)
 
+    assert tiff.endianness == enums.Endianness.LittleEndian
+
     ifds = tiff.ifds
     assert len(ifds) == 5
 
