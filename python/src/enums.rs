@@ -1,5 +1,5 @@
 use async_tiff::reader::Endianness;
-use async_tiff::tiff::tags::{
+use async_tiff::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat,
 };

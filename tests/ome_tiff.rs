@@ -5,7 +5,7 @@ use std::sync::Arc;
 use async_tiff::metadata::cache::ReadaheadMetadataCache;
 use async_tiff::metadata::TiffMetadataReader;
 use async_tiff::reader::{AsyncFileReader, ObjectReader};
-use async_tiff::tiff::tags::PhotometricInterpretation;
+use async_tiff::tags::PhotometricInterpretation;
 use async_tiff::TIFF;
 use reqwest::Url;
 

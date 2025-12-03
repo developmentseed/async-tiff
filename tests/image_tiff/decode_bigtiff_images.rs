@@ -1,6 +1,6 @@
 extern crate tiff;
 
-use async_tiff::tiff::tags::PhotometricInterpretation;
+use async_tiff::tags::PhotometricInterpretation;
 
 use crate::image_tiff::util::open_tiff;
 

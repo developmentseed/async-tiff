@@ -5,7 +5,7 @@ use bytes::{Bytes, BytesMut};
 
 use crate::error::{AsyncTiffError, AsyncTiffResult};
 use crate::reader::Endianness;
-use crate::tiff::tags::PlanarConfiguration;
+use crate::tags::PlanarConfiguration;
 use crate::ImageFileDirectory;
 
 /// All info that may be used by a predictor

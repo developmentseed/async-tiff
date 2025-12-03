@@ -5,7 +5,8 @@ use std::collections::HashMap;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use crate::tiff::{TiffError, TiffResult, Value};
+use crate::error::{TiffError, TiffResult};
+use crate::tag_value::TagValue;
 
 /// Geospatial TIFF tag variants
 #[derive(Clone, Copy, Debug, PartialEq, TryFromPrimitive, IntoPrimitive, Eq, Hash)]
@@ -134,7 +135,7 @@ pub struct GeoKeyDirectory {
 
 impl GeoKeyDirectory {
     /// Construct a new [`GeoKeyDirectory`] from tag values.
-    pub(crate) fn from_tags(mut tag_data: HashMap<GeoKeyTag, Value>) -> TiffResult<Self> {
+    pub(crate) fn from_tags(mut tag_data: HashMap<GeoKeyTag, TagValue>) -> TiffResult<Self> {
         let mut model_type = None;
         let mut raster_type = None;
         let mut citation = None;
