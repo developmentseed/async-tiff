@@ -20,7 +20,7 @@ const DOCUMENT_NAME: u16 = 269;
 /// An ImageFileDirectory representing Image content
 // The ordering of these tags matches the sorted order in TIFF spec Appendix A
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ImageFileDirectory {
     pub(crate) endianness: Endianness,
 

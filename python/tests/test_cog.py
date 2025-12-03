@@ -23,6 +23,7 @@ async def test_cog_s3():
     assert ifd.photometric_interpretation == enums.PhotometricInterpretation.BlackIsZero
 
     gkd = ifd.geo_key_directory
+    assert gkd is not None, "GeoKeyDirectory should exist"
     assert gkd.citation == "WGS 84 / UTM zone 12N"
     assert gkd.projected_type == 32612
 
