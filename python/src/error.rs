@@ -3,9 +3,6 @@ use pyo3::create_exception;
 use pyo3::exceptions::PyFileNotFoundError;
 use pyo3::prelude::*;
 
-// Base exception
-// Note that this is named `BaseError` instead of `ObstoreError` to not leak the name "obstore" to
-// other Rust-Python libraries using pyo3-object_store.
 create_exception!(
     async_tiff,
     AsyncTiffException,
