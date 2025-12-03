@@ -5,10 +5,10 @@ use std::io::Read;
 use std::ops::Range;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use bytes::buf::Reader;
 use bytes::{Buf, Bytes};
-use futures::future::{BoxFuture, FutureExt};
 use futures::TryFutureExt;
 
 use crate::error::AsyncTiffResult;
@@ -29,57 +29,48 @@ use crate::error::AsyncTiffResult;
 /// [`ObjectStore`]: object_store::ObjectStore
 ///
 /// [`tokio::fs::File`]: https://docs.rs/tokio/latest/tokio/fs/struct.File.html
+#[async_trait]
 pub trait AsyncFileReader: Debug + Send + Sync {
     /// Retrieve the bytes in `range` as part of a request for image data, not header metadata.
     ///
     /// This is also used as the default implementation of [`MetadataFetch`] if not overridden.
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>>;
+    async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes>;
 
     /// Retrieve multiple byte ranges as part of a request for image data, not header metadata. The
     /// default implementation will call `get_bytes` sequentially
-    fn get_byte_ranges(
-        &self,
-        ranges: Vec<Range<u64>>,
-    ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
-        async move {
-            let mut result = Vec::with_capacity(ranges.len());
+    async fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> AsyncTiffResult<Vec<Bytes>> {
+        let mut result = Vec::with_capacity(ranges.len());
 
-            for range in ranges.into_iter() {
-                let data = self.get_bytes(range).await?;
-                result.push(data);
-            }
-
-            Ok(result)
+        for range in ranges.into_iter() {
+            let data = self.get_bytes(range).await?;
+            result.push(data);
         }
-        .boxed()
+
+        Ok(result)
     }
 }
 
 /// This allows Box<dyn AsyncFileReader + '_> to be used as an AsyncFileReader,
+#[async_trait]
 impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.as_ref().get_bytes(range)
+    async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        self.as_ref().get_bytes(range).await
     }
 
-    fn get_byte_ranges(
-        &self,
-        ranges: Vec<Range<u64>>,
-    ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
-        self.as_ref().get_byte_ranges(ranges)
+    async fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> AsyncTiffResult<Vec<Bytes>> {
+        self.as_ref().get_byte_ranges(ranges).await
     }
 }
 
 /// This allows Arc<dyn AsyncFileReader + '_> to be used as an AsyncFileReader,
+#[async_trait]
 impl AsyncFileReader for Arc<dyn AsyncFileReader + '_> {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.as_ref().get_bytes(range)
+    async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        self.as_ref().get_bytes(range).await
     }
 
-    fn get_byte_ranges(
-        &self,
-        ranges: Vec<Range<u64>>,
-    ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
-        self.as_ref().get_byte_ranges(ranges)
+    async fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> AsyncTiffResult<Vec<Bytes>> {
+        self.as_ref().get_byte_ranges(ranges).await
     }
 }
 
@@ -129,11 +120,12 @@ impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> Toki
 }
 
 #[cfg(feature = "tokio")]
+#[async_trait]
 impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> AsyncFileReader
     for TokioReader<T>
 {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.make_range_request(range).boxed()
+    async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        self.make_range_request(range).await
     }
 }
 
@@ -164,12 +156,13 @@ impl ObjectReader {
 }
 
 #[cfg(feature = "object_store")]
+#[async_trait]
 impl AsyncFileReader for ObjectReader {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.make_range_request(range).boxed()
+    async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        self.make_range_request(range).await
     }
 
-    fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>>
+    async fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> AsyncTiffResult<Vec<Bytes>>
     where
         Self: Send,
     {
@@ -177,13 +170,10 @@ impl AsyncFileReader for ObjectReader {
             .into_iter()
             .map(|r| r.start as _..r.end as _)
             .collect::<Vec<_>>();
-        async move {
-            self.store
-                .get_ranges(&self.path, &ranges)
-                .await
-                .map_err(|e| e.into())
-        }
-        .boxed()
+        self.store
+            .get_ranges(&self.path, &ranges)
+            .await
+            .map_err(|e| e.into())
     }
 }
 
@@ -202,29 +192,27 @@ impl ReqwestReader {
         Self { client, url }
     }
 
-    fn make_range_request(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
+    async fn make_range_request(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
         let url = self.url.clone();
         let client = self.client.clone();
         // HTTP range is inclusive, so we need to subtract 1 from the end
         let range = format!("bytes={}-{}", range.start, range.end - 1);
-        async move {
-            let response = client
-                .get(url)
-                .header("Range", range)
-                .send()
-                .await?
-                .error_for_status()?;
-            let bytes = response.bytes().await?;
-            Ok(bytes)
-        }
-        .boxed()
+        let response = client
+            .get(url)
+            .header("Range", range)
+            .send()
+            .await?
+            .error_for_status()?;
+        let bytes = response.bytes().await?;
+        Ok(bytes)
     }
 }
 
 #[cfg(feature = "reqwest")]
+#[async_trait]
 impl AsyncFileReader for ReqwestReader {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.make_range_request(range)
+    async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        self.make_range_request(range).await
     }
 }
 

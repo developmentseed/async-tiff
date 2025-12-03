@@ -21,6 +21,7 @@ dependencies = [
 name = "async-tiff"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "byteorder",
  "bytes",
  "flate2",

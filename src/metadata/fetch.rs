@@ -1,7 +1,7 @@
 use std::ops::Range;
 
+use async_trait::async_trait;
 use bytes::Bytes;
-use futures::future::BoxFuture;
 
 use crate::error::AsyncTiffResult;
 use crate::reader::{AsyncFileReader, EndianAwareReader, Endianness};
@@ -10,17 +10,19 @@ use crate::reader::{AsyncFileReader, EndianAwareReader, Endianness};
 /// load [`ImageFileDirectory`]s.
 ///
 /// Note that implementation is provided for [`AsyncFileReader`].
+#[async_trait]
 pub trait MetadataFetch {
     /// Return a future that fetches the specified range of bytes asynchronously
     ///
     /// Note the returned type is a boxed future, often created by
     /// [futures::FutureExt::boxed]. See the trait documentation for an example.
-    fn fetch(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>>;
+    async fn fetch(&self, range: Range<u64>) -> AsyncTiffResult<Bytes>;
 }
 
+#[async_trait]
 impl<T: AsyncFileReader> MetadataFetch for T {
-    fn fetch(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.get_bytes(range)
+    async fn fetch(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        self.get_bytes(range).await
     }
 }
 
