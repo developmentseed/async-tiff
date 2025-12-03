@@ -1,3 +1,4 @@
+use async_tiff::reader::Endianness;
 use async_tiff::tiff::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat,
@@ -36,6 +37,30 @@ impl<'py> IntoPyObject<'py> for PyCompressionMethod {
 
     fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
         to_py_enum_variant(py, intern!(py, "CompressionMethod"), self.0.to_u16())
+    }
+}
+
+pub(crate) struct PyEndianness(Endianness);
+
+impl From<Endianness> for PyEndianness {
+    fn from(value: Endianness) -> Self {
+        Self(value)
+    }
+}
+
+impl<'py> IntoPyObject<'py> for PyEndianness {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        let enums_mod = py.import(intern!(py, "async_tiff.enums"))?;
+        let endianness_enum = enums_mod.getattr(intern!(py, "Endianness"))?;
+
+        match self.0 {
+            Endianness::LittleEndian => endianness_enum.getattr("LittleEndian"),
+            Endianness::BigEndian => endianness_enum.getattr("BigEndian"),
+        }
     }
 }
 
@@ -132,6 +157,7 @@ impl<'py> IntoPyObject<'py> for PySampleFormat {
         to_py_enum_variant(py, intern!(py, "SampleFormat"), self.0.to_u16())
     }
 }
+
 fn to_py_enum_variant<'py>(
     py: Python<'py>,
     enum_name: &Bound<'py, PyString>,

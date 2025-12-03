@@ -9,7 +9,7 @@ use crate::metadata::MetadataFetch;
 use crate::reader::Endianness;
 use crate::tiff::tags::{Tag, Type};
 use crate::tiff::{TiffError, TiffFormatError, Value};
-use crate::ImageFileDirectory;
+use crate::{ImageFileDirectory, TIFF};
 
 /// Entry point to reading TIFF metadata.
 ///
@@ -134,6 +134,12 @@ impl TiffMetadataReader {
             ifds.push(ifd);
         }
         Ok(ifds)
+    }
+
+    /// Read all IFDs from the file and return a complete TIFF structure.
+    pub async fn read<F: MetadataFetch>(&mut self, fetch: &F) -> AsyncTiffResult<TIFF> {
+        let ifds = self.read_all_ifds(fetch).await?;
+        Ok(TIFF::new(ifds, self.endianness))
     }
 }
 

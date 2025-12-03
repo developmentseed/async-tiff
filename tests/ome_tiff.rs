@@ -16,8 +16,7 @@ async fn open_remote_tiff(url: &str) -> TIFF {
     let reader = Arc::new(ObjectReader::new(Arc::new(store), path)) as Arc<dyn AsyncFileReader>;
     let cached_reader = ReadaheadMetadataCache::new(reader.clone());
     let mut metadata_reader = TiffMetadataReader::try_open(&cached_reader).await.unwrap();
-    let ifds = metadata_reader.read_all_ifds(&cached_reader).await.unwrap();
-    TIFF::new(ifds)
+    metadata_reader.read(&cached_reader).await.unwrap()
 }
 
 #[tokio::test]
