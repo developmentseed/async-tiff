@@ -11,7 +11,9 @@ async def test_cog_s3():
     """
     path = "sentinel-s2-l2a-cogs/12/S/UF/2022/6/S2B_12SUF_20220609_0_L2A/B04.tif"
     store = S3Store("sentinel-cogs", region="us-west-2", skip_signature=True)
-    tiff = await TIFF.open(path=path, store=store, prefetch=32768)
+    tiff = await TIFF.open(path=path, store=store)
+
+    assert tiff.endianness == enums.Endianness.LittleEndian
 
     ifds = tiff.ifds
     assert len(ifds) == 5
@@ -23,6 +25,7 @@ async def test_cog_s3():
     assert ifd.photometric_interpretation == enums.PhotometricInterpretation.BlackIsZero
 
     gkd = ifd.geo_key_directory
+    assert gkd is not None, "GeoKeyDirectory should exist"
     assert gkd.citation == "WGS 84 / UTM zone 12N"
     assert gkd.projected_type == 32612
 

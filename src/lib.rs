@@ -3,16 +3,18 @@
 
 pub mod reader;
 // TODO: maybe rename this mod
-mod cog;
 pub mod decoder;
 pub mod error;
 pub mod geo;
 mod ifd;
 pub mod metadata;
 pub mod predictor;
-pub mod tiff;
+mod tag_value;
+pub mod tags;
+mod tiff;
 mod tile;
 
-pub use cog::TIFF;
 pub use ifd::ImageFileDirectory;
+pub use tag_value::TagValue;
+pub use tiff::TIFF;
 pub use tile::Tile;

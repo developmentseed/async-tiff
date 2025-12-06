@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use async_tiff::decoder::{Decoder, DecoderRegistry};
 use async_tiff::error::{AsyncTiffError, AsyncTiffResult};
-use async_tiff::tiff::tags::PhotometricInterpretation;
+use async_tiff::tags::PhotometricInterpretation;
 use bytes::Bytes;
 use pyo3::exceptions::PyTypeError;
 use pyo3::intern;

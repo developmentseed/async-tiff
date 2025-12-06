@@ -3,13 +3,13 @@ use std::io::Read;
 
 use bytes::Bytes;
 
-use crate::error::{AsyncTiffError, AsyncTiffResult};
+use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffFormatError};
 use crate::metadata::fetch::MetadataCursor;
 use crate::metadata::MetadataFetch;
 use crate::reader::Endianness;
-use crate::tiff::tags::{Tag, Type};
-use crate::tiff::{TiffError, TiffFormatError, Value};
-use crate::ImageFileDirectory;
+use crate::tag_value::TagValue;
+use crate::tags::{Tag, Type};
+use crate::{ImageFileDirectory, TIFF};
 
 /// Entry point to reading TIFF metadata.
 ///
@@ -135,6 +135,12 @@ impl TiffMetadataReader {
         }
         Ok(ifds)
     }
+
+    /// Read all IFDs from the file and return a complete TIFF structure.
+    pub async fn read<F: MetadataFetch>(&mut self, fetch: &F) -> AsyncTiffResult<TIFF> {
+        let ifds = self.read_all_ifds(fetch).await?;
+        Ok(TIFF::new(ifds, self.endianness))
+    }
 }
 
 /// Reads the [`ImageFileDirectory`] metadata.
@@ -174,7 +180,7 @@ impl ImageFileDirectoryReader {
         // Count:
         //  - bigtiff: 8 bytes
         //  - else: 4 bytes
-        // Value:
+        // TagValue:
         //  - bigtiff: 8 bytes either a pointer the value itself
         //  - else: 4 bytes either a pointer the value itself
         let ifd_entry_byte_size = if bigtiff { 20 } else { 12 };
@@ -207,7 +213,7 @@ impl ImageFileDirectoryReader {
         &self,
         fetch: &F,
         tag_idx: u64,
-    ) -> AsyncTiffResult<(Tag, Value)> {
+    ) -> AsyncTiffResult<(Tag, TagValue)> {
         assert!(tag_idx < self.tag_count);
         let tag_offset =
             self.ifd_start_offset + self.tag_count_byte_size + (self.ifd_entry_byte_size * tag_idx);
@@ -259,7 +265,7 @@ async fn read_tag<F: MetadataFetch>(
     tag_offset: u64,
     endianness: Endianness,
     bigtiff: bool,
-) -> AsyncTiffResult<(Tag, Value)> {
+) -> AsyncTiffResult<(Tag, TagValue)> {
     let mut cursor = MetadataCursor::new_with_offset(fetch, endianness, tag_offset);
 
     let tag_name = Tag::from_u16_exhaustive(cursor.read_u16().await?);
@@ -289,10 +295,10 @@ async fn read_tag_value<F: MetadataFetch>(
     tag_type: Type,
     count: u64,
     bigtiff: bool,
-) -> AsyncTiffResult<Value> {
+) -> AsyncTiffResult<TagValue> {
     // Case 1: there are no values so we can return immediately.
     if count == 0 {
-        return Ok(Value::List(vec![]));
+        return Ok(TagValue::List(vec![]));
     }
 
     let tag_size = match tag_type {
@@ -316,12 +322,12 @@ async fn read_tag_value<F: MetadataFetch>(
             let mut data = cursor.read(value_byte_length).await?;
 
             return Ok(match tag_type {
-                Type::LONG8 => Value::UnsignedBig(data.read_u64()?),
-                Type::SLONG8 => Value::SignedBig(data.read_i64()?),
-                Type::DOUBLE => Value::Double(data.read_f64()?),
-                Type::RATIONAL => Value::Rational(data.read_u32()?, data.read_u32()?),
-                Type::SRATIONAL => Value::SRational(data.read_i32()?, data.read_i32()?),
-                Type::IFD8 => Value::IfdBig(data.read_u64()?),
+                Type::LONG8 => TagValue::UnsignedBig(data.read_u64()?),
+                Type::SLONG8 => TagValue::SignedBig(data.read_i64()?),
+                Type::DOUBLE => TagValue::Double(data.read_f64()?),
+                Type::RATIONAL => TagValue::Rational(data.read_u32()?, data.read_u32()?),
+                Type::SRATIONAL => TagValue::SRational(data.read_i32()?, data.read_i32()?),
+                Type::IFD8 => TagValue::IfdBig(data.read_u64()?),
                 Type::BYTE
                 | Type::SBYTE
                 | Type::ASCII
@@ -342,16 +348,16 @@ async fn read_tag_value<F: MetadataFetch>(
 
         // 2b: the value is at most 4 bytes or doesn't fit in the offset field.
         return Ok(match tag_type {
-            Type::BYTE | Type::UNDEFINED => Value::Byte(data.read_u8()?),
-            Type::SBYTE => Value::SignedByte(data.read_i8()?),
-            Type::SHORT => Value::Short(data.read_u16()?),
-            Type::SSHORT => Value::SignedShort(data.read_i16()?),
-            Type::LONG => Value::Unsigned(data.read_u32()?),
-            Type::SLONG => Value::Signed(data.read_i32()?),
-            Type::FLOAT => Value::Float(data.read_f32()?),
+            Type::BYTE | Type::UNDEFINED => TagValue::Byte(data.read_u8()?),
+            Type::SBYTE => TagValue::SignedByte(data.read_i8()?),
+            Type::SHORT => TagValue::Short(data.read_u16()?),
+            Type::SSHORT => TagValue::SignedShort(data.read_i16()?),
+            Type::LONG => TagValue::Unsigned(data.read_u32()?),
+            Type::SLONG => TagValue::Signed(data.read_i32()?),
+            Type::FLOAT => TagValue::Float(data.read_f32()?),
             Type::ASCII => {
                 if data.as_ref()[0] == 0 {
-                    Value::Ascii("".to_string())
+                    TagValue::Ascii("".to_string())
                 } else {
                     panic!("Invalid tag");
                     // return Err(TiffError::FormatError(TiffFormatError::InvalidTag));
@@ -360,37 +366,37 @@ async fn read_tag_value<F: MetadataFetch>(
             Type::LONG8 => {
                 let offset = data.read_u32()?;
                 cursor.seek(offset as _);
-                Value::UnsignedBig(cursor.read_u64().await?)
+                TagValue::UnsignedBig(cursor.read_u64().await?)
             }
             Type::SLONG8 => {
                 let offset = data.read_u32()?;
                 cursor.seek(offset as _);
-                Value::SignedBig(cursor.read_i64().await?)
+                TagValue::SignedBig(cursor.read_i64().await?)
             }
             Type::DOUBLE => {
                 let offset = data.read_u32()?;
                 cursor.seek(offset as _);
-                Value::Double(cursor.read_f64().await?)
+                TagValue::Double(cursor.read_f64().await?)
             }
             Type::RATIONAL => {
                 let offset = data.read_u32()?;
                 cursor.seek(offset as _);
                 let numerator = cursor.read_u32().await?;
                 let denominator = cursor.read_u32().await?;
-                Value::Rational(numerator, denominator)
+                TagValue::Rational(numerator, denominator)
             }
             Type::SRATIONAL => {
                 let offset = data.read_u32()?;
                 cursor.seek(offset as _);
                 let numerator = cursor.read_i32().await?;
                 let denominator = cursor.read_i32().await?;
-                Value::SRational(numerator, denominator)
+                TagValue::SRational(numerator, denominator)
             }
-            Type::IFD => Value::Ifd(data.read_u32()?),
+            Type::IFD => TagValue::Ifd(data.read_u32()?),
             Type::IFD8 => {
                 let offset = data.read_u32()?;
                 cursor.seek(offset as _);
-                Value::IfdBig(cursor.read_u64().await?)
+                TagValue::IfdBig(cursor.read_u64().await?)
             }
         });
     }
@@ -407,18 +413,18 @@ async fn read_tag_value<F: MetadataFetch>(
         match tag_type {
             Type::BYTE | Type::UNDEFINED => {
                 return {
-                    Ok(Value::List(
+                    Ok(TagValue::List(
                         (0..count)
-                            .map(|_| Value::Byte(data.read_u8().unwrap()))
+                            .map(|_| TagValue::Byte(data.read_u8().unwrap()))
                             .collect(),
                     ))
                 };
             }
             Type::SBYTE => {
                 return {
-                    Ok(Value::List(
+                    Ok(TagValue::List(
                         (0..count)
-                            .map(|_| Value::SignedByte(data.read_i8().unwrap()))
+                            .map(|_| TagValue::SignedByte(data.read_i8().unwrap()))
                             .collect(),
                     ))
                 }
@@ -430,7 +436,7 @@ async fn read_tag_value<F: MetadataFetch>(
                     let v = std::str::from_utf8(&buf)
                         .map_err(|err| AsyncTiffError::General(err.to_string()))?;
                     let v = v.trim_matches(char::from(0));
-                    return Ok(Value::Ascii(v.into()));
+                    return Ok(TagValue::Ascii(v.into()));
                 } else {
                     panic!("Invalid tag");
                     // return Err(TiffError::FormatError(TiffFormatError::InvalidTag));
@@ -439,44 +445,44 @@ async fn read_tag_value<F: MetadataFetch>(
             Type::SHORT => {
                 let mut v = Vec::new();
                 for _ in 0..count {
-                    v.push(Value::Short(data.read_u16()?));
+                    v.push(TagValue::Short(data.read_u16()?));
                 }
-                return Ok(Value::List(v));
+                return Ok(TagValue::List(v));
             }
             Type::SSHORT => {
                 let mut v = Vec::new();
                 for _ in 0..count {
-                    v.push(Value::SignedShort(data.read_i16()?));
+                    v.push(TagValue::SignedShort(data.read_i16()?));
                 }
-                return Ok(Value::List(v));
+                return Ok(TagValue::List(v));
             }
             Type::LONG => {
                 let mut v = Vec::new();
                 for _ in 0..count {
-                    v.push(Value::Unsigned(data.read_u32()?));
+                    v.push(TagValue::Unsigned(data.read_u32()?));
                 }
-                return Ok(Value::List(v));
+                return Ok(TagValue::List(v));
             }
             Type::SLONG => {
                 let mut v = Vec::new();
                 for _ in 0..count {
-                    v.push(Value::Signed(data.read_i32()?));
+                    v.push(TagValue::Signed(data.read_i32()?));
                 }
-                return Ok(Value::List(v));
+                return Ok(TagValue::List(v));
             }
             Type::FLOAT => {
                 let mut v = Vec::new();
                 for _ in 0..count {
-                    v.push(Value::Float(data.read_f32()?));
+                    v.push(TagValue::Float(data.read_f32()?));
                 }
-                return Ok(Value::List(v));
+                return Ok(TagValue::List(v));
             }
             Type::IFD => {
                 let mut v = Vec::new();
                 for _ in 0..count {
-                    v.push(Value::Ifd(data.read_u32()?));
+                    v.push(TagValue::Ifd(data.read_u32()?));
                 }
-                return Ok(Value::List(v));
+                return Ok(TagValue::List(v));
             }
             Type::LONG8
             | Type::SLONG8
@@ -504,106 +510,106 @@ async fn read_tag_value<F: MetadataFetch>(
         Type::BYTE | Type::UNDEFINED => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::Byte(cursor.read_u8().await?))
+                v.push(TagValue::Byte(cursor.read_u8().await?))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::SBYTE => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::SignedByte(cursor.read_i8().await?))
+                v.push(TagValue::SignedByte(cursor.read_i8().await?))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::SHORT => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::Short(cursor.read_u16().await?))
+                v.push(TagValue::Short(cursor.read_u16().await?))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::SSHORT => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::SignedShort(cursor.read_i16().await?))
+                v.push(TagValue::SignedShort(cursor.read_i16().await?))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::LONG => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::Unsigned(cursor.read_u32().await?))
+                v.push(TagValue::Unsigned(cursor.read_u32().await?))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::SLONG => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::Signed(cursor.read_i32().await?))
+                v.push(TagValue::Signed(cursor.read_i32().await?))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::FLOAT => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::Float(cursor.read_f32().await?))
+                v.push(TagValue::Float(cursor.read_f32().await?))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::DOUBLE => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::Double(cursor.read_f64().await?))
+                v.push(TagValue::Double(cursor.read_f64().await?))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::RATIONAL => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::Rational(
+                v.push(TagValue::Rational(
                     cursor.read_u32().await?,
                     cursor.read_u32().await?,
                 ))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::SRATIONAL => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::SRational(
+                v.push(TagValue::SRational(
                     cursor.read_i32().await?,
                     cursor.read_i32().await?,
                 ))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::LONG8 => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::UnsignedBig(cursor.read_u64().await?))
+                v.push(TagValue::UnsignedBig(cursor.read_u64().await?))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::SLONG8 => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::SignedBig(cursor.read_i64().await?))
+                v.push(TagValue::SignedBig(cursor.read_i64().await?))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::IFD => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::Ifd(cursor.read_u32().await?))
+                v.push(TagValue::Ifd(cursor.read_u32().await?))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::IFD8 => {
             let mut v = Vec::with_capacity(count as _);
             for _ in 0..count {
-                v.push(Value::IfdBig(cursor.read_u64().await?))
+                v.push(TagValue::IfdBig(cursor.read_u64().await?))
             }
-            Ok(Value::List(v))
+            Ok(TagValue::List(v))
         }
         Type::ASCII => {
             let mut out = vec![0; count as _];
@@ -614,29 +620,22 @@ async fn read_tag_value<F: MetadataFetch>(
             if let Some(first) = out.iter().position(|&b| b == 0) {
                 out.truncate(first);
             }
-            Ok(Value::Ascii(String::from_utf8_lossy(&out).into_owned()))
+            Ok(TagValue::Ascii(String::from_utf8_lossy(&out).into_owned()))
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use bytes::Bytes;
-    use futures::FutureExt;
+    use async_trait::async_trait;
 
-    use crate::metadata::reader::read_tag;
-    use crate::metadata::MetadataFetch;
-    use crate::reader::Endianness;
-    use crate::tiff::tags::Tag;
-    use crate::tiff::Value;
+    use super::*;
 
+    #[async_trait]
     impl MetadataFetch for Bytes {
-        fn fetch(
-            &self,
-            range: std::ops::Range<u64>,
-        ) -> futures::future::BoxFuture<'_, crate::error::AsyncTiffResult<Bytes>> {
+        async fn fetch(&self, range: std::ops::Range<u64>) -> crate::error::AsyncTiffResult<Bytes> {
             let usize_range = range.start as usize..range.end as usize;
-            async { Ok(self.slice(usize_range)) }.boxed()
+            Ok(self.slice(usize_range))
         }
     }
 
@@ -651,26 +650,26 @@ mod test {
         let cases= [
         // tag type   count      offset
         // /\  / \   /     \   /       \
-        ([1,1, 1, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::Byte      (42                )),
-        ([1,1, 0, 1, 0,0,0,1, 42, 0, 0, 0], Endianness::BigEndian,    Value::Byte      (42                )),
-        ([1,1, 6, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::SignedByte(42                )),
-        ([1,1, 0, 6, 0,0,0,1, 42, 0, 0, 0], Endianness::BigEndian,    Value::SignedByte(42                )),
-        ([1,1, 7, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::Byte      (42                )), // undefined
-        ([1,1, 0, 7, 0,0,0,1, 42, 0, 0, 0], Endianness::BigEndian,    Value::Byte      (42                )), // undefined
-        ([1,1, 2, 0, 1,0,0,0,  0, 0, 0, 0], Endianness::LittleEndian, Value::Ascii     ("".into()         )),
-        ([1,1, 0, 2, 0,0,0,1,  0, 0, 0, 0], Endianness::BigEndian,    Value::Ascii     ("".into()         )),
-        ([1,1, 3, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::Short       (42              )),
-        ([1,1, 0, 3, 0,0,0,1,  0,42, 0, 0], Endianness::BigEndian,    Value::Short       (42              )),
-        ([1,1, 8, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::SignedShort (42              )),
-        ([1,1, 0, 8, 0,0,0,1,  0,42, 0, 0], Endianness::BigEndian,    Value::SignedShort (42              )),
-        ([1,1, 4, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::Unsigned  (42                )),
-        ([1,1, 0, 4, 0,0,0,1,  0, 0, 0,42], Endianness::BigEndian,    Value::Unsigned  (42                )),
-        ([1,1, 9, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::Signed    (42                )),
-        ([1,1, 0, 9, 0,0,0,1,  0, 0, 0,42], Endianness::BigEndian,    Value::Signed    (42                )),
-        ([1,1,13, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::Ifd       (42                )),
-        ([1,1, 0,13, 0,0,0,1,  0, 0, 0,42], Endianness::BigEndian,    Value::Ifd       (42                )),
-        ([1,1,11, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, Value::Float     (f32::from_bits(42))),
-        ([1,1, 0,11, 0,0,0,1,  0, 0, 0,42], Endianness::BigEndian,    Value::Float     (f32::from_bits(42))),
+        ([1,1, 1, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, TagValue::Byte      (42                )),
+        ([1,1, 0, 1, 0,0,0,1, 42, 0, 0, 0], Endianness::BigEndian,    TagValue::Byte      (42                )),
+        ([1,1, 6, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, TagValue::SignedByte(42                )),
+        ([1,1, 0, 6, 0,0,0,1, 42, 0, 0, 0], Endianness::BigEndian,    TagValue::SignedByte(42                )),
+        ([1,1, 7, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, TagValue::Byte      (42                )), // undefined
+        ([1,1, 0, 7, 0,0,0,1, 42, 0, 0, 0], Endianness::BigEndian,    TagValue::Byte      (42                )), // undefined
+        ([1,1, 2, 0, 1,0,0,0,  0, 0, 0, 0], Endianness::LittleEndian, TagValue::Ascii     ("".into()         )),
+        ([1,1, 0, 2, 0,0,0,1,  0, 0, 0, 0], Endianness::BigEndian,    TagValue::Ascii     ("".into()         )),
+        ([1,1, 3, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, TagValue::Short       (42              )),
+        ([1,1, 0, 3, 0,0,0,1,  0,42, 0, 0], Endianness::BigEndian,    TagValue::Short       (42              )),
+        ([1,1, 8, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, TagValue::SignedShort (42              )),
+        ([1,1, 0, 8, 0,0,0,1,  0,42, 0, 0], Endianness::BigEndian,    TagValue::SignedShort (42              )),
+        ([1,1, 4, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, TagValue::Unsigned  (42                )),
+        ([1,1, 0, 4, 0,0,0,1,  0, 0, 0,42], Endianness::BigEndian,    TagValue::Unsigned  (42                )),
+        ([1,1, 9, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, TagValue::Signed    (42                )),
+        ([1,1, 0, 9, 0,0,0,1,  0, 0, 0,42], Endianness::BigEndian,    TagValue::Signed    (42                )),
+        ([1,1,13, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, TagValue::Ifd       (42                )),
+        ([1,1, 0,13, 0,0,0,1,  0, 0, 0,42], Endianness::BigEndian,    TagValue::Ifd       (42                )),
+        ([1,1,11, 0, 1,0,0,0, 42, 0, 0, 0], Endianness::LittleEndian, TagValue::Float     (f32::from_bits(42))),
+        ([1,1, 0,11, 0,0,0,1,  0, 0, 0,42], Endianness::BigEndian,    TagValue::Float     (f32::from_bits(42))),
         // Double doesn't fit, neither 8-types and we special-case IFD
         ];
         for (buf, byte_order, res) in cases {
@@ -694,38 +693,38 @@ mod test {
         let cases = [
         //      type       count            offset
         //       / \  1 2 3 4 5 6 7 8   1  2  3  4  5  6  7  8
-        ([1,1,  1, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::Byte       (42)                ),
-        ([1,1,  0, 1, 0,0,0,0,0,0,0,1, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    Value::Byte       (42)                ),
-        ([1,1,  6, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::SignedByte (42)                ),
-        ([1,1,  0, 6, 0,0,0,0,0,0,0,1, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    Value::SignedByte (42)                ),
-        ([1,1,  7, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::Byte       (42)                ), // undefined
-        ([1,1,  0, 7, 0,0,0,0,0,0,0,1, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    Value::Byte       (42)                ), // undefined
-        ([1,1,  2, 0, 1,0,0,0,0,0,0,0,  0, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::Ascii      ("".into())         ),
-        ([1,1,  0, 2, 0,0,0,0,0,0,0,1,  0, 0, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    Value::Ascii      ("".into())         ),
-        ([1,1,  3, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::Short      (42)                ),
-        ([1,1,  0, 3, 0,0,0,0,0,0,0,1,  0,42, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    Value::Short      (42)                ),
-        ([1,1,  8, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::SignedShort(42)                ),
-        ([1,1,  0, 8, 0,0,0,0,0,0,0,1,  0,42, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    Value::SignedShort(42)                ),
-        ([1,1,  4, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::Unsigned   (42)                ),
-        ([1,1,  0, 4, 0,0,0,0,0,0,0,1,  0, 0, 0,42, 0, 0, 0, 0], Endianness::BigEndian,    Value::Unsigned   (42)                ),
-        ([1,1,  9, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::Signed     (42)                ),
-        ([1,1,  0, 9, 0,0,0,0,0,0,0,1,  0, 0, 0,42, 0, 0, 0, 0], Endianness::BigEndian,    Value::Signed     (42)                ),
-        ([1,1, 13, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::Ifd        (42)                ),
-        ([1,1,  0,13, 0,0,0,0,0,0,0,1,  0, 0, 0,42, 0, 0, 0, 0], Endianness::BigEndian,    Value::Ifd        (42)                ),
-        ([1,1, 16, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::UnsignedBig(42)                ),
-        ([1,1,  0,16, 0,0,0,0,0,0,0,1,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian,    Value::UnsignedBig(42)                ),
-        ([1,1, 17, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::SignedBig  (42)                ),
-        ([1,1,  0,17, 0,0,0,0,0,0,0,1,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian,    Value::SignedBig  (42)                ),
-        ([1,1, 18, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::IfdBig     (42)                ),
-        ([1,1,  0,18, 0,0,0,0,0,0,0,1,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian,    Value::IfdBig     (42)                ),
-        ([1,1, 11, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::Float      (f32::from_bits(42))),
-        ([1,1,  0,11, 0,0,0,0,0,0,0,1,  0, 0, 0,42, 0, 0, 0, 0], Endianness::BigEndian,    Value::Float      (f32::from_bits(42))),
-        ([1,1, 12, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::Double     (f64::from_bits(42))),
-        ([1,1,  0,12, 0,0,0,0,0,0,0,1,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian,    Value::Double     (f64::from_bits(42))),
-        ([1,1,  5, 0, 1,0,0,0,0,0,0,0,  42,0, 0, 0,43, 0, 0, 0], Endianness::LittleEndian, Value::Rational   (42, 43)            ),
-        ([1,1,  0, 5, 0,0,0,0,0,0,0,1,  0, 0, 0,42, 0, 0, 0,43], Endianness::BigEndian,    Value::Rational   (42, 43)            ),
-        ([1,1,  10,0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0,43, 0, 0, 0], Endianness::LittleEndian, Value::SRational  (42, 43)            ),
-        ([1,1,  0,10, 0,0,0,0,0,0,0,1,  0, 0, 0,42, 0, 0, 0,43], Endianness::BigEndian,    Value::SRational  (42, 43)            ),
+        ([1,1,  1, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::Byte       (42)                ),
+        ([1,1,  0, 1, 0,0,0,0,0,0,0,1, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    TagValue::Byte       (42)                ),
+        ([1,1,  6, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::SignedByte (42)                ),
+        ([1,1,  0, 6, 0,0,0,0,0,0,0,1, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    TagValue::SignedByte (42)                ),
+        ([1,1,  7, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::Byte       (42)                ), // undefined
+        ([1,1,  0, 7, 0,0,0,0,0,0,0,1, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    TagValue::Byte       (42)                ), // undefined
+        ([1,1,  2, 0, 1,0,0,0,0,0,0,0,  0, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::Ascii      ("".into())         ),
+        ([1,1,  0, 2, 0,0,0,0,0,0,0,1,  0, 0, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    TagValue::Ascii      ("".into())         ),
+        ([1,1,  3, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::Short      (42)                ),
+        ([1,1,  0, 3, 0,0,0,0,0,0,0,1,  0,42, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    TagValue::Short      (42)                ),
+        ([1,1,  8, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::SignedShort(42)                ),
+        ([1,1,  0, 8, 0,0,0,0,0,0,0,1,  0,42, 0, 0, 0, 0, 0, 0], Endianness::BigEndian,    TagValue::SignedShort(42)                ),
+        ([1,1,  4, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::Unsigned   (42)                ),
+        ([1,1,  0, 4, 0,0,0,0,0,0,0,1,  0, 0, 0,42, 0, 0, 0, 0], Endianness::BigEndian,    TagValue::Unsigned   (42)                ),
+        ([1,1,  9, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::Signed     (42)                ),
+        ([1,1,  0, 9, 0,0,0,0,0,0,0,1,  0, 0, 0,42, 0, 0, 0, 0], Endianness::BigEndian,    TagValue::Signed     (42)                ),
+        ([1,1, 13, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::Ifd        (42)                ),
+        ([1,1,  0,13, 0,0,0,0,0,0,0,1,  0, 0, 0,42, 0, 0, 0, 0], Endianness::BigEndian,    TagValue::Ifd        (42)                ),
+        ([1,1, 16, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::UnsignedBig(42)                ),
+        ([1,1,  0,16, 0,0,0,0,0,0,0,1,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian,    TagValue::UnsignedBig(42)                ),
+        ([1,1, 17, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::SignedBig  (42)                ),
+        ([1,1,  0,17, 0,0,0,0,0,0,0,1,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian,    TagValue::SignedBig  (42)                ),
+        ([1,1, 18, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::IfdBig     (42)                ),
+        ([1,1,  0,18, 0,0,0,0,0,0,0,1,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian,    TagValue::IfdBig     (42)                ),
+        ([1,1, 11, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::Float      (f32::from_bits(42))),
+        ([1,1,  0,11, 0,0,0,0,0,0,0,1,  0, 0, 0,42, 0, 0, 0, 0], Endianness::BigEndian,    TagValue::Float      (f32::from_bits(42))),
+        ([1,1, 12, 0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::Double     (f64::from_bits(42))),
+        ([1,1,  0,12, 0,0,0,0,0,0,0,1,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian,    TagValue::Double     (f64::from_bits(42))),
+        ([1,1,  5, 0, 1,0,0,0,0,0,0,0,  42,0, 0, 0,43, 0, 0, 0], Endianness::LittleEndian, TagValue::Rational   (42, 43)            ),
+        ([1,1,  0, 5, 0,0,0,0,0,0,0,1,  0, 0, 0,42, 0, 0, 0,43], Endianness::BigEndian,    TagValue::Rational   (42, 43)            ),
+        ([1,1,  10,0, 1,0,0,0,0,0,0,0, 42, 0, 0, 0,43, 0, 0, 0], Endianness::LittleEndian, TagValue::SRational  (42, 43)            ),
+        ([1,1,  0,10, 0,0,0,0,0,0,0,1,  0, 0, 0,42, 0, 0, 0,43], Endianness::BigEndian,    TagValue::SRational  (42, 43)            ),
         // we special-case IFD
         ];
         for (buf, byte_order, res) in cases {
@@ -749,19 +748,19 @@ mod test {
         let cases = [
         //  tag type  count    offset
         //  // /  \  /     \   /     \
-        ([1,1, 1, 0, 4,0,0,0, 42,42,42,42], Endianness::LittleEndian, Value::List(vec![Value::Byte       (42); 4]) ),
-        ([1,1, 0, 1, 0,0,0,4, 42,42,42,42], Endianness::BigEndian,    Value::List(vec![Value::Byte       (42); 4]) ),
-        ([1,1, 6, 0, 4,0,0,0, 42,42,42,42], Endianness::LittleEndian, Value::List(vec![Value::SignedByte (42); 4]) ),
-        ([1,1, 0, 6, 0,0,0,4, 42,42,42,42], Endianness::BigEndian,    Value::List(vec![Value::SignedByte (42); 4]) ),
-        ([1,1, 7, 0, 4,0,0,0, 42,42,42,42], Endianness::LittleEndian, Value::List(vec![Value::Byte     (42); 4]) ), // undefined
-        ([1,1, 0, 7, 0,0,0,4, 42,42,42,42], Endianness::BigEndian,    Value::List(vec![Value::Byte     (42); 4]) ), // undefined
-        ([1,1, 2, 0, 4,0,0,0, 42,42,42, 0], Endianness::LittleEndian, Value::Ascii("***".into())),
-        ([1,1, 0, 2, 0,0,0,4, 42,42,42, 0], Endianness::BigEndian,    Value::Ascii("***".into())),
-        ([1,1, 3, 0, 2,0,0,0, 42, 0,42, 0], Endianness::LittleEndian, Value::List(vec![Value::Short       (42); 2]) ),
-        ([1,1, 0, 3, 0,0,0,2,  0,42, 0,42], Endianness::BigEndian,    Value::List(vec![Value::Short       (42); 2]) ),
-        ([1,1, 8, 0, 2,0,0,0, 42, 0,42, 0], Endianness::LittleEndian, Value::List(vec![Value::SignedShort (42); 2]) ),
-        ([1,1, 0, 8, 0,0,0,2,  0,42, 0,42], Endianness::BigEndian,    Value::List(vec![Value::SignedShort (42); 2]) ),
-        ([1,1, 0, 2, 0,0,0,4, b'A',b'B',b'C',0], Endianness::BigEndian, Value::Ascii("ABC".into())),
+        ([1,1, 1, 0, 4,0,0,0, 42,42,42,42], Endianness::LittleEndian, TagValue::List(vec![TagValue::Byte       (42); 4]) ),
+        ([1,1, 0, 1, 0,0,0,4, 42,42,42,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::Byte       (42); 4]) ),
+        ([1,1, 6, 0, 4,0,0,0, 42,42,42,42], Endianness::LittleEndian, TagValue::List(vec![TagValue::SignedByte (42); 4]) ),
+        ([1,1, 0, 6, 0,0,0,4, 42,42,42,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::SignedByte (42); 4]) ),
+        ([1,1, 7, 0, 4,0,0,0, 42,42,42,42], Endianness::LittleEndian, TagValue::List(vec![TagValue::Byte     (42); 4]) ), // undefined
+        ([1,1, 0, 7, 0,0,0,4, 42,42,42,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::Byte     (42); 4]) ), // undefined
+        ([1,1, 2, 0, 4,0,0,0, 42,42,42, 0], Endianness::LittleEndian, TagValue::Ascii("***".into())),
+        ([1,1, 0, 2, 0,0,0,4, 42,42,42, 0], Endianness::BigEndian,    TagValue::Ascii("***".into())),
+        ([1,1, 3, 0, 2,0,0,0, 42, 0,42, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::Short       (42); 2]) ),
+        ([1,1, 0, 3, 0,0,0,2,  0,42, 0,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::Short       (42); 2]) ),
+        ([1,1, 8, 0, 2,0,0,0, 42, 0,42, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::SignedShort (42); 2]) ),
+        ([1,1, 0, 8, 0,0,0,2,  0,42, 0,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::SignedShort (42); 2]) ),
+        ([1,1, 0, 2, 0,0,0,4, b'A',b'B',b'C',0], Endianness::BigEndian, TagValue::Ascii("ABC".into())),
         // others don't fit, neither 8-types and we special-case IFD
         ];
         for (buf, byte_order, res) in cases {
@@ -786,26 +785,26 @@ mod test {
         let cases = [
         //     type       count            offset
         //     / \  1 2 3 4 5 6 7 8   1  2  3  4  5  6  7  8
-        ([1,1, 1, 0, 8,0,0,0,0,0,0,0, 42,42,42,42,42,42,42,42], Endianness::LittleEndian, Value::List(vec![Value::Byte      (42)                ; 8])),
-        ([1,1, 0, 1, 0,0,0,0,0,0,0,8, 42,42,42,42,42,42,42,42], Endianness::BigEndian,    Value::List(vec![Value::Byte      (42)                ; 8])),
-        ([1,1, 6, 0, 8,0,0,0,0,0,0,0, 42,42,42,42,42,42,42,42], Endianness::LittleEndian, Value::List(vec![Value::SignedByte(42)                ; 8])),
-        ([1,1, 0, 6, 0,0,0,0,0,0,0,8, 42,42,42,42,42,42,42,42], Endianness::BigEndian,    Value::List(vec![Value::SignedByte(42)                ; 8])),
-        ([1,1, 7, 0, 8,0,0,0,0,0,0,0, 42,42,42,42,42,42,42,42], Endianness::LittleEndian, Value::List(vec![Value::Byte      (42)                ; 8])), //undefined u8
-        ([1,1, 0, 7, 0,0,0,0,0,0,0,8, 42,42,42,42,42,42,42,42], Endianness::BigEndian,    Value::List(vec![Value::Byte      (42)                ; 8])), //undefined u8
-        ([1,1, 2, 0, 8,0,0,0,0,0,0,0, 42,42,42,42,42,42,42, 0], Endianness::LittleEndian, Value::Ascii                      ("*******".into()       )),
-        ([1,1, 0, 2, 0,0,0,0,0,0,0,8, 42,42,42,42,42,42,42, 0], Endianness::BigEndian,    Value::Ascii                      ("*******".into()       )),
-        ([1,1, 3, 0, 4,0,0,0,0,0,0,0, 42, 0,42, 0,42, 0,42, 0], Endianness::LittleEndian, Value::List(vec![Value::Short       (42)              ; 4])),
-        ([1,1, 0, 3, 0,0,0,0,0,0,0,4,  0,42, 0,42, 0,42, 0,42], Endianness::BigEndian,    Value::List(vec![Value::Short       (42)              ; 4])),
-        ([1,1, 8, 0, 4,0,0,0,0,0,0,0, 42, 0,42, 0,42, 0,42, 0], Endianness::LittleEndian, Value::List(vec![Value::SignedShort (42)              ; 4])),
-        ([1,1, 0, 8, 0,0,0,0,0,0,0,4,  0,42, 0,42, 0,42, 0,42], Endianness::BigEndian,    Value::List(vec![Value::SignedShort (42)              ; 4])),
-        ([1,1, 4, 0, 2,0,0,0,0,0,0,0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Unsigned  (42)                ; 2])),
-        ([1,1, 0, 4, 0,0,0,0,0,0,0,2,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian,    Value::List(vec![Value::Unsigned  (42)                ; 2])),
-        ([1,1, 9, 0, 2,0,0,0,0,0,0,0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Signed    (42)                ; 2])),
-        ([1,1, 0, 9, 0,0,0,0,0,0,0,2,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian,    Value::List(vec![Value::Signed    (42)                ; 2])),
-        ([1,1,13, 0, 2,0,0,0,0,0,0,0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Ifd       (42)                ; 2])),
-        ([1,1, 0,13, 0,0,0,0,0,0,0,2,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian,    Value::List(vec![Value::Ifd       (42)                ; 2])),
-        ([1,1,11, 0, 2,0,0,0,0,0,0,0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Float     (f32::from_bits(42)); 2])),
-        ([1,1, 0,11, 0,0,0,0,0,0,0,2,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian,    Value::List(vec![Value::Float     (f32::from_bits(42)); 2])),
+        ([1,1, 1, 0, 8,0,0,0,0,0,0,0, 42,42,42,42,42,42,42,42], Endianness::LittleEndian, TagValue::List(vec![TagValue::Byte      (42)                ; 8])),
+        ([1,1, 0, 1, 0,0,0,0,0,0,0,8, 42,42,42,42,42,42,42,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::Byte      (42)                ; 8])),
+        ([1,1, 6, 0, 8,0,0,0,0,0,0,0, 42,42,42,42,42,42,42,42], Endianness::LittleEndian, TagValue::List(vec![TagValue::SignedByte(42)                ; 8])),
+        ([1,1, 0, 6, 0,0,0,0,0,0,0,8, 42,42,42,42,42,42,42,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::SignedByte(42)                ; 8])),
+        ([1,1, 7, 0, 8,0,0,0,0,0,0,0, 42,42,42,42,42,42,42,42], Endianness::LittleEndian, TagValue::List(vec![TagValue::Byte      (42)                ; 8])), //undefined u8
+        ([1,1, 0, 7, 0,0,0,0,0,0,0,8, 42,42,42,42,42,42,42,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::Byte      (42)                ; 8])), //undefined u8
+        ([1,1, 2, 0, 8,0,0,0,0,0,0,0, 42,42,42,42,42,42,42, 0], Endianness::LittleEndian, TagValue::Ascii                      ("*******".into()       )),
+        ([1,1, 0, 2, 0,0,0,0,0,0,0,8, 42,42,42,42,42,42,42, 0], Endianness::BigEndian,    TagValue::Ascii                      ("*******".into()       )),
+        ([1,1, 3, 0, 4,0,0,0,0,0,0,0, 42, 0,42, 0,42, 0,42, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::Short       (42)              ; 4])),
+        ([1,1, 0, 3, 0,0,0,0,0,0,0,4,  0,42, 0,42, 0,42, 0,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::Short       (42)              ; 4])),
+        ([1,1, 8, 0, 4,0,0,0,0,0,0,0, 42, 0,42, 0,42, 0,42, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::SignedShort (42)              ; 4])),
+        ([1,1, 0, 8, 0,0,0,0,0,0,0,4,  0,42, 0,42, 0,42, 0,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::SignedShort (42)              ; 4])),
+        ([1,1, 4, 0, 2,0,0,0,0,0,0,0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::Unsigned  (42)                ; 2])),
+        ([1,1, 0, 4, 0,0,0,0,0,0,0,2,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::Unsigned  (42)                ; 2])),
+        ([1,1, 9, 0, 2,0,0,0,0,0,0,0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::Signed    (42)                ; 2])),
+        ([1,1, 0, 9, 0,0,0,0,0,0,0,2,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::Signed    (42)                ; 2])),
+        ([1,1,13, 0, 2,0,0,0,0,0,0,0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::Ifd       (42)                ; 2])),
+        ([1,1, 0,13, 0,0,0,0,0,0,0,2,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::Ifd       (42)                ; 2])),
+        ([1,1,11, 0, 2,0,0,0,0,0,0,0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::Float     (f32::from_bits(42)); 2])),
+        ([1,1, 0,11, 0,0,0,0,0,0,0,2,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian,    TagValue::List(vec![TagValue::Float     (f32::from_bits(42)); 2])),
         // we special-case IFD
         ];
         for (buf, byte_order, res) in cases {
@@ -829,38 +828,38 @@ mod test {
         let cases = [
         //          type  count    offset 12
         //          /\   /     \   /     \
-        (vec![1,1, 1, 0, 5,0,0,0, 12, 0, 0, 0, 42,42,42,42,42],          Endianness::LittleEndian, Value::List(vec![Value::Byte       (42                 );5])),
-        (vec![1,1, 0, 1, 0,0,0,5,  0, 0, 0,12, 42,42,42,42,42],          Endianness::BigEndian   , Value::List(vec![Value::Byte       (42                 );5])),
-        (vec![1,1, 6, 0, 5,0,0,0, 12, 0, 0, 0, 42,42,42,42,42],          Endianness::LittleEndian, Value::List(vec![Value::SignedByte (42                 );5])),
-        (vec![1,1, 0, 6, 0,0,0,5,  0, 0, 0,12, 42,42,42,42,42],          Endianness::BigEndian   , Value::List(vec![Value::SignedByte (42                 );5])),
-        (vec![1,1, 7, 0, 5,0,0,0, 12, 0, 0, 0, 42,42,42,42,42],          Endianness::LittleEndian, Value::List(vec![Value::Byte       (42                 );5])), // Type::UNDEFINED ),
-        (vec![1,1, 0, 7, 0,0,0,5,  0, 0, 0,12, 42,42,42,42,42],          Endianness::BigEndian   , Value::List(vec![Value::Byte       (42                 );5])), // Type::UNDEFINED ),
-        (vec![1,1, 2, 0, 5,0,0,0, 12, 0, 0, 0, 42,42,42,42, 0],          Endianness::LittleEndian,                  Value::Ascii      ("****".into()      )    ),
-        (vec![1,1, 0, 2, 0,0,0,5,  0, 0, 0,12, 42,42,42,42, 0],          Endianness::BigEndian   ,                  Value::Ascii      ("****".into()      )    ),
-        (vec![1,1, 3, 0, 3,0,0,0, 12, 0, 0, 0, 42, 0,42, 0,42, 0],       Endianness::LittleEndian, Value::List(vec![Value::Short      (42                 );3])),
-        (vec![1,1, 0, 3, 0,0,0,3,  0, 0, 0,12,  0,42, 0,42, 0,42],       Endianness::BigEndian   , Value::List(vec![Value::Short      (42                 );3])),
-        (vec![1,1, 8, 0, 3,0,0,0, 12, 0, 0, 0, 42, 0,42, 0,42, 0],       Endianness::LittleEndian, Value::List(vec![Value::SignedShort(42                 );3])),
-        (vec![1,1, 0, 8, 0,0,0,3,  0, 0, 0,12,  0,42, 0,42, 0,42],       Endianness::BigEndian   , Value::List(vec![Value::SignedShort(42                 );3])),
-        (vec![1,1, 4, 0, 2,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Unsigned   (42                 );2])),
-        (vec![1,1, 0, 4, 0,0,0,2,  0, 0, 0,12,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   , Value::List(vec![Value::Unsigned   (42                 );2])),
-        (vec![1,1, 9, 0, 2,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Signed     (42                 );2])),
-        (vec![1,1, 0, 9, 0,0,0,2,  0, 0, 0,12,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   , Value::List(vec![Value::Signed     (42                 );2])),
-        (vec![1,1,13, 0, 2,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Ifd        (42                 );2])),
-        (vec![1,1, 0,13, 0,0,0,2,  0, 0, 0,12,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   , Value::List(vec![Value::Ifd        (42                 );2])),
-        (vec![1,1, 16,0, 1,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian,                  Value::UnsignedBig(42                 )    ),
-        (vec![1,1, 0,16, 0,0,0,1,  0, 0, 0,12,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   ,                  Value::UnsignedBig(42                 )    ),
-        (vec![1,1, 17,0, 1,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian,                  Value::SignedBig  (42                 )    ),
-        (vec![1,1, 0,17, 0,0,0,1,  0, 0, 0,12,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   ,                  Value::SignedBig  (42                 )    ),
-        (vec![1,1, 18,0, 1,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian,                  Value::IfdBig     (42                 )    ),
-        (vec![1,1, 0,18, 0,0,0,1,  0, 0, 0,12,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   ,                  Value::IfdBig     (42                 )    ),
-        (vec![1,1, 11,0, 2,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Float      (f32::from_bits(42) );2])),
-        (vec![1,1, 0,11, 0,0,0,2,  0, 0, 0,12,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   , Value::List(vec![Value::Float      (f32::from_bits(42) );2])),
-        (vec![1,1, 12,0, 1,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian,                  Value::Double     (f64::from_bits(42))     ),
-        (vec![1,1, 0,12, 0,0,0,1,  0, 0, 0,12,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   ,                  Value::Double     (f64::from_bits(42))     ),
-        (vec![1,1, 5, 0, 1,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian,                  Value::Rational   (42, 42             )    ),
-        (vec![1,1, 0, 5, 0,0,0,1,  0, 0, 0,12,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   ,                  Value::Rational   (42, 42             )    ),
-        (vec![1,1, 10,0, 1,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian,                  Value::SRational  (42, 42             )    ),
-        (vec![1,1, 0,10, 0,0,0,1,  0, 0, 0,12,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   ,                  Value::SRational  (42, 42             )    ),
+        (vec![1,1, 1, 0, 5,0,0,0, 12, 0, 0, 0, 42,42,42,42,42],          Endianness::LittleEndian, TagValue::List(vec![TagValue::Byte       (42                 );5])),
+        (vec![1,1, 0, 1, 0,0,0,5,  0, 0, 0,12, 42,42,42,42,42],          Endianness::BigEndian   , TagValue::List(vec![TagValue::Byte       (42                 );5])),
+        (vec![1,1, 6, 0, 5,0,0,0, 12, 0, 0, 0, 42,42,42,42,42],          Endianness::LittleEndian, TagValue::List(vec![TagValue::SignedByte (42                 );5])),
+        (vec![1,1, 0, 6, 0,0,0,5,  0, 0, 0,12, 42,42,42,42,42],          Endianness::BigEndian   , TagValue::List(vec![TagValue::SignedByte (42                 );5])),
+        (vec![1,1, 7, 0, 5,0,0,0, 12, 0, 0, 0, 42,42,42,42,42],          Endianness::LittleEndian, TagValue::List(vec![TagValue::Byte       (42                 );5])), // Type::UNDEFINED ),
+        (vec![1,1, 0, 7, 0,0,0,5,  0, 0, 0,12, 42,42,42,42,42],          Endianness::BigEndian   , TagValue::List(vec![TagValue::Byte       (42                 );5])), // Type::UNDEFINED ),
+        (vec![1,1, 2, 0, 5,0,0,0, 12, 0, 0, 0, 42,42,42,42, 0],          Endianness::LittleEndian,                  TagValue::Ascii      ("****".into()      )    ),
+        (vec![1,1, 0, 2, 0,0,0,5,  0, 0, 0,12, 42,42,42,42, 0],          Endianness::BigEndian   ,                  TagValue::Ascii      ("****".into()      )    ),
+        (vec![1,1, 3, 0, 3,0,0,0, 12, 0, 0, 0, 42, 0,42, 0,42, 0],       Endianness::LittleEndian, TagValue::List(vec![TagValue::Short      (42                 );3])),
+        (vec![1,1, 0, 3, 0,0,0,3,  0, 0, 0,12,  0,42, 0,42, 0,42],       Endianness::BigEndian   , TagValue::List(vec![TagValue::Short      (42                 );3])),
+        (vec![1,1, 8, 0, 3,0,0,0, 12, 0, 0, 0, 42, 0,42, 0,42, 0],       Endianness::LittleEndian, TagValue::List(vec![TagValue::SignedShort(42                 );3])),
+        (vec![1,1, 0, 8, 0,0,0,3,  0, 0, 0,12,  0,42, 0,42, 0,42],       Endianness::BigEndian   , TagValue::List(vec![TagValue::SignedShort(42                 );3])),
+        (vec![1,1, 4, 0, 2,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::Unsigned   (42                 );2])),
+        (vec![1,1, 0, 4, 0,0,0,2,  0, 0, 0,12,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   , TagValue::List(vec![TagValue::Unsigned   (42                 );2])),
+        (vec![1,1, 9, 0, 2,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::Signed     (42                 );2])),
+        (vec![1,1, 0, 9, 0,0,0,2,  0, 0, 0,12,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   , TagValue::List(vec![TagValue::Signed     (42                 );2])),
+        (vec![1,1,13, 0, 2,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::Ifd        (42                 );2])),
+        (vec![1,1, 0,13, 0,0,0,2,  0, 0, 0,12,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   , TagValue::List(vec![TagValue::Ifd        (42                 );2])),
+        (vec![1,1, 16,0, 1,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian,                  TagValue::UnsignedBig(42                 )    ),
+        (vec![1,1, 0,16, 0,0,0,1,  0, 0, 0,12,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   ,                  TagValue::UnsignedBig(42                 )    ),
+        (vec![1,1, 17,0, 1,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian,                  TagValue::SignedBig  (42                 )    ),
+        (vec![1,1, 0,17, 0,0,0,1,  0, 0, 0,12,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   ,                  TagValue::SignedBig  (42                 )    ),
+        (vec![1,1, 18,0, 1,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian,                  TagValue::IfdBig     (42                 )    ),
+        (vec![1,1, 0,18, 0,0,0,1,  0, 0, 0,12,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   ,                  TagValue::IfdBig     (42                 )    ),
+        (vec![1,1, 11,0, 2,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::Float      (f32::from_bits(42) );2])),
+        (vec![1,1, 0,11, 0,0,0,2,  0, 0, 0,12,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   , TagValue::List(vec![TagValue::Float      (f32::from_bits(42) );2])),
+        (vec![1,1, 12,0, 1,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian,                  TagValue::Double     (f64::from_bits(42))     ),
+        (vec![1,1, 0,12, 0,0,0,1,  0, 0, 0,12,  0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   ,                  TagValue::Double     (f64::from_bits(42))     ),
+        (vec![1,1, 5, 0, 1,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian,                  TagValue::Rational   (42, 42             )    ),
+        (vec![1,1, 0, 5, 0,0,0,1,  0, 0, 0,12,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   ,                  TagValue::Rational   (42, 42             )    ),
+        (vec![1,1, 10,0, 1,0,0,0, 12, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian,                  TagValue::SRational  (42, 42             )    ),
+        (vec![1,1, 0,10, 0,0,0,1,  0, 0, 0,12,  0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   ,                  TagValue::SRational  (42, 42             )    ),
         ];
         for (buf, byte_order, res) in cases {
             println!("reading {buf:?} to be {res:?}");
@@ -883,38 +882,38 @@ mod test {
         let cases = [
         //           type       count            offset
         //           / \  1 2 3 4 5 6 7 8   1  2  3  4  5  6  7  8
-        (vec![1,1,  1, 0, 9,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42,42,42,42,42,42,42,42,42],                      Endianness::LittleEndian, Value::List(vec![Value::Byte       (42                );9])),
-        (vec![1,1,  0, 1, 0,0,0,0,0,0,0,9,  0, 0, 0, 0, 0, 0, 0,20, 42,42,42,42,42,42,42,42,42],                      Endianness::BigEndian   , Value::List(vec![Value::Byte       (42                );9])),
-        (vec![1,1,  6, 0, 9,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42,42,42,42,42,42,42,42,42],                      Endianness::LittleEndian, Value::List(vec![Value::SignedByte (42                );9])),
-        (vec![1,1,  0, 6, 0,0,0,0,0,0,0,9,  0, 0, 0, 0, 0, 0, 0,20, 42,42,42,42,42,42,42,42,42],                      Endianness::BigEndian   , Value::List(vec![Value::SignedByte (42                );9])),
-        (vec![1,1,  7, 0, 9,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42,42,42,42,42,42,42,42,42],                      Endianness::LittleEndian, Value::List(vec![Value::Byte       (42                );9])), //TagType::UNDEFINED ),
-        (vec![1,1,  0, 7, 0,0,0,0,0,0,0,9,  0, 0, 0, 0, 0, 0, 0,20, 42,42,42,42,42,42,42,42,42],                      Endianness::BigEndian   , Value::List(vec![Value::Byte       (42                );9])), //TagType::UNDEFINED ),
-        (vec![1,1,  2, 0, 9,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42,42,42,42,42,42,42,42, 0],                      Endianness::LittleEndian,                  Value::Ascii      ("********".into() )    ),
-        (vec![1,1,  0, 2, 0,0,0,0,0,0,0,9,  0, 0, 0, 0, 0, 0, 0,20, 42,42,42,42,42,42,42,42, 0],                      Endianness::BigEndian   ,                  Value::Ascii      ("********".into() )    ),
-        (vec![1,1,  3, 0, 5,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0,42, 0,42, 0,42, 0,42, 0],                   Endianness::LittleEndian, Value::List(vec![Value::Short      (42                );5])),
-        (vec![1,1,  0, 3, 0,0,0,0,0,0,0,5,  0, 0, 0, 0, 0, 0, 0,20,  0,42, 0,42, 0,42, 0,42, 0,42],                   Endianness::BigEndian   , Value::List(vec![Value::Short      (42                );5])),
-        (vec![1,1,  8, 0, 5,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0,42, 0,42, 0,42, 0,42, 0],                   Endianness::LittleEndian, Value::List(vec![Value::SignedShort(42                );5])),
-        (vec![1,1,  0, 8, 0,0,0,0,0,0,0,5,  0, 0, 0, 0, 0, 0, 0,20,  0,42, 0,42, 0,42, 0,42, 0,42],                   Endianness::BigEndian   , Value::List(vec![Value::SignedShort(42                );5])),
-        (vec![1,1,  4, 0, 3,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0],             Endianness::LittleEndian, Value::List(vec![Value::Unsigned   (42                );3])),
-        (vec![1,1,  0, 4, 0,0,0,0,0,0,0,3,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42],             Endianness::BigEndian   , Value::List(vec![Value::Unsigned   (42                );3])),
-        (vec![1,1,  9, 0, 3,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0],             Endianness::LittleEndian, Value::List(vec![Value::Signed     (42                );3])),
-        (vec![1,1,  0, 9, 0,0,0,0,0,0,0,3,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42],             Endianness::BigEndian   , Value::List(vec![Value::Signed     (42                );3])),
-        (vec![1,1, 13, 0, 3,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0],             Endianness::LittleEndian, Value::List(vec![Value::Ifd        (42                );3])),
-        (vec![1,1,  0,13, 0,0,0,0,0,0,0,3,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42],             Endianness::BigEndian   , Value::List(vec![Value::Ifd        (42                );3])),
-        (vec![1,1, 16, 0, 2,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::UnsignedBig(42                );2])),
-        (vec![1,1,  0,16, 0,0,0,0,0,0,0,2,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   , Value::List(vec![Value::UnsignedBig(42                );2])),
-        (vec![1,1, 17, 0, 2,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::SignedBig  (42                );2])),
-        (vec![1,1,  0,17, 0,0,0,0,0,0,0,2,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   , Value::List(vec![Value::SignedBig  (42                );2])),
-        (vec![1,1, 18, 0, 2,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::IfdBig     (42                );2])),
-        (vec![1,1,  0,18, 0,0,0,0,0,0,0,2,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   , Value::List(vec![Value::IfdBig     (42                );2])),
-        (vec![1,1, 11, 0, 3,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,],            Endianness::LittleEndian, Value::List(vec![Value::Float      (f32::from_bits(42));3])),
-        (vec![1,1,  0,11, 0,0,0,0,0,0,0,3,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42,],            Endianness::BigEndian   , Value::List(vec![Value::Float      (f32::from_bits(42));3])),
-        (vec![1,1, 12, 0, 2,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Double     (f64::from_bits(42));2])),
-        (vec![1,1,  0,12, 0,0,0,0,0,0,0,2,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   , Value::List(vec![Value::Double     (f64::from_bits(42));2])),
-        (vec![1,1,  5, 0, 2,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::Rational   (42, 42            );2])),
-        (vec![1,1,  0, 5, 0,0,0,0,0,0,0,2,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   , Value::List(vec![Value::Rational   (42, 42            );2])),
-        (vec![1,1, 10, 0, 2,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, Value::List(vec![Value::SRational  (42, 42            );2])),
-        (vec![1,1,  0,10, 0,0,0,0,0,0,0,2,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   , Value::List(vec![Value::SRational  (42, 42            );2])),
+        (vec![1,1,  1, 0, 9,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42,42,42,42,42,42,42,42,42],                      Endianness::LittleEndian, TagValue::List(vec![TagValue::Byte       (42                );9])),
+        (vec![1,1,  0, 1, 0,0,0,0,0,0,0,9,  0, 0, 0, 0, 0, 0, 0,20, 42,42,42,42,42,42,42,42,42],                      Endianness::BigEndian   , TagValue::List(vec![TagValue::Byte       (42                );9])),
+        (vec![1,1,  6, 0, 9,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42,42,42,42,42,42,42,42,42],                      Endianness::LittleEndian, TagValue::List(vec![TagValue::SignedByte (42                );9])),
+        (vec![1,1,  0, 6, 0,0,0,0,0,0,0,9,  0, 0, 0, 0, 0, 0, 0,20, 42,42,42,42,42,42,42,42,42],                      Endianness::BigEndian   , TagValue::List(vec![TagValue::SignedByte (42                );9])),
+        (vec![1,1,  7, 0, 9,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42,42,42,42,42,42,42,42,42],                      Endianness::LittleEndian, TagValue::List(vec![TagValue::Byte       (42                );9])), //TagType::UNDEFINED ),
+        (vec![1,1,  0, 7, 0,0,0,0,0,0,0,9,  0, 0, 0, 0, 0, 0, 0,20, 42,42,42,42,42,42,42,42,42],                      Endianness::BigEndian   , TagValue::List(vec![TagValue::Byte       (42                );9])), //TagType::UNDEFINED ),
+        (vec![1,1,  2, 0, 9,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42,42,42,42,42,42,42,42, 0],                      Endianness::LittleEndian,                  TagValue::Ascii      ("********".into() )    ),
+        (vec![1,1,  0, 2, 0,0,0,0,0,0,0,9,  0, 0, 0, 0, 0, 0, 0,20, 42,42,42,42,42,42,42,42, 0],                      Endianness::BigEndian   ,                  TagValue::Ascii      ("********".into() )    ),
+        (vec![1,1,  3, 0, 5,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0,42, 0,42, 0,42, 0,42, 0],                   Endianness::LittleEndian, TagValue::List(vec![TagValue::Short      (42                );5])),
+        (vec![1,1,  0, 3, 0,0,0,0,0,0,0,5,  0, 0, 0, 0, 0, 0, 0,20,  0,42, 0,42, 0,42, 0,42, 0,42],                   Endianness::BigEndian   , TagValue::List(vec![TagValue::Short      (42                );5])),
+        (vec![1,1,  8, 0, 5,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0,42, 0,42, 0,42, 0,42, 0],                   Endianness::LittleEndian, TagValue::List(vec![TagValue::SignedShort(42                );5])),
+        (vec![1,1,  0, 8, 0,0,0,0,0,0,0,5,  0, 0, 0, 0, 0, 0, 0,20,  0,42, 0,42, 0,42, 0,42, 0,42],                   Endianness::BigEndian   , TagValue::List(vec![TagValue::SignedShort(42                );5])),
+        (vec![1,1,  4, 0, 3,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0],             Endianness::LittleEndian, TagValue::List(vec![TagValue::Unsigned   (42                );3])),
+        (vec![1,1,  0, 4, 0,0,0,0,0,0,0,3,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42],             Endianness::BigEndian   , TagValue::List(vec![TagValue::Unsigned   (42                );3])),
+        (vec![1,1,  9, 0, 3,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0],             Endianness::LittleEndian, TagValue::List(vec![TagValue::Signed     (42                );3])),
+        (vec![1,1,  0, 9, 0,0,0,0,0,0,0,3,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42],             Endianness::BigEndian   , TagValue::List(vec![TagValue::Signed     (42                );3])),
+        (vec![1,1, 13, 0, 3,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0],             Endianness::LittleEndian, TagValue::List(vec![TagValue::Ifd        (42                );3])),
+        (vec![1,1,  0,13, 0,0,0,0,0,0,0,3,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42],             Endianness::BigEndian   , TagValue::List(vec![TagValue::Ifd        (42                );3])),
+        (vec![1,1, 16, 0, 2,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::UnsignedBig(42                );2])),
+        (vec![1,1,  0,16, 0,0,0,0,0,0,0,2,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   , TagValue::List(vec![TagValue::UnsignedBig(42                );2])),
+        (vec![1,1, 17, 0, 2,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::SignedBig  (42                );2])),
+        (vec![1,1,  0,17, 0,0,0,0,0,0,0,2,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   , TagValue::List(vec![TagValue::SignedBig  (42                );2])),
+        (vec![1,1, 18, 0, 2,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::IfdBig     (42                );2])),
+        (vec![1,1,  0,18, 0,0,0,0,0,0,0,2,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   , TagValue::List(vec![TagValue::IfdBig     (42                );2])),
+        (vec![1,1, 11, 0, 3,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,],            Endianness::LittleEndian, TagValue::List(vec![TagValue::Float      (f32::from_bits(42));3])),
+        (vec![1,1,  0,11, 0,0,0,0,0,0,0,3,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42,],            Endianness::BigEndian   , TagValue::List(vec![TagValue::Float      (f32::from_bits(42));3])),
+        (vec![1,1, 12, 0, 2,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::Double     (f64::from_bits(42));2])),
+        (vec![1,1,  0,12, 0,0,0,0,0,0,0,2,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0, 0, 0, 0, 0,42, 0, 0, 0, 0, 0, 0, 0,42], Endianness::BigEndian   , TagValue::List(vec![TagValue::Double     (f64::from_bits(42));2])),
+        (vec![1,1,  5, 0, 2,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::Rational   (42, 42            );2])),
+        (vec![1,1,  0, 5, 0,0,0,0,0,0,0,2,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   , TagValue::List(vec![TagValue::Rational   (42, 42            );2])),
+        (vec![1,1, 10, 0, 2,0,0,0,0,0,0,0, 20, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0], Endianness::LittleEndian, TagValue::List(vec![TagValue::SRational  (42, 42            );2])),
+        (vec![1,1,  0,10, 0,0,0,0,0,0,0,2,  0, 0, 0, 0, 0, 0, 0,20,  0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42, 0, 0, 0,42], Endianness::BigEndian   , TagValue::List(vec![TagValue::SRational  (42, 42            );2])),
         ];
         for (buf, byte_order, res) in cases {
             println!("reading {buf:?} to be {res:?}");

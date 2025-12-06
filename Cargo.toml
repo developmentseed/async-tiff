@@ -9,6 +9,7 @@ description = "Low-level asynchronous TIFF reader."
 readme = "README.md"
 
 [dependencies]
+async-trait = "0.1.89"
 byteorder = "1"
 bytes = "1.7.0"
 flate2 = "1.0.20"
@@ -18,10 +19,7 @@ num_enum = "0.7.3"
 object_store = { version = "0.12", optional = true }
 reqwest = { version = "0.12", default-features = false, optional = true }
 thiserror = "1"
-tokio = { version = "1.43.0", optional = true, default-features = false, features = [
-    "io-util",
-    "sync",
-] }
+tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
 weezl = "0.1.0"
 
 [dev-dependencies]
@@ -37,7 +35,7 @@ tokio-test = "0.4.4"
 
 [features]
 default = ["object_store", "reqwest"]
-tokio = ["dep:tokio"]
+tokio = ["tokio/io-util"]
 reqwest = ["dep:reqwest"]
 object_store = ["dep:object_store"]
 

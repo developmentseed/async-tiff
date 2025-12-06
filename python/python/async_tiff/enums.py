@@ -21,6 +21,11 @@ class CompressionMethod(IntEnum):
     PackBits = 0x8005
 
 
+class Endianness(IntEnum):
+    LittleEndian = 0
+    BigEndian = 1
+
+
 class PhotometricInterpretation(IntEnum):
     WhiteIsZero = 0
     BlackIsZero = 1

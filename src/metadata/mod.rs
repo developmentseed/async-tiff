@@ -11,7 +11,8 @@
 //!
 //! use object_store::local::LocalFileSystem;
 //!
-//! use async_tiff::metadata::{PrefetchBuffer, TiffMetadataReader};
+//! use async_tiff::metadata::TiffMetadataReader;
+//! use async_tiff::metadata::cache::ReadaheadMetadataCache;
 //! use async_tiff::reader::ObjectReader;
 //!
 //! // Create new Arc<dyn ObjectStore>
@@ -23,24 +24,22 @@
 //!     "tests/image_tiff/images/tiled-jpeg-rgb-u8.tif".into(),
 //! );
 //!
-//! // Use PrefetchBuffer to ensure that a given number of bytes at the start of the
-//! // file are prefetched.
+//! // Use ReadaheadMetadataCache to ensure that a given number of bytes at the start of the
+//! // file are prefetched, and to ensure that any additional fetches are made in larger chunks.
 //! //
-//! // This or a similar caching layer should **always** be used and ensures that the
-//! // underlying read calls that the TiffMetadataReader makes don't translate to actual
-//! // network fetches.
-//! let prefetch_reader = PrefetchBuffer::new(reader.clone(), 32 * 1024)
-//!     .await
-//!     .unwrap();
+//! // The `ReadaheadMetadataCache` or a similar caching layer should **always** be used to ensure
+//! // that the underlying small read calls that the TiffMetadataReader makes don't translate to
+//! // individual tiny network fetches.
+//! let cached_reader = ReadaheadMetadataCache::new(reader.clone());
 //!
 //! // Create a TiffMetadataReader wrapping some MetadataFetch
-//! let mut metadata_reader = TiffMetadataReader::try_open(&prefetch_reader)
+//! let mut metadata_reader = TiffMetadataReader::try_open(&cached_reader)
 //!     .await
 //!     .unwrap();
 //!
 //! // Read all IFDs out of the source.
 //! let ifds = metadata_reader
-//!     .read_all_ifds(&prefetch_reader)
+//!     .read_all_ifds(&cached_reader)
 //!     .await
 //!     .unwrap();
 //! # })
@@ -54,12 +53,13 @@
 //! [`MetadataFetch`] implementation.
 //!
 //! Thus, it is **imperative to always supply some sort of caching, prefetching, or buffering**
-//! middleware when reading metadata. [`PrefetchBuffer`] is an example of this, which
-//! fetches the first `N` bytes out of a file.
-//!
+//! middleware when reading metadata. [`ReadaheadMetadataCache`] is an example of this, which
+//! fetches the first `N` bytes out of a file, and then multiplies the size of any subsequent
+//! fetches by a given `multiplier`.
 
+pub mod cache;
 mod fetch;
 mod reader;
 
-pub use fetch::{MetadataFetch, PrefetchBuffer};
+pub use fetch::MetadataFetch;
 pub use reader::{ImageFileDirectoryReader, TiffMetadataReader};

@@ -2,37 +2,26 @@
 
 use std::sync::Arc;
 
-use async_tiff::metadata::{PrefetchBuffer, TiffMetadataReader};
+use async_tiff::metadata::cache::ReadaheadMetadataCache;
+use async_tiff::metadata::TiffMetadataReader;
 use async_tiff::reader::{AsyncFileReader, ObjectReader};
-use async_tiff::tiff::tags::PhotometricInterpretation;
+use async_tiff::tags::PhotometricInterpretation;
 use async_tiff::TIFF;
 use reqwest::Url;
 
-async fn open_remote_tiff(url: &str, prefetch_bytes: u64) -> TIFF {
+async fn open_remote_tiff(url: &str) -> TIFF {
     let parsed_url = Url::parse(url).expect("failed parsing url");
     let (store, path) = object_store::parse_url(&parsed_url).unwrap();
 
     let reader = Arc::new(ObjectReader::new(Arc::new(store), path)) as Arc<dyn AsyncFileReader>;
-    let prefetch_reader = PrefetchBuffer::new(reader.clone(), prefetch_bytes)
-        .await
-        .unwrap();
-    let mut metadata_reader = TiffMetadataReader::try_open(&prefetch_reader)
-        .await
-        .unwrap();
-    let ifds = metadata_reader
-        .read_all_ifds(&prefetch_reader)
-        .await
-        .unwrap();
-    TIFF::new(ifds)
+    let cached_reader = ReadaheadMetadataCache::new(reader.clone());
+    let mut metadata_reader = TiffMetadataReader::try_open(&cached_reader).await.unwrap();
+    metadata_reader.read(&cached_reader).await.unwrap()
 }
 
 #[tokio::test]
 async fn test_ome_tiff_single_channel() {
-    let tiff = open_remote_tiff(
-        "https://cildata.crbs.ucsd.edu/media/images/40613/40613.tif",
-        32 * 128 * 1024,
-    )
-    .await;
+    let tiff = open_remote_tiff("https://cildata.crbs.ucsd.edu/media/images/40613/40613.tif").await;
 
     assert_eq!(tiff.ifds().len(), 3);
     let ifd = &tiff.ifds()[0];

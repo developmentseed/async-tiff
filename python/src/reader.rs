@@ -3,9 +3,8 @@ use std::sync::Arc;
 
 use async_tiff::error::{AsyncTiffError, AsyncTiffResult};
 use async_tiff::reader::{AsyncFileReader, ObjectReader};
+use async_trait::async_trait;
 use bytes::Bytes;
-use futures::future::BoxFuture;
-use futures::FutureExt;
 use pyo3::exceptions::PyTypeError;
 use pyo3::intern;
 use pyo3::prelude::*;
@@ -116,15 +115,13 @@ struct ObspecReader {
     path: String,
 }
 
+#[async_trait]
 impl AsyncFileReader for ObspecReader {
-    fn get_bytes(&self, range: Range<u64>) -> BoxFuture<'_, AsyncTiffResult<Bytes>> {
-        self.backend.get_range_wrapper(&self.path, range).boxed()
+    async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        self.backend.get_range_wrapper(&self.path, range).await
     }
 
-    fn get_byte_ranges(
-        &self,
-        ranges: Vec<Range<u64>>,
-    ) -> BoxFuture<'_, AsyncTiffResult<Vec<Bytes>>> {
-        self.backend.get_ranges_wrapper(&self.path, ranges).boxed()
+    async fn get_byte_ranges(&self, ranges: Vec<Range<u64>>) -> AsyncTiffResult<Vec<Bytes>> {
+        self.backend.get_ranges_wrapper(&self.path, ranges).await
     }
 }
