@@ -620,9 +620,7 @@ async fn read_tag_value<F: MetadataFetch>(
             if let Some(first) = out.iter().position(|&b| b == 0) {
                 out.truncate(first);
             }
-            Ok(TagValue::Ascii(
-                String::from_utf8(out).map_err(|err| AsyncTiffError::General(err.to_string()))?,
-            ))
+            Ok(TagValue::Ascii(String::from_utf8_lossy(&out).into_owned()))
         }
     }
 }
