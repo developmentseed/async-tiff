@@ -47,7 +47,8 @@ fn read_tiff(fpath: &str) -> AsyncTiffResult<()> {
             let (x_count, y_count) = ifd.tile_count().ok_or(AsyncTiffError::General(
                 "unable to get IFD count".to_string(),
             ))?;
-            // dbg!(x_count, y_count); // 43 * 43 = 1849
+            assert_eq!(x_count, 43);
+            assert_eq!(y_count, 43);
 
             // Get cartesian product of x and y tile ids
             let x_ids: Vec<usize> = (0..x_count)
@@ -56,7 +57,7 @@ fn read_tiff(fpath: &str) -> AsyncTiffResult<()> {
             let y_ids: Vec<usize> = (0..x_count).flat_map(|_i| 0..y_count).collect();
 
             let tiles: Vec<Tile> = ifd.fetch_tiles(&x_ids, &y_ids, &reader).await?;
-            assert_eq!(tiles.len(), 1849);
+            assert_eq!(tiles.len(), 1849); // 43 * 43 = 1849
 
             Ok::<Vec<Tile>, AsyncTiffError>(tiles)
         })
