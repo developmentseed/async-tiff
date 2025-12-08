@@ -4,7 +4,8 @@ use std::sync::Arc;
 
 use async_tiff::decoder::DecoderRegistry;
 use async_tiff::error::{AsyncTiffError, AsyncTiffResult};
-use async_tiff::metadata::{PrefetchBuffer, TiffMetadataReader};
+use async_tiff::metadata::cache::ReadaheadMetadataCache;
+use async_tiff::metadata::TiffMetadataReader;
 use async_tiff::reader::ObjectReader;
 use async_tiff::{ImageFileDirectory, Tile};
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
@@ -32,12 +33,12 @@ fn read_tiff(fpath: &str) -> AsyncTiffResult<()> {
     let tiles: Vec<Tile> = runtime
         .block_on(async {
             // Read metadata header
-            let prefetch_reader = PrefetchBuffer::new(reader.clone(), 32 * 1024).await?;
-            let mut metadata_reader = TiffMetadataReader::try_open(&prefetch_reader).await?;
+            let cached_reader = ReadaheadMetadataCache::new(reader.clone());
+            let mut metadata_reader = TiffMetadataReader::try_open(&cached_reader).await?;
 
             // Read Image File Directories
             let ifds: Vec<ImageFileDirectory> =
-                metadata_reader.read_all_ifds(&prefetch_reader).await?;
+                metadata_reader.read_all_ifds(&cached_reader).await?;
 
             assert_eq!(ifds.len(), 1); // should have only 1 IFD
             let ifd: &ImageFileDirectory = ifds.first().ok_or(AsyncTiffError::General(
