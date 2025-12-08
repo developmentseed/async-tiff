@@ -1,10 +1,12 @@
 from typing import Protocol
-from ._tile import Tile
-from ._ifd import ImageFileDirectory
-from .store import ObjectStore
 
 # Fix exports
 from obspec._get import GetRangeAsync, GetRangesAsync
+
+from ._ifd import ImageFileDirectory
+from ._tile import Tile
+from .enums import Endianness
+from .store import ObjectStore
 
 class ObspecInput(GetRangeAsync, GetRangesAsync, Protocol):
     """Supported obspec input to reader."""
@@ -17,6 +19,7 @@ class TIFF:
         *,
         store: ObjectStore | ObspecInput,
         prefetch: int = 32768,
+        multiplier: int | float = 2.0,
     ) -> TIFF:
         """Open a new TIFF.
 
@@ -24,10 +27,18 @@ class TIFF:
             path: The path within the store to read from.
             store: The backend to use for data fetching.
             prefetch: The number of initial bytes to read up front.
+            multiplier: The multiplier to use for readahead size growth. Must be
+                greater than 1.0. For example, for a value of `2.0`, the first metadata
+                read will be of size `prefetch`, and then the next read will be of size
+                `prefetch * 2`.
 
         Returns:
             A TIFF instance.
         """
+
+    @property
+    def endianness(self) -> Endianness:
+        """The endianness of this TIFF file."""
     @property
     def ifds(self) -> list[ImageFileDirectory]:
         """Access the underlying IFDs of this TIFF.

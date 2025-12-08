@@ -1,13 +1,16 @@
 use std::sync::Arc;
 
-use async_tiff::metadata::{PrefetchBuffer, TiffMetadataReader};
+use async_tiff::metadata::cache::ReadaheadMetadataCache;
+use async_tiff::metadata::TiffMetadataReader;
 use async_tiff::reader::AsyncFileReader;
 use async_tiff::TIFF;
-use pyo3::exceptions::{PyFileNotFoundError, PyIndexError, PyTypeError};
+use pyo3::exceptions::{PyIndexError, PyTypeError};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
 use pyo3_async_runtimes::tokio::future_into_py;
 
+use crate::enums::PyEndianness;
+use crate::error::PyAsyncTiffResult;
 use crate::reader::StoreInput;
 use crate::tile::PyTile;
 use crate::PyImageFileDirectory;
@@ -18,32 +21,44 @@ pub(crate) struct PyTIFF {
     reader: Arc<dyn AsyncFileReader>,
 }
 
+async fn open(
+    reader: Arc<dyn AsyncFileReader>,
+    prefetch: u64,
+    multiplier: f64,
+) -> PyAsyncTiffResult<PyTIFF> {
+    let metadata_fetch = ReadaheadMetadataCache::new(reader.clone())
+        .with_initial_size(prefetch)
+        .with_multiplier(multiplier);
+    let mut metadata_reader = TiffMetadataReader::try_open(&metadata_fetch).await?;
+    let tiff = metadata_reader.read(&metadata_fetch).await?;
+    Ok(PyTIFF { tiff, reader })
+}
+
 #[pymethods]
 impl PyTIFF {
     #[classmethod]
-    #[pyo3(signature = (path, *, store, prefetch=32768))]
+    #[pyo3(signature = (path, *, store, prefetch=32768, multiplier=2.0))]
     fn open<'py>(
         _cls: &'py Bound<PyType>,
         py: Python<'py>,
         path: String,
         store: StoreInput,
         prefetch: u64,
+        multiplier: f64,
     ) -> PyResult<Bound<'py, PyAny>> {
         let reader = store.into_async_file_reader(path);
 
-        let cog_reader = future_into_py(py, async move {
-            let metadata_fetch = PrefetchBuffer::new(reader.clone(), prefetch)
-                .await
-                .map_err(|err| PyFileNotFoundError::new_err(err.to_string()))?;
-            let mut metadata_reader = TiffMetadataReader::try_open(&metadata_fetch).await.unwrap();
-            let ifds = metadata_reader
-                .read_all_ifds(&metadata_fetch)
-                .await
-                .unwrap();
-            let tiff = TIFF::new(ifds);
-            Ok(PyTIFF { tiff, reader })
-        })?;
+        let cog_reader =
+            future_into_py(
+                py,
+                async move { Ok(open(reader, prefetch, multiplier).await?) },
+            )?;
         Ok(cog_reader)
+    }
+
+    #[getter]
+    fn endianness(&self) -> PyEndianness {
+        self.tiff.endianness().into()
     }
 
     #[getter]

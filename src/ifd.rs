@@ -4,15 +4,15 @@ use std::ops::Range;
 use bytes::Bytes;
 use num_enum::TryFromPrimitive;
 
-use crate::error::{AsyncTiffError, AsyncTiffResult};
+use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError};
 use crate::geo::{GeoKeyDirectory, GeoKeyTag};
 use crate::predictor::PredictorInfo;
 use crate::reader::{AsyncFileReader, Endianness};
-use crate::tiff::tags::{
+use crate::tag_value::TagValue;
+use crate::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat, Tag,
 };
-use crate::tiff::{TiffError, Value};
 use crate::tile::Tile;
 
 const DOCUMENT_NAME: u16 = 269;
@@ -20,7 +20,7 @@ const DOCUMENT_NAME: u16 = 269;
 /// An ImageFileDirectory representing Image content
 // The ordering of these tags matches the sorted order in TIFF spec Appendix A
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ImageFileDirectory {
     pub(crate) endianness: Endianness,
 
@@ -141,13 +141,13 @@ pub struct ImageFileDirectory {
     // GDAL tags
     // no_data
     // gdal_metadata
-    pub(crate) other_tags: HashMap<Tag, Value>,
+    pub(crate) other_tags: HashMap<Tag, TagValue>,
 }
 
 impl ImageFileDirectory {
     /// Create a new ImageFileDirectory from tag data
     pub fn from_tags(
-        tag_data: HashMap<Tag, Value>,
+        tag_data: HashMap<Tag, TagValue>,
         endianness: Endianness,
     ) -> AsyncTiffResult<Self> {
         let mut new_subfile_type = None;
@@ -216,11 +216,11 @@ impl ImageFileDirectory {
                 Tag::MinSampleValue => min_sample_value = Some(value.into_u16_vec()?),
                 Tag::MaxSampleValue => max_sample_value = Some(value.into_u16_vec()?),
                 Tag::XResolution => match value {
-                    Value::Rational(n, d) => x_resolution = Some(n as f64 / d as f64),
+                    TagValue::Rational(n, d) => x_resolution = Some(n as f64 / d as f64),
                     _ => unreachable!("Expected rational type for XResolution."),
                 },
                 Tag::YResolution => match value {
-                    Value::Rational(n, d) => y_resolution = Some(n as f64 / d as f64),
+                    TagValue::Rational(n, d) => y_resolution = Some(n as f64 / d as f64),
                     _ => unreachable!("Expected rational type for YResolution."),
                 },
                 Tag::PlanarConfiguration => {
@@ -310,7 +310,7 @@ impl ImageFileDirectory {
                 let value_offset = chunk[3];
 
                 if tag_location == 0 {
-                    tags.insert(tag_name, Value::Short(value_offset));
+                    tags.insert(tag_name, TagValue::Short(value_offset));
                 } else if Tag::from_u16_exhaustive(tag_location) == Tag::GeoAsciiParamsTag {
                     // If the tag_location points to the value of Tag::GeoAsciiParamsTag, then we
                     // need to extract a subslice from GeoAsciiParamsTag
@@ -327,7 +327,7 @@ impl ImageFileDirectory {
                         s = &s[0..s.len() - 1];
                     }
 
-                    tags.insert(tag_name, Value::Ascii(s.to_string()));
+                    tags.insert(tag_name, TagValue::Ascii(s.to_string()));
                 } else if Tag::from_u16_exhaustive(tag_location) == Tag::GeoDoubleParamsTag {
                     // If the tag_location points to the value of Tag::GeoDoubleParamsTag, then we
                     // need to extract a subslice from GeoDoubleParamsTag
@@ -337,13 +337,13 @@ impl ImageFileDirectory {
                         .expect("GeoDoubleParamsTag exists but geo_double_params does not.");
                     let value_offset = value_offset as usize;
                     let value = if count == 1 {
-                        Value::Double(geo_double_params[value_offset])
+                        TagValue::Double(geo_double_params[value_offset])
                     } else {
                         let x = geo_double_params[value_offset..value_offset + count as usize]
                             .iter()
-                            .map(|val| Value::Double(*val))
+                            .map(|val| TagValue::Double(*val))
                             .collect();
-                        Value::List(x)
+                        TagValue::List(x)
                     };
                     tags.insert(tag_name, value);
                 }
@@ -642,7 +642,7 @@ impl ImageFileDirectory {
     }
 
     /// Tags for which the tiff crate doesn't have a hard-coded enum variant.
-    pub fn other_tags(&self) -> &HashMap<Tag, Value> {
+    pub fn other_tags(&self) -> &HashMap<Tag, TagValue> {
         &self.other_tags
     }
 

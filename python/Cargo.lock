@@ -21,6 +21,7 @@ dependencies = [
 name = "async-tiff"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "byteorder",
  "bytes",
  "flate2",
@@ -30,6 +31,7 @@ dependencies = [
  "object_store",
  "reqwest",
  "thiserror 1.0.69",
+ "tokio",
  "weezl",
 ]
 
@@ -966,6 +968,7 @@ name = "py-async-tiff"
 version = "0.2.0"
 dependencies = [
  "async-tiff",
+ "async-trait",
  "bytes",
  "futures",
  "object_store",
