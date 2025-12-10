@@ -38,12 +38,13 @@ impl AsMut<HashMap<CompressionMethod, Box<dyn Decoder>>> for DecoderRegistry {
 
 impl Default for DecoderRegistry {
     fn default() -> Self {
-        let mut registry = HashMap::with_capacity(5);
+        let mut registry = HashMap::with_capacity(6);
         registry.insert(CompressionMethod::None, Box::new(UncompressedDecoder) as _);
         registry.insert(CompressionMethod::Deflate, Box::new(DeflateDecoder) as _);
         registry.insert(CompressionMethod::OldDeflate, Box::new(DeflateDecoder) as _);
         registry.insert(CompressionMethod::LZW, Box::new(LZWDecoder) as _);
         registry.insert(CompressionMethod::ModernJPEG, Box::new(JPEGDecoder) as _);
+        registry.insert(CompressionMethod::ZSTD, Box::new(ZstdDecoder) as _);
         Self(registry)
     }
 }
@@ -122,6 +123,24 @@ impl Decoder for UncompressedDecoder {
         _jpeg_tables: Option<&[u8]>,
     ) -> AsyncTiffResult<Bytes> {
         Ok(buffer)
+    }
+}
+
+/// A decoder for the Zstd compression method.
+#[derive(Debug, Clone)]
+pub struct ZstdDecoder;
+
+impl Decoder for ZstdDecoder {
+    fn decode_tile(
+        &self,
+        buffer: Bytes,
+        _photometric_interpretation: PhotometricInterpretation,
+        _jpeg_tables: Option<&[u8]>,
+    ) -> AsyncTiffResult<Bytes> {
+        let mut decoder = zstd::Decoder::new(Cursor::new(buffer))?;
+        let mut buf = Vec::new();
+        decoder.read_to_end(&mut buf)?;
+        Ok(buf.into())
     }
 }
 

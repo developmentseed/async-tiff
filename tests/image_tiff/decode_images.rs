@@ -225,6 +225,17 @@ async fn test_int16_rgb() {
 }
 
 #[tokio::test]
+async fn test_zstd_compression() {
+    let tiff = open_tiff("int16_zstd.tif").await;
+    let ifd = &tiff.ifds()[0];
+    assert!(matches!(
+        ifd.photometric_interpretation(),
+        PhotometricInterpretation::BlackIsZero
+    ));
+    assert!(ifd.bits_per_sample().iter().all(|x| *x == 16));
+}
+
+#[tokio::test]
 async fn test_string_tags() {
     // these files have null-terminated strings for their Software tag. One has extra bytes after
     // the null byte, so we check both to ensure that we're truncating properly
