@@ -63,8 +63,11 @@ impl PyTIFF {
 
     #[getter]
     fn ifds(&self) -> Vec<PyImageFileDirectory> {
-        let ifds = self.tiff.ifds();
-        ifds.as_ref().iter().map(|ifd| ifd.clone().into()).collect()
+        self.tiff
+            .ifds()
+            .iter()
+            .map(|ifd| ifd.clone().into())
+            .collect()
     }
 
     fn fetch_tile<'py>(
