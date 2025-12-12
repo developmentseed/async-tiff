@@ -191,9 +191,6 @@ impl ImageFileDirectory {
 
         let mut other_tags = HashMap::new();
 
-        // for x in tag_data.into_iter() {
-
-        // }
         tag_data.into_iter().try_for_each(|(tag, value)| {
             match tag {
                 Tag::NewSubfileType => new_subfile_type = Some(value.into_u32()?),
