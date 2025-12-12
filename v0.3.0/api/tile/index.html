@@ -12,13 +12,13 @@
         <meta name="author" content="Development Seed">
       
       
-        <link rel="canonical" href="https://developmentseed.org/async-tiff/latest/api/tiff/">
+        <link rel="canonical" href="https://developmentseed.org/async-tiff/latest/api/tile/">
       
       
-        <link rel="prev" href="../..">
+        <link rel="prev" href="../ifd/">
       
       
-        <link rel="next" href="../ifd/">
+        <link rel="next" href="../geo/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -26,7 +26,7 @@
     
     
       
-        <title>TIFF - async-tiff</title>
+        <title>Tile - async-tiff</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#tiff" class="md-skip">
+        <a href="#tile" class="md-skip">
           Skip to content
         </a>
       
@@ -133,7 +133,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              TIFF
+              Tile
             
           </span>
         </div>
@@ -364,31 +364,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    TIFF
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../tiff/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -398,95 +377,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#async_tiff.TIFF" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;TIFF
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label=" TIFF">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.TIFF.endianness" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;endianness
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.TIFF.ifds" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;ifds
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.TIFF.fetch_tile" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;fetch_tile
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.TIFF.fetch_tiles" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;fetch_tiles
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#async_tiff.TIFF.open" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;open
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#async_tiff.ObspecInput" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ObspecInput
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -518,10 +408,31 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../tile/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Tile
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -531,6 +442,86 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#async_tiff.Tile" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;Tile
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" Tile">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#async_tiff.Tile.compressed_bytes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;compressed_bytes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#async_tiff.Tile.compression_method" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;compression_method
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#async_tiff.Tile.x" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;x
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#async_tiff.Tile.y" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;y
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#async_tiff.Tile.decode_async" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;decode_async
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -864,55 +855,55 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#async_tiff.TIFF" class="md-nav__link">
+  <a href="#async_tiff.Tile" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;TIFF
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;Tile
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" TIFF">
+    <nav class="md-nav" aria-label=" Tile">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#async_tiff.TIFF.endianness" class="md-nav__link">
+  <a href="#async_tiff.Tile.compressed_bytes" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;endianness
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;compressed_bytes
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.TIFF.ifds" class="md-nav__link">
+  <a href="#async_tiff.Tile.compression_method" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;ifds
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;compression_method
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.TIFF.fetch_tile" class="md-nav__link">
+  <a href="#async_tiff.Tile.x" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;fetch_tile
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;x
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.TIFF.fetch_tiles" class="md-nav__link">
+  <a href="#async_tiff.Tile.y" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;fetch_tiles
+      <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;y
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#async_tiff.TIFF.open" class="md-nav__link">
+  <a href="#async_tiff.Tile.decode_async" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;open
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;decode_async
     </span>
   </a>
   
@@ -920,15 +911,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#async_tiff.ObspecInput" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ObspecInput
-    </span>
-  </a>
   
 </li>
       
@@ -954,22 +936,24 @@
   
 
 
-<h1 id="tiff">TIFF<a class="headerlink" href="#tiff" title="Permanent link">&para;</a></h1>
+<h1 id="tile">Tile<a class="headerlink" href="#tile" title="Permanent link">&para;</a></h1>
 
 
 <div class="doc doc-object doc-class">
 
 
 
-<h2 id="async_tiff.TIFF" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">async_tiff.TIFF</span>
+<h2 id="async_tiff.Tile" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">async_tiff.Tile</span>
 
 
-<a href="#async_tiff.TIFF" class="headerlink" title="Permanent link">&para;</a></h2>
+<a href="#async_tiff.Tile" class="headerlink" title="Permanent link">&para;</a></h2>
 
 
     <div class="doc doc-contents first">
 
+
+        <p>A representation of a TIFF image tile.</p>
 
 
 
@@ -991,21 +975,21 @@
 
 
 
-<h3 id="async_tiff.TIFF.endianness" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">endianness</span>
+<h3 id="async_tiff.Tile.compressed_bytes" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">compressed_bytes</span>
 
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
   </span>
 
-<a href="#async_tiff.TIFF.endianness" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">endianness</span><span class="p">:</span> <span class="n"><span title="async_tiff.enums.Endianness">Endianness</span></span>
+<a href="#async_tiff.Tile.compressed_bytes" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature codehilite"><pre><span></span><code><span class="n">compressed_bytes</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" title="collections.abc.Buffer" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Buffer">Buffer</a></span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>The endianness of this TIFF file.</p>
+        <p>The compressed bytes underlying this tile.</p>
     </div>
 
 </div>
@@ -1014,23 +998,67 @@
 
 
 
-<h3 id="async_tiff.TIFF.ifds" class="doc doc-heading">
-            <span class="doc doc-object-name doc-attribute-name">ifds</span>
+<h3 id="async_tiff.Tile.compression_method" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">compression_method</span>
 
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
   </span>
 
-<a href="#async_tiff.TIFF.ifds" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="n">ifds</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-internal" title="async_tiff._ifd.ImageFileDirectory" href="../ifd/#async_tiff.ImageFileDirectory">ImageFileDirectory</a></span><span class="p">]</span>
+<a href="#async_tiff.Tile.compression_method" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature codehilite"><pre><span></span><code><span class="n">compression_method</span><span class="p">:</span> <span class="n"><span title="async_tiff.enums.CompressionMethod">CompressionMethod</span></span> <span class="o">|</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Access the underlying IFDs of this TIFF.</p>
-<p>Each ImageFileDirectory (IFD) represents one of the internal "sub images" of
-this file.</p>
+        <p>The compression method used by this tile.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="async_tiff.Tile.x" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">x</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#async_tiff.Tile.x" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature codehilite"><pre><span></span><code><span class="n">x</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The column index this tile represents.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="async_tiff.Tile.y" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">y</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#async_tiff.Tile.y" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature codehilite"><pre><span></span><code><span class="n">y</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The row index this tile represents.</p>
     </div>
 
 </div>
@@ -1040,197 +1068,43 @@ this file.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="async_tiff.TIFF.fetch_tile" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">fetch_tile</span>
+<h3 id="async_tiff.Tile.decode_async" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">decode_async</span>
 
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-async"><code>async</code></small>
   </span>
 
-<a href="#async_tiff.TIFF.fetch_tile" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="nf">fetch_tile</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff._tile.Tile" href="../tile/#async_tiff.Tile">Tile</a></span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Fetch a single tile.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-            <b><code>x</code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>The column index within the ifd to read from.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-            <b><code>y</code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>The row index within the ifd to read from.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-            <b><code>z</code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>The IFD index to read from.</p>
-          </div>
-        </li>
-    </ul>
-
-
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-              <code><a class="autorefs autorefs-internal" title="async_tiff._tile.Tile" href="../tile/#async_tiff.Tile">Tile</a></code>
-          –
-          <div class="doc-md-description">
-            <p>Tile response.</p>
-          </div>
-        </li>
-    </ul>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="async_tiff.TIFF.fetch_tiles" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">fetch_tiles</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-async"><code>async</code></small>
-  </span>
-
-<a href="#async_tiff.TIFF.fetch_tiles" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="nf">fetch_tiles</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span><span class="p">],</span> <span class="n">y</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span><span class="p">],</span> <span class="n">z</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-internal" title="async_tiff._tile.Tile" href="../tile/#async_tiff.Tile">Tile</a></span><span class="p">]</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Fetch multiple tiles concurrently.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-            <b><code>x</code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a>]</code>)
-          –
-          <div class="doc-md-description">
-            <p>The column indexes within the ifd to read from.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-            <b><code>y</code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a>]</code>)
-          –
-          <div class="doc-md-description">
-            <p>The row indexes within the ifd to read from.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-            <b><code>z</code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>The IFD index to read from.</p>
-          </div>
-        </li>
-    </ul>
-
-
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-internal" title="async_tiff._tile.Tile" href="../tile/#async_tiff.Tile">Tile</a>]</code>
-          –
-          <div class="doc-md-description">
-            <p>Tile responses.</p>
-          </div>
-        </li>
-    </ul>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="async_tiff.TIFF.open" class="doc doc-heading">
-            <span class="doc doc-object-name doc-function-name">open</span>
-
-
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-async"><code>async</code></small>
-      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
-  </span>
-
-<a href="#async_tiff.TIFF.open" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature codehilite"><pre><span></span><code><span class="nb">open</span><span class="p">(</span>
-    <span class="nf">path</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span>
+<a href="#async_tiff.Tile.decode_async" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature codehilite"><pre><span></span><code><span class="nf">decode_async</span><span class="p">(</span>
     <span class="o">*</span><span class="p">,</span>
-    <span class="n">store</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff.store.ObjectStore" href="../store/#async_tiff.store.ObjectStore">ObjectStore</a></span> <span class="o">|</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff._tiff.ObspecInput" href="#async_tiff.ObspecInput">ObspecInput</a></span><span class="p">,</span>
-    <span class="n">prefetch</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">=</span> <span class="mi">32768</span><span class="p">,</span>
-    <span class="n">multiplier</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">|</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff._tiff.TIFF" href="#async_tiff.TIFF">TIFF</a></span>
+    <span class="n">decoder_registry</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff._decoder.DecoderRegistry" href="../decoder/#async_tiff.DecoderRegistry">DecoderRegistry</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">pool</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-internal" title="async_tiff._thread_pool.ThreadPool" href="../thread-pool/#async_tiff.ThreadPool">ThreadPool</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n"><a class="autorefs autorefs-external" title="collections.abc.Buffer" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Buffer">Buffer</a></span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Open a new TIFF.</p>
+        <p>Decode this tile's data.</p>
 
 
-<p><span class="doc-section-title">Parameters:</span></p>
+<p><span class="doc-section-title">Other Parameters:</span></p>
     <ul>
         <li class="doc-section-item field-body">
-            <b><code>path</code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>)
+          <b><code>decoder_registry</code></b>
+              (<code><a class="autorefs autorefs-internal" title="async_tiff._decoder.DecoderRegistry" href="../decoder/#async_tiff.DecoderRegistry">DecoderRegistry</a> | None</code>)
           –
           <div class="doc-md-description">
-            <p>The path within the store to read from.</p>
+            <p>the decoders to use for decompression. Defaults to None.</p>
           </div>
         </li>
         <li class="doc-section-item field-body">
-            <b><code>store</code></b>
-              (<code><a class="autorefs autorefs-internal" title="async_tiff.store.ObjectStore" href="../store/#async_tiff.store.ObjectStore">ObjectStore</a> | <a class="autorefs autorefs-internal" title="async_tiff._tiff.ObspecInput" href="#async_tiff.ObspecInput">ObspecInput</a></code>)
+          <b><code>pool</code></b>
+              (<code><a class="autorefs autorefs-internal" title="async_tiff._thread_pool.ThreadPool" href="../thread-pool/#async_tiff.ThreadPool">ThreadPool</a> | None</code>)
           –
           <div class="doc-md-description">
-            <p>The backend to use for data fetching.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-            <b><code>prefetch</code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>, default:
-                  <code>32768</code>
-)
-          –
-          <div class="doc-md-description">
-            <p>The number of initial bytes to read up front.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-            <b><code>multiplier</code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#float">float</a></code>, default:
-                  <code>2.0</code>
-)
-          –
-          <div class="doc-md-description">
-            <p>The multiplier to use for readahead size growth. Must be
-greater than 1.0. For example, for a value of <code>2.0</code>, the first metadata
-read will be of size <code>prefetch</code>, and then the next read will be of size
-<code>prefetch * 2</code>.</p>
+            <p>the thread pool on which to run decompression. Defaults to None.</p>
           </div>
         </li>
     </ul>
@@ -1239,10 +1113,10 @@ read will be of size <code>prefetch</code>, and then the next read will be of si
 <p><span class="doc-section-title">Returns:</span></p>
     <ul>
         <li class="doc-section-item field-body">
-              <code><a class="autorefs autorefs-internal" title="async_tiff._tiff.TIFF" href="#async_tiff.TIFF">TIFF</a></code>
+              <code><a class="autorefs autorefs-external" title="collections.abc.Buffer" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Buffer">Buffer</a></code>
           –
           <div class="doc-md-description">
-            <p>A TIFF instance.</p>
+            <p>Decoded tile data as a buffer.</p>
           </div>
         </li>
     </ul>
@@ -1254,34 +1128,6 @@ read will be of size <code>prefetch</code>, and then the next read will be of si
 
 
   </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="async_tiff.ObspecInput" class="doc doc-heading">
-            <span class="doc doc-object-name doc-class-name">async_tiff.ObspecInput</span>
-
-
-<a href="#async_tiff.ObspecInput" class="headerlink" title="Permanent link">&para;</a></h2>
-
-
-    <div class="doc doc-contents first">
-            <p class="doc doc-class-bases">
-              Bases: <code><span title="obspec._get.GetRangeAsync">GetRangeAsync</span></code>, <code><span title="obspec._get.GetRangesAsync">GetRangesAsync</span></code>, <code><a class="autorefs autorefs-external" title="typing.Protocol" href="https://docs.python.org/3/library/typing.html#typing.Protocol">Protocol</a></code></p>
-
-
-        <p>Supported obspec input to reader.</p>
-
-
-
-
-
-
 
     </div>
 
