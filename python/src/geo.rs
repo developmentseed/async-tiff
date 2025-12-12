@@ -2,100 +2,55 @@ use async_tiff::geo::GeoKeyDirectory;
 use pyo3::prelude::*;
 use pyo3::IntoPyObjectExt;
 
-#[pyclass(name = "GeoKeyDirectory", frozen, eq)]
+#[pyclass(name = "GeoKeyDirectory", frozen, eq, get_all)]
 #[derive(PartialEq)]
 pub(crate) struct PyGeoKeyDirectory {
-    #[pyo3(get)]
     model_type: Option<u16>,
-    #[pyo3(get)]
     raster_type: Option<u16>,
-    #[pyo3(get)]
     citation: Option<String>,
-    #[pyo3(get)]
     geographic_type: Option<u16>,
-    #[pyo3(get)]
     geog_citation: Option<String>,
-    #[pyo3(get)]
     geog_geodetic_datum: Option<u16>,
-    #[pyo3(get)]
     geog_prime_meridian: Option<u16>,
-    #[pyo3(get)]
     geog_linear_units: Option<u16>,
-    #[pyo3(get)]
     geog_linear_unit_size: Option<f64>,
-    #[pyo3(get)]
     geog_angular_units: Option<u16>,
-    #[pyo3(get)]
     geog_angular_unit_size: Option<f64>,
-    #[pyo3(get)]
     geog_ellipsoid: Option<u16>,
-    #[pyo3(get)]
     geog_semi_major_axis: Option<f64>,
-    #[pyo3(get)]
     geog_semi_minor_axis: Option<f64>,
-    #[pyo3(get)]
     geog_inv_flattening: Option<f64>,
-    #[pyo3(get)]
     geog_azimuth_units: Option<u16>,
-    #[pyo3(get)]
     geog_prime_meridian_long: Option<f64>,
 
-    #[pyo3(get)]
     projected_type: Option<u16>,
-    #[pyo3(get)]
     proj_citation: Option<String>,
-    #[pyo3(get)]
     projection: Option<u16>,
-    #[pyo3(get)]
     proj_coord_trans: Option<u16>,
-    #[pyo3(get)]
     proj_linear_units: Option<u16>,
-    #[pyo3(get)]
     proj_linear_unit_size: Option<f64>,
-    #[pyo3(get)]
     proj_std_parallel1: Option<f64>,
-    #[pyo3(get)]
     proj_std_parallel2: Option<f64>,
-    #[pyo3(get)]
     proj_nat_origin_long: Option<f64>,
-    #[pyo3(get)]
     proj_nat_origin_lat: Option<f64>,
-    #[pyo3(get)]
     proj_false_easting: Option<f64>,
-    #[pyo3(get)]
     proj_false_northing: Option<f64>,
-    #[pyo3(get)]
     proj_false_origin_long: Option<f64>,
-    #[pyo3(get)]
     proj_false_origin_lat: Option<f64>,
-    #[pyo3(get)]
     proj_false_origin_easting: Option<f64>,
-    #[pyo3(get)]
     proj_false_origin_northing: Option<f64>,
-    #[pyo3(get)]
     proj_center_long: Option<f64>,
-    #[pyo3(get)]
     proj_center_lat: Option<f64>,
-    #[pyo3(get)]
     proj_center_easting: Option<f64>,
-    #[pyo3(get)]
     proj_center_northing: Option<f64>,
-    #[pyo3(get)]
     proj_scale_at_nat_origin: Option<f64>,
-    #[pyo3(get)]
     proj_scale_at_center: Option<f64>,
-    #[pyo3(get)]
     proj_azimuth_angle: Option<f64>,
-    #[pyo3(get)]
     proj_straight_vert_pole_long: Option<f64>,
 
-    #[pyo3(get)]
     vertical: Option<u16>,
-    #[pyo3(get)]
     vertical_citation: Option<String>,
-    #[pyo3(get)]
     vertical_datum: Option<u16>,
-    #[pyo3(get)]
     vertical_units: Option<u16>,
 }
 
