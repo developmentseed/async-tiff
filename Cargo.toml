@@ -15,9 +15,11 @@ bytes = "1.7.0"
 flate2 = "1.0.20"
 futures = "0.3.31"
 jpeg = { package = "jpeg-decoder", version = "0.3.0", default-features = false }
+jpeg2k = {  version = "0.10.1", optional = true }
 num_enum = "0.7.3"
 object_store = { version = "0.12", optional = true }
 reqwest = { version = "0.12", default-features = false, optional = true }
+bytemuck = { version = "1.24", features = ["extern_crate_alloc"] }
 thiserror = "1"
 tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
 weezl = "0.1.0"
