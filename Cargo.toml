@@ -21,6 +21,7 @@ reqwest = { version = "0.12", default-features = false, optional = true }
 thiserror = "1"
 tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
 weezl = "0.1.0"
+zstd = "0.13"
 
 [dev-dependencies]
 criterion = { package = "codspeed-criterion-compat", version = "4.1.0" }
