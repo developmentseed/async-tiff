@@ -6,7 +6,7 @@ use async_tiff::decoder::DecoderRegistry;
 use async_tiff::error::{AsyncTiffError, AsyncTiffResult};
 use async_tiff::metadata::cache::ReadaheadMetadataCache;
 use async_tiff::metadata::TiffMetadataReader;
-use async_tiff::reader::ObjectReader;
+use async_tiff::reader::{AsyncFileReader, ObjectReader};
 use async_tiff::{ImageFileDirectory, Tile};
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use object_store::path::Path;
@@ -16,12 +16,16 @@ use rayon::ThreadPoolBuilder;
 use reqwest::Url;
 use tokio::runtime;
 
-fn read_tiff(fpath: &str) -> AsyncTiffResult<()> {
+fn open_tiff(fpath: &str) -> AsyncTiffResult<ObjectReader> {
     let abs_path: PathBuf = std::path::Path::new(fpath).canonicalize()?;
     let tif_url: Url = Url::from_file_path(abs_path).expect("Failed to parse url: {abs_path}");
     let (store, path): (Box<dyn ObjectStore>, Path) = parse_url(&tif_url)?;
 
     let reader = ObjectReader::new(Arc::new(store), path);
+    Ok(reader)
+}
+
+fn decode_tiff<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Vec<u8>> {
     let decoder_registry = DecoderRegistry::default();
 
     // Initialize async runtime
@@ -78,6 +82,12 @@ fn read_tiff(fpath: &str) -> AsyncTiffResult<()> {
     });
     assert_eq!(tile_bytes.len(), 363528192); // should be 361681200, why not?
 
+    Ok(tile_bytes)
+}
+
+fn read_tiff(fpath: &str) -> AsyncTiffResult<()> {
+    let reader: ObjectReader = open_tiff(fpath)?;
+    let _tiles: Vec<u8> = decode_tiff(reader)?;
     Ok(())
 }
 
