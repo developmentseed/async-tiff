@@ -80,7 +80,8 @@ fn decode_tiff<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Vec<u8>
             .flat_map_iter(|tile| tile.decode(&decoder_registry).unwrap())
             .collect()
     });
-    assert_eq!(tile_bytes.len(), 363528192); // should be 361681200, why not?
+    assert_eq!(tile_bytes.len(), 363528192); // 363528192 = 1849 * 196608, should be
+                                             // 361681200 if mask padding is removed
 
     Ok(tile_bytes)
 }
