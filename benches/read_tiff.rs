@@ -25,6 +25,33 @@ fn open_tiff(fpath: &str) -> AsyncTiffResult<ObjectReader> {
     Ok(reader)
 }
 
+async fn read_tiles<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Vec<Tile>> {
+    // Read metadata header
+    let cached_reader = ReadaheadMetadataCache::new(reader.clone());
+    let mut metadata_reader = TiffMetadataReader::try_open(&cached_reader).await?;
+
+    // Read Image File Directories
+    let ifds: Vec<ImageFileDirectory> = metadata_reader.read_all_ifds(&cached_reader).await?;
+
+    assert_eq!(ifds.len(), 1); // should have only 1 IFD
+    let ifd: &ImageFileDirectory = ifds.first().ok_or(AsyncTiffError::General(
+        "unable to read first IFD".to_string(),
+    ))?;
+
+    let (x_count, y_count): (usize, usize) = ifd.tile_count().ok_or(AsyncTiffError::General(
+        "unable to get IFD count".to_string(),
+    ))?;
+
+    // Get cartesian product of x and y tile ids
+    let x_ids: Vec<usize> = (0..x_count)
+        .flat_map(|i| (0..y_count).map(move |_j| i))
+        .collect();
+    let y_ids: Vec<usize> = (0..x_count).flat_map(|_i| 0..y_count).collect();
+
+    let tiles: Vec<Tile> = ifd.fetch_tiles(&x_ids, &y_ids, &reader).await?;
+    Ok(tiles)
+}
+
 fn decode_tiff<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Vec<u8>> {
     let decoder_registry = DecoderRegistry::default();
 
@@ -34,39 +61,8 @@ fn decode_tiff<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Vec<u8>
         .build()?;
 
     // Get list of tiles in TIFF file stream (using tokio async runtime)
-    let tiles: Vec<Tile> = runtime
-        .block_on(async {
-            // Read metadata header
-            let cached_reader = ReadaheadMetadataCache::new(reader.clone());
-            let mut metadata_reader = TiffMetadataReader::try_open(&cached_reader).await?;
-
-            // Read Image File Directories
-            let ifds: Vec<ImageFileDirectory> =
-                metadata_reader.read_all_ifds(&cached_reader).await?;
-
-            assert_eq!(ifds.len(), 1); // should have only 1 IFD
-            let ifd: &ImageFileDirectory = ifds.first().ok_or(AsyncTiffError::General(
-                "unable to read first IFD".to_string(),
-            ))?;
-
-            let (x_count, y_count) = ifd.tile_count().ok_or(AsyncTiffError::General(
-                "unable to get IFD count".to_string(),
-            ))?;
-            assert_eq!(x_count, 43);
-            assert_eq!(y_count, 43);
-
-            // Get cartesian product of x and y tile ids
-            let x_ids: Vec<usize> = (0..x_count)
-                .flat_map(|i| (0..y_count).map(move |_j| i))
-                .collect();
-            let y_ids: Vec<usize> = (0..x_count).flat_map(|_i| 0..y_count).collect();
-
-            let tiles: Vec<Tile> = ifd.fetch_tiles(&x_ids, &y_ids, &reader).await?;
-            assert_eq!(tiles.len(), 1849); // 43 * 43 = 1849
-
-            Ok::<Vec<Tile>, AsyncTiffError>(tiles)
-        })
-        .unwrap();
+    let tiles: Vec<Tile> = runtime.block_on(read_tiles(reader)).unwrap();
+    assert_eq!(tiles.len(), 1849); // x_count:43 * y_count:43 = 1849
 
     // Do actual decoding of TIFF tile data (multi-threaded using rayon)
     let pool = ThreadPoolBuilder::new()
