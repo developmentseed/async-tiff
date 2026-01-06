@@ -1,4 +1,13 @@
-/// Benchmarks on reading a GeoTIFF
+//! Benchmarks on opening and decoding a GeoTIFF
+//!
+//! Steps:
+//! 1. Download Sentinel-2 True-Colour Image (TCI) file from
+//!    https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/12/S/UF/2022/6/S2B_12SUF_20220609_0_L2A/TCI.tif
+//!    to `benches/` folder, applying LZW compression with Horizontal differencing
+//!    predictor using the following command:
+//!    `gdal raster convert --co COMPRESS=LZW --co TILED=YES --co PREDICTOR=2 benches/TCI.tif benches/TCI_lzw.tif`
+//! 2. Run `cargo bench`
+
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -16,15 +25,7 @@ use rayon::ThreadPoolBuilder;
 use reqwest::Url;
 use tokio::runtime;
 
-fn open_tiff(fpath: &str) -> AsyncTiffResult<ObjectReader> {
-    let abs_path: PathBuf = std::path::Path::new(fpath).canonicalize()?;
-    let tif_url: Url = Url::from_file_path(abs_path).expect("Failed to parse url: {abs_path}");
-    let (store, path): (Box<dyn ObjectStore>, Path) = parse_url(&tif_url)?;
-
-    let reader = ObjectReader::new(Arc::new(store), path);
-    Ok(reader)
-}
-
+// Retrieve all TIFF tiles (with their compressed bytes) from the first IFD
 async fn read_tiles<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Vec<Tile>> {
     // Read metadata header
     let cached_reader = ReadaheadMetadataCache::new(reader.clone());
@@ -52,8 +53,13 @@ async fn read_tiles<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Ve
     Ok(tiles)
 }
 
-fn decode_tiff<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Vec<u8>> {
-    let decoder_registry = DecoderRegistry::default();
+// Open TIFF file, fetching compressed tile bytes in async manner
+fn open_tiff(fpath: &str) -> AsyncTiffResult<Vec<Tile>> {
+    let abs_path: PathBuf = std::path::Path::new(fpath).canonicalize()?;
+    let tif_url: Url = Url::from_file_path(abs_path).expect("Failed to parse url: {abs_path}");
+    let (store, path): (Box<dyn ObjectStore>, Path) = parse_url(&tif_url)?;
+
+    let reader = ObjectReader::new(Arc::new(store), path);
 
     // Initialize async runtime
     let runtime = runtime::Builder::new_current_thread()
@@ -63,6 +69,13 @@ fn decode_tiff<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Vec<u8>
     // Get list of tiles in TIFF file stream (using tokio async runtime)
     let tiles: Vec<Tile> = runtime.block_on(read_tiles(reader)).unwrap();
     assert_eq!(tiles.len(), 1849); // x_count:43 * y_count:43 = 1849
+
+    Ok(tiles)
+}
+
+// Do actual decoding of compressed TIFF tiles using multi-threading
+fn decode_tiff(tiles: Vec<Tile>) -> AsyncTiffResult<Vec<u8>> {
+    let decoder_registry = DecoderRegistry::default();
 
     // Do actual decoding of TIFF tile data (multi-threaded using rayon)
     let pool = ThreadPoolBuilder::new()
@@ -83,8 +96,8 @@ fn decode_tiff<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Vec<u8>
 }
 
 fn read_tiff(fpath: &str) -> AsyncTiffResult<()> {
-    let reader: ObjectReader = open_tiff(fpath)?;
-    let _tiles: Vec<u8> = decode_tiff(reader)?;
+    let compressed_tiles: Vec<Tile> = open_tiff(fpath)?;
+    let _decoded_tiles: Vec<u8> = decode_tiff(compressed_tiles)?;
     Ok(())
 }
 
