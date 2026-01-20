@@ -13,8 +13,7 @@ use crate::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat, Tag,
 };
-use crate::DataType;
-use crate::Tile;
+use crate::{DataType, Tile};
 
 const DOCUMENT_NAME: u16 = 269;
 

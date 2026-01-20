@@ -1,8 +1,7 @@
 //! [`ndarray`] integration for async-tiff
 
 use bytemuck::cast_slice;
-use ndarray::Ix3;
-use ndarray::{ArrayView3, CowArray};
+use ndarray::{ArrayView3, CowArray, Ix3};
 
 use crate::error::AsyncTiffError;
 use crate::{Array, DataType};
