@@ -53,7 +53,6 @@ fn _async_tiff(py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     check_debug_build(py)?;
 
     m.add_wrapped(wrap_pyfunction!(___version))?;
-    m.add_wrapped(wrap_pyfunction!(crate::array::example_array))?;
     m.add_class::<PyDecoderRegistry>()?;
     m.add_class::<PyGeoKeyDirectory>()?;
     m.add_class::<PyImageFileDirectory>()?;
