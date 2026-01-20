@@ -30,15 +30,16 @@
 //! alive by the `Py_INCREF` call. This avoids the need to leak/free allocations
 //! in `__getbuffer__`/`__releasebuffer__`.
 
+use std::ffi::CStr;
+use std::fmt::Display;
+use std::os::raw::c_int;
+use std::str::FromStr;
+
 use bytes::Bytes;
 use pyo3::exceptions::PyValueError;
 use pyo3::ffi;
 use pyo3::prelude::*;
 use pyo3_bytes::PyBytes;
-use std::ffi::CStr;
-use std::fmt::Display;
-use std::os::raw::c_int;
-use std::str::FromStr;
 
 /// Supported numeric data types for array elements.
 #[derive(Debug, Clone, Copy)]
