@@ -11,10 +11,12 @@ readme = "README.md"
 [dependencies]
 async-trait = "0.1.89"
 byteorder = "1"
+bytemuck = "1.24.0"
 bytes = "1.7.0"
 flate2 = "1.0.20"
 futures = "0.3.31"
 jpeg = { package = "jpeg-decoder", version = "0.3.0", default-features = false }
+ndarray = { version = "0.17", optional = true }
 num_enum = "0.7.3"
 object_store = { version = "0.12", optional = true }
 reqwest = { version = "0.12", default-features = false, optional = true }

@@ -1,6 +1,10 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
+mod array;
+mod data_type;
+#[cfg(feature = "ndarray")]
+pub mod ndarray;
 pub mod reader;
 // TODO: maybe rename this mod
 pub mod decoder;
@@ -14,6 +18,8 @@ pub mod tags;
 mod tiff;
 mod tile;
 
+pub use array::Array;
+pub use data_type::DataType;
 pub use ifd::ImageFileDirectory;
 pub use tag_value::TagValue;
 pub use tiff::TIFF;

@@ -13,7 +13,8 @@ use crate::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat, Tag,
 };
-use crate::tile::Tile;
+use crate::DataType;
+use crate::Tile;
 
 const DOCUMENT_NAME: u16 = 269;
 
@@ -697,9 +698,16 @@ impl ImageFileDirectory {
             .get_tile_byte_range(x, y)
             .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
         let compressed_bytes = reader.get_bytes(range).await?;
+        let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
         Ok(Tile {
             x,
             y,
+            data_type,
+            endianness: self.endianness,
+            width: self.tile_width.unwrap_or(self.image_width),
+            height: self.tile_height.unwrap_or(self.image_height),
+            planar_configuration: self.planar_configuration,
+            samples_per_pixel: self.samples_per_pixel,
             predictor: self.predictor.unwrap_or(Predictor::None),
             predictor_info: PredictorInfo::from_ifd(self),
             compressed_bytes,
@@ -719,6 +727,7 @@ impl ImageFileDirectory {
         assert_eq!(x.len(), y.len(), "x and y should have same len");
 
         let predictor_info = PredictorInfo::from_ifd(self);
+        let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
 
         // 1: Get all the byte ranges for all tiles
         let byte_ranges = x
@@ -739,6 +748,12 @@ impl ImageFileDirectory {
             let tile = Tile {
                 x,
                 y,
+                data_type,
+                endianness: self.endianness,
+                width: self.tile_width.unwrap_or(self.image_width),
+                height: self.tile_height.unwrap_or(self.image_height),
+                planar_configuration: self.planar_configuration,
+                samples_per_pixel: self.samples_per_pixel,
                 predictor: self.predictor.unwrap_or(Predictor::None),
                 predictor_info,
                 compressed_bytes,
