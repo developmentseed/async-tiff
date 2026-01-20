@@ -18,7 +18,7 @@ pub mod tags;
 mod tiff;
 mod tile;
 
-pub use array::Array;
+pub use array::{Array, TypedArray};
 pub use data_type::DataType;
 pub use ifd::ImageFileDirectory;
 pub use tag_value::TagValue;

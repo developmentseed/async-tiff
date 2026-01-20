@@ -91,14 +91,24 @@ impl Array {
 /// An enum representing a typed view of the array data.
 #[derive(Debug, Clone, Copy)]
 pub enum TypedArray<'a> {
+    /// Unsigned 8-bit integer array.
     Uint8(&'a [u8]),
+    /// Unsigned 16-bit integer array.
     Uint16(&'a [u16]),
+    /// Unsigned 32-bit integer array.
     Uint32(&'a [u32]),
+    /// Unsigned 64-bit integer array.
     Uint64(&'a [u64]),
+    /// Signed 8-bit integer array.
     Int8(&'a [i8]),
+    /// Signed 16-bit integer array.
     Int16(&'a [i16]),
+    /// Signed 32-bit integer array.
     Int32(&'a [i32]),
+    /// Signed 64-bit integer array.
     Int64(&'a [i64]),
+    /// 32-bit floating point array.
     Float32(&'a [f32]),
+    /// 64-bit floating point array.
     Float64(&'a [f64]),
 }
