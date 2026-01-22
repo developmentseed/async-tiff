@@ -74,7 +74,7 @@ impl PyTile {
             let array = pool
                 .spawn_async(move || tile.decode(&decoder_registry))
                 .await
-                .unwrap();
+                .map_err(|e| PyValueError::new_err(e.to_string()))?;
             let (array, _shape, _data_type) = array.into_inner();
             Ok(PyBytes::new(Bytes::from_owner(array)))
         })
