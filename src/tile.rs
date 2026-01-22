@@ -4,7 +4,6 @@ use crate::array::Array;
 use crate::decoder::DecoderRegistry;
 use crate::error::{AsyncTiffResult, TiffError, TiffUnsupportedError};
 use crate::predictor::{fix_endianness, unpredict_float, unpredict_hdiff, PredictorInfo};
-use crate::reader::Endianness;
 use crate::tags::{CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor};
 use crate::DataType;
 
@@ -21,7 +20,6 @@ pub struct Tile {
     pub(crate) x: usize,
     pub(crate) y: usize,
     pub(crate) data_type: Option<DataType>,
-    pub(crate) endianness: Endianness,
     pub(crate) samples_per_pixel: u16,
     pub(crate) width: u32,
     pub(crate) height: u32,
