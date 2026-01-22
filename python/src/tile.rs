@@ -75,7 +75,8 @@ impl PyTile {
                 .spawn_async(move || tile.decode(&decoder_registry))
                 .await
                 .unwrap();
-            Ok(PyBytes::new(Bytes::from_owner(decoded_bytes)))
+            let (array, _shape, _data_type) = array.into_inner();
+            Ok(PyBytes::new(Bytes::from_owner(array)))
         })
     }
 }

@@ -1,4 +1,4 @@
-use bytemuck::{cast_vec, try_cast_vec};
+use bytemuck::{cast_slice, cast_vec, try_cast_vec};
 
 use crate::data_type::DataType;
 
@@ -33,6 +33,11 @@ impl Array {
     /// Access the raw underlying byte data of the array.
     pub fn data(&self) -> &TypedArray {
         &self.data
+    }
+
+    /// Consume the Array and return its components.
+    pub fn into_inner(self) -> (TypedArray, [usize; 3], Option<DataType>) {
+        (self.data, self.shape, self.data_type)
     }
 
     /// Get the shape of the array.
@@ -156,6 +161,23 @@ impl TypedArray {
                         .collect()
                 }))
             }
+        }
+    }
+}
+
+impl AsRef<[u8]> for TypedArray {
+    fn as_ref(&self) -> &[u8] {
+        match self {
+            TypedArray::UInt8(data) => data.as_slice(),
+            TypedArray::UInt16(data) => cast_slice(data),
+            TypedArray::UInt32(data) => cast_slice(data),
+            TypedArray::UInt64(data) => cast_slice(data),
+            TypedArray::Int8(data) => cast_slice(data),
+            TypedArray::Int16(data) => cast_slice(data),
+            TypedArray::Int32(data) => cast_slice(data),
+            TypedArray::Int64(data) => cast_slice(data),
+            TypedArray::Float32(data) => cast_slice(data),
+            TypedArray::Float64(data) => cast_slice(data),
         }
     }
 }
