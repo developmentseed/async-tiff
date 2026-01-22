@@ -1,6 +1,7 @@
 use bytemuck::{cast_slice, cast_vec, try_cast_vec};
 
 use crate::data_type::DataType;
+use crate::error::{AsyncTiffError, AsyncTiffResult};
 
 /// A 3D array that represents decoded TIFF image data.
 #[derive(Debug, Clone)]
@@ -22,12 +23,24 @@ pub struct Array {
 }
 
 impl Array {
-    pub(crate) fn new(data: Vec<u8>, shape: [usize; 3], data_type: Option<DataType>) -> Self {
-        Self {
-            data: TypedArray::new(data, data_type),
+    pub(crate) fn try_new(
+        data: Vec<u8>,
+        shape: [usize; 3],
+        data_type: Option<DataType>,
+    ) -> AsyncTiffResult<Self> {
+        // Validate that the data length matches the expected size
+        let expected_len = shape[0] * shape[1] * shape[2];
+
+        let typed_data = TypedArray::new(data, data_type);
+        if typed_data.len() != expected_len {
+            return Err(AsyncTiffError::General(format!("Internal error: incorrect shape or data length passed to Array::try_new. Got data length {}, expected {}", typed_data.len(), expected_len)));
+        }
+
+        Ok(Self {
+            data: typed_data,
             shape,
             data_type,
-        }
+        })
     }
 
     /// Access the raw underlying byte data of the array.
@@ -162,6 +175,27 @@ impl TypedArray {
                 }))
             }
         }
+    }
+
+    /// Get the length (number of elements) of the typed array.
+    pub fn len(&self) -> usize {
+        match self {
+            TypedArray::UInt8(data) => data.len(),
+            TypedArray::UInt16(data) => data.len(),
+            TypedArray::UInt32(data) => data.len(),
+            TypedArray::UInt64(data) => data.len(),
+            TypedArray::Int8(data) => data.len(),
+            TypedArray::Int16(data) => data.len(),
+            TypedArray::Int32(data) => data.len(),
+            TypedArray::Int64(data) => data.len(),
+            TypedArray::Float32(data) => data.len(),
+            TypedArray::Float64(data) => data.len(),
+        }
+    }
+
+    /// Check if the typed array is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 

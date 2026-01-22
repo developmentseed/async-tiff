@@ -108,7 +108,7 @@ impl Tile {
             self.height as _,
             self.samples_per_pixel as _,
         );
-        Ok(Array::new(decoded, shape, self.data_type))
+        Array::try_new(decoded, shape, self.data_type)
     }
 }
 
