@@ -6,10 +6,6 @@ use crate::error::AsyncTiffError;
 use crate::{Array, TypedArray};
 
 /// An enum representing a view of a 3D ndarray with various possible data types.
-///
-/// Note: We use CowArray because whether we can expose data as zero-copy depends on whether the
-/// endianness of the TIFF data matches the host system. If it doesn't match, we need to allocate a
-/// new array with the correct endianness.
 pub enum NdArray {
     /// Unsigned 8-bit integer array
     Uint8(Array3<u8>),
@@ -52,34 +48,54 @@ impl TryFrom<Array> for NdArray {
             .ok_or_else(|| AsyncTiffError::General("Unknown data type".to_string()))?;
         match value.data {
             TypedArray::UInt8(data) => Ok(NdArray::Uint8(
-                Array3::from_shape_vec(value.shape, data).unwrap(),
+                Array3::from_shape_vec(value.shape, data).map_err(|e| {
+                    AsyncTiffError::General(format!("Failed to create ndarray: {}", e))
+                })?,
             )),
             TypedArray::UInt16(data) => Ok(NdArray::Uint16(
-                Array3::from_shape_vec(value.shape, data).unwrap(),
+                Array3::from_shape_vec(value.shape, data).map_err(|e| {
+                    AsyncTiffError::General(format!("Failed to create ndarray: {}", e))
+                })?,
             )),
             TypedArray::UInt32(data) => Ok(NdArray::Uint32(
-                Array3::from_shape_vec(value.shape, data).unwrap(),
+                Array3::from_shape_vec(value.shape, data).map_err(|e| {
+                    AsyncTiffError::General(format!("Failed to create ndarray: {}", e))
+                })?,
             )),
             TypedArray::UInt64(data) => Ok(NdArray::Uint64(
-                Array3::from_shape_vec(value.shape, data).unwrap(),
+                Array3::from_shape_vec(value.shape, data).map_err(|e| {
+                    AsyncTiffError::General(format!("Failed to create ndarray: {}", e))
+                })?,
             )),
             TypedArray::Int8(data) => Ok(NdArray::Int8(
-                Array3::from_shape_vec(value.shape, data).unwrap(),
+                Array3::from_shape_vec(value.shape, data).map_err(|e| {
+                    AsyncTiffError::General(format!("Failed to create ndarray: {}", e))
+                })?,
             )),
             TypedArray::Int16(data) => Ok(NdArray::Int16(
-                Array3::from_shape_vec(value.shape, data).unwrap(),
+                Array3::from_shape_vec(value.shape, data).map_err(|e| {
+                    AsyncTiffError::General(format!("Failed to create ndarray: {}", e))
+                })?,
             )),
             TypedArray::Int32(data) => Ok(NdArray::Int32(
-                Array3::from_shape_vec(value.shape, data).unwrap(),
+                Array3::from_shape_vec(value.shape, data).map_err(|e| {
+                    AsyncTiffError::General(format!("Failed to create ndarray: {}", e))
+                })?,
             )),
             TypedArray::Int64(data) => Ok(NdArray::Int64(
-                Array3::from_shape_vec(value.shape, data).unwrap(),
+                Array3::from_shape_vec(value.shape, data).map_err(|e| {
+                    AsyncTiffError::General(format!("Failed to create ndarray: {}", e))
+                })?,
             )),
             TypedArray::Float32(data) => Ok(NdArray::Float32(
-                Array3::from_shape_vec(value.shape, data).unwrap(),
+                Array3::from_shape_vec(value.shape, data).map_err(|e| {
+                    AsyncTiffError::General(format!("Failed to create ndarray: {}", e))
+                })?,
             )),
             TypedArray::Float64(data) => Ok(NdArray::Float64(
-                Array3::from_shape_vec(value.shape, data).unwrap(),
+                Array3::from_shape_vec(value.shape, data).map_err(|e| {
+                    AsyncTiffError::General(format!("Failed to create ndarray: {}", e))
+                })?,
             )),
         }
     }
