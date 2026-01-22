@@ -9,9 +9,10 @@ pub struct Array {
     /// The raw byte data of the array.
     pub(crate) data: TypedArray,
 
-    /// The shape of the array as [height, width, channels].
+    /// The 3D shape of the array.
     ///
-    /// The interpretation depends on the PlanarConfiguration:
+    /// The axis ordering depends on the PlanarConfiguration:
+    ///
     /// - PlanarConfiguration=1 (chunky): (height, width, bands)
     /// - PlanarConfiguration=2 (planar): (bands, height, width)
     pub(crate) shape: [usize; 3],
