@@ -81,18 +81,21 @@ impl Tile {
                 TiffUnsupportedError::UnsupportedCompressionMethod(self.compression_method),
             ))?;
 
-        let decoded_tile = decoder.decode_tile(
+        let mut decoded_tile = decoder.decode_tile(
             self.compressed_bytes.clone(),
             self.photometric_interpretation,
             self.jpeg_tables.as_deref(),
         )?;
 
         let decoded = match self.predictor {
-            Predictor::None => Ok(fix_endianness(
-                decoded_tile,
-                self.predictor_info.endianness(),
-                self.predictor_info.bits_per_sample(),
-            )),
+            Predictor::None => {
+                fix_endianness(
+                    &mut decoded_tile,
+                    self.predictor_info.endianness(),
+                    self.predictor_info.bits_per_sample(),
+                );
+                Ok(decoded_tile)
+            }
             Predictor::Horizontal => {
                 unpredict_hdiff(decoded_tile, &self.predictor_info, self.x as _)
             }

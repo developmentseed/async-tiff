@@ -1,4 +1,5 @@
 use async_tiff::Tile;
+use bytes::Bytes;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3_async_runtimes::tokio::future_into_py;
@@ -74,7 +75,7 @@ impl PyTile {
                 .spawn_async(move || tile.decode(&decoder_registry))
                 .await
                 .unwrap();
-            Ok(PyBytes::new(array.raw_data().clone()))
+            Ok(PyBytes::new(Bytes::from_owner(decoded_bytes)))
         })
     }
 }
