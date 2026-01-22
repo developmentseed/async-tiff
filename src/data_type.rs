@@ -76,3 +76,154 @@ impl DataType {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_tags_uint_types() {
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Uint], &[8]),
+            Some(DataType::UInt8),
+            "Uint 8-bit should be UInt8"
+        );
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Uint], &[16]),
+            Some(DataType::UInt16),
+            "Uint 16-bit should be UInt16"
+        );
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Uint], &[32]),
+            Some(DataType::UInt32),
+            "Uint 32-bit should be UInt32"
+        );
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Uint], &[64]),
+            Some(DataType::UInt64),
+            "Uint 64-bit should be UInt64"
+        );
+    }
+
+    #[test]
+    fn test_from_tags_int_types() {
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Int], &[8]),
+            Some(DataType::Int8),
+            "Int 8-bit should be Int8"
+        );
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Int], &[16]),
+            Some(DataType::Int16),
+            "Int 16-bit should be Int16"
+        );
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Int], &[32]),
+            Some(DataType::Int32),
+            "Int 32-bit should be Int32"
+        );
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Int], &[64]),
+            Some(DataType::Int64),
+            "Int 64-bit should be Int64"
+        );
+    }
+
+    #[test]
+    fn test_from_tags_float_types() {
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::IEEEFP], &[32]),
+            Some(DataType::Float32),
+            "IEEEFP 32-bit should be Float32"
+        );
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::IEEEFP], &[64]),
+            Some(DataType::Float64),
+            "IEEEFP 64-bit should be Float64"
+        );
+    }
+
+    #[test]
+    fn test_from_tags_rgb_consistent() {
+        // RGB image with 3 samples, all UInt8
+        assert_eq!(
+            DataType::from_tags(
+                &[SampleFormat::Uint, SampleFormat::Uint, SampleFormat::Uint],
+                &[8, 8, 8]
+            ),
+            Some(DataType::UInt8),
+            "RGB with consistent UInt8 should succeed"
+        );
+
+        // RGB image with 3 samples, all UInt16
+        assert_eq!(
+            DataType::from_tags(
+                &[SampleFormat::Uint, SampleFormat::Uint, SampleFormat::Uint],
+                &[16, 16, 16]
+            ),
+            Some(DataType::UInt16),
+            "RGB with consistent UInt16 should succeed"
+        );
+    }
+
+    #[test]
+    fn test_from_tags_inconsistent_format() {
+        // Mixed formats should return None
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Uint, SampleFormat::Int], &[8, 8]),
+            None,
+            "Inconsistent sample formats should return None"
+        );
+    }
+
+    #[test]
+    fn test_from_tags_inconsistent_bits() {
+        // Mixed bit depths should return None
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Uint, SampleFormat::Uint], &[8, 16]),
+            None,
+            "Inconsistent bit depths should return None"
+        );
+    }
+
+    #[test]
+    fn test_from_tags_empty_arrays() {
+        assert_eq!(
+            DataType::from_tags(&[], &[]),
+            None,
+            "Empty arrays should return None"
+        );
+    }
+
+    #[test]
+    fn test_from_tags_unsupported_bit_depth() {
+        // Unsupported bit depth
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Uint], &[12]),
+            None,
+            "Unsupported bit depth (12) should return None"
+        );
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Uint], &[24]),
+            None,
+            "Unsupported bit depth (24) should return None"
+        );
+    }
+
+    #[test]
+    fn test_from_tags_unsupported_format() {
+        // Void format is not supported
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Void], &[8]),
+            None,
+            "Void format should return None"
+        );
+
+        // Unknown format should also return None
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Unknown(99)], &[8]),
+            None,
+            "Unknown format should return None"
+        );
+    }
+}
