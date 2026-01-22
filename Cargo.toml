@@ -11,7 +11,7 @@ readme = "README.md"
 [dependencies]
 async-trait = "0.1.89"
 byteorder = "1"
-bytemuck = "1.24.0"
+bytemuck = { version = "1.24.0", features = ["extern_crate_alloc"] }
 bytes = "1.7.0"
 flate2 = "1.0.20"
 futures = "0.3.31"

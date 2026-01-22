@@ -1,17 +1,12 @@
-use bytemuck::cast_slice;
-use bytes::Bytes;
+use bytemuck::{cast_vec, try_cast_vec};
 
 use crate::data_type::DataType;
-use crate::reader::Endianness;
 
 /// A 3D array that represents decoded TIFF image data.
 #[derive(Debug, Clone)]
 pub struct Array {
     /// The raw byte data of the array.
-    pub(crate) data: Bytes,
-
-    /// The endianness of the data.
-    pub(crate) endianness: Endianness,
+    pub(crate) data: TypedArray,
 
     /// The shape of the array as [height, width, channels].
     ///
@@ -27,24 +22,16 @@ pub struct Array {
 }
 
 impl Array {
-    pub(crate) fn new(
-        data: Bytes,
-        endianness: Endianness,
-        shape: [usize; 3],
-        data_type: Option<DataType>,
-    ) -> Self {
+    pub(crate) fn new(data: Vec<u8>, shape: [usize; 3], data_type: Option<DataType>) -> Self {
         Self {
-            data,
-            endianness,
+            data: TypedArray::new(data, data_type),
             shape,
             data_type,
         }
     }
 
     /// Access the raw underlying byte data of the array.
-    ///
-    /// Use [`as_typed`][Self::as_typed] to get a typed view of the data.
-    pub fn raw_data(&self) -> &Bytes {
+    pub fn data(&self) -> &TypedArray {
         &self.data
     }
 
@@ -59,56 +46,116 @@ impl Array {
         self.shape
     }
 
-    /// Get the endianness of the array data.
-    pub fn endianness(&self) -> Endianness {
-        self.endianness
-    }
-
     /// The logical data type of the array elements.
     ///
     /// If None, the data type is unsupported or unknown.
     pub fn data_type(&self) -> Option<DataType> {
         self.data_type
     }
-
-    /// Get a typed view of the array data.
-    pub fn as_typed(&self) -> Option<TypedArray<'_>> {
-        match self.data_type? {
-            DataType::UInt8 => Some(TypedArray::Uint8(&self.data)),
-            DataType::UInt16 => Some(TypedArray::Uint16(cast_slice(&self.data))),
-            DataType::UInt32 => Some(TypedArray::Uint32(cast_slice(&self.data))),
-            DataType::UInt64 => Some(TypedArray::Uint64(cast_slice(&self.data))),
-            DataType::Int8 => Some(TypedArray::Int8(cast_slice(&self.data))),
-            DataType::Int16 => Some(TypedArray::Int16(cast_slice(&self.data))),
-            DataType::Int32 => Some(TypedArray::Int32(cast_slice(&self.data))),
-            DataType::Int64 => Some(TypedArray::Int64(cast_slice(&self.data))),
-            DataType::Float32 => Some(TypedArray::Float32(cast_slice(&self.data))),
-            DataType::Float64 => Some(TypedArray::Float64(cast_slice(&self.data))),
-        }
-    }
 }
 
 /// An enum representing a typed view of the array data.
-#[derive(Debug, Clone, Copy)]
-pub enum TypedArray<'a> {
+#[derive(Debug, Clone)]
+pub enum TypedArray {
     /// Unsigned 8-bit integer array.
-    Uint8(&'a [u8]),
+    Uint8(Vec<u8>),
     /// Unsigned 16-bit integer array.
-    Uint16(&'a [u16]),
+    Uint16(Vec<u16>),
     /// Unsigned 32-bit integer array.
-    Uint32(&'a [u32]),
+    Uint32(Vec<u32>),
     /// Unsigned 64-bit integer array.
-    Uint64(&'a [u64]),
+    Uint64(Vec<u64>),
     /// Signed 8-bit integer array.
-    Int8(&'a [i8]),
+    Int8(Vec<i8>),
     /// Signed 16-bit integer array.
-    Int16(&'a [i16]),
+    Int16(Vec<i16>),
     /// Signed 32-bit integer array.
-    Int32(&'a [i32]),
+    Int32(Vec<i32>),
     /// Signed 64-bit integer array.
-    Int64(&'a [i64]),
+    Int64(Vec<i64>),
     /// 32-bit floating point array.
-    Float32(&'a [f32]),
+    Float32(Vec<f32>),
     /// 64-bit floating point array.
-    Float64(&'a [f64]),
+    Float64(Vec<f64>),
+}
+
+impl TypedArray {
+    /// Create a new TypedArray from raw byte data and a specified DataType.
+    pub fn new(data: Vec<u8>, data_type: Option<DataType>) -> Self {
+        match data_type {
+            None | Some(DataType::UInt8) => TypedArray::Uint8(data),
+            Some(DataType::UInt16) => {
+                TypedArray::Uint16(try_cast_vec(data).unwrap_or_else(|(_, data)| {
+                    // Fallback to manual conversion when not aligned
+                    data.chunks_exact(2)
+                        .map(|b| u16::from_ne_bytes([b[0], b[1]]))
+                        .collect()
+                }))
+            }
+            Some(DataType::UInt32) => {
+                TypedArray::Uint32(try_cast_vec(data).unwrap_or_else(|(_, data)| {
+                    // Fallback to manual conversion when not aligned
+                    data.chunks_exact(4)
+                        .map(|b| u32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+                        .collect()
+                }))
+            }
+            Some(DataType::UInt64) => {
+                TypedArray::Uint64(try_cast_vec(data).unwrap_or_else(|(_, data)| {
+                    // Fallback to manual conversion when not aligned
+                    data.chunks_exact(8)
+                        .map(|b| {
+                            u64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
+                        })
+                        .collect()
+                }))
+            }
+            // Casting u8 to i8 is safe as they have the same memory representation
+            Some(DataType::Int8) => TypedArray::Int8(cast_vec(data)),
+            Some(DataType::Int16) => {
+                TypedArray::Int16(try_cast_vec(data).unwrap_or_else(|(_, data)| {
+                    // Fallback to manual conversion when not aligned
+                    data.chunks_exact(2)
+                        .map(|b| i16::from_ne_bytes([b[0], b[1]]))
+                        .collect()
+                }))
+            }
+            Some(DataType::Int32) => {
+                TypedArray::Int32(try_cast_vec(data).unwrap_or_else(|(_, data)| {
+                    // Fallback to manual conversion when not aligned
+                    data.chunks_exact(4)
+                        .map(|b| i32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+                        .collect()
+                }))
+            }
+            Some(DataType::Int64) => {
+                TypedArray::Int64(try_cast_vec(data).unwrap_or_else(|(_, data)| {
+                    // Fallback to manual conversion when not aligned
+                    data.chunks_exact(8)
+                        .map(|b| {
+                            i64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
+                        })
+                        .collect()
+                }))
+            }
+            Some(DataType::Float32) => {
+                TypedArray::Float32(try_cast_vec(data).unwrap_or_else(|(_, data)| {
+                    // Fallback to manual conversion when not aligned
+                    data.chunks_exact(4)
+                        .map(|b| f32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+                        .collect()
+                }))
+            }
+            Some(DataType::Float64) => {
+                TypedArray::Float64(try_cast_vec(data).unwrap_or_else(|(_, data)| {
+                    // Fallback to manual conversion when not aligned
+                    data.chunks_exact(8)
+                        .map(|b| {
+                            f64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
+                        })
+                        .collect()
+                }))
+            }
+        }
+    }
 }
