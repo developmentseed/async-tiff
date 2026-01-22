@@ -58,13 +58,13 @@ impl Array {
 #[derive(Debug, Clone)]
 pub enum TypedArray {
     /// Unsigned 8-bit integer array.
-    Uint8(Vec<u8>),
+    UInt8(Vec<u8>),
     /// Unsigned 16-bit integer array.
-    Uint16(Vec<u16>),
+    UInt16(Vec<u16>),
     /// Unsigned 32-bit integer array.
-    Uint32(Vec<u32>),
+    UInt32(Vec<u32>),
     /// Unsigned 64-bit integer array.
-    Uint64(Vec<u64>),
+    UInt64(Vec<u64>),
     /// Signed 8-bit integer array.
     Int8(Vec<i8>),
     /// Signed 16-bit integer array.
@@ -83,9 +83,9 @@ impl TypedArray {
     /// Create a new TypedArray from raw byte data and a specified DataType.
     pub fn new(data: Vec<u8>, data_type: Option<DataType>) -> Self {
         match data_type {
-            None | Some(DataType::UInt8) => TypedArray::Uint8(data),
+            None | Some(DataType::UInt8) => TypedArray::UInt8(data),
             Some(DataType::UInt16) => {
-                TypedArray::Uint16(try_cast_vec(data).unwrap_or_else(|(_, data)| {
+                TypedArray::UInt16(try_cast_vec(data).unwrap_or_else(|(_, data)| {
                     // Fallback to manual conversion when not aligned
                     data.chunks_exact(2)
                         .map(|b| u16::from_ne_bytes([b[0], b[1]]))
@@ -93,7 +93,7 @@ impl TypedArray {
                 }))
             }
             Some(DataType::UInt32) => {
-                TypedArray::Uint32(try_cast_vec(data).unwrap_or_else(|(_, data)| {
+                TypedArray::UInt32(try_cast_vec(data).unwrap_or_else(|(_, data)| {
                     // Fallback to manual conversion when not aligned
                     data.chunks_exact(4)
                         .map(|b| u32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
@@ -101,7 +101,7 @@ impl TypedArray {
                 }))
             }
             Some(DataType::UInt64) => {
-                TypedArray::Uint64(try_cast_vec(data).unwrap_or_else(|(_, data)| {
+                TypedArray::UInt64(try_cast_vec(data).unwrap_or_else(|(_, data)| {
                     // Fallback to manual conversion when not aligned
                     data.chunks_exact(8)
                         .map(|b| {

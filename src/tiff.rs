@@ -55,7 +55,7 @@ mod test {
         let tile = ifd.fetch_tile(0, 0, reader.as_ref()).await.unwrap();
         let array = tile.decode(&Default::default()).unwrap();
         let contents = match array.data() {
-            TypedArray::Uint8(data) => data,
+            TypedArray::UInt8(data) => data,
             _ => panic!("unexpected data type"),
         };
         std::fs::write("img.buf", contents).unwrap();
