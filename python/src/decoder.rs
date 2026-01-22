@@ -52,7 +52,7 @@ impl PyDecoderRegistry {
 pub(crate) struct PyDecoder(Py<PyAny>);
 
 impl PyDecoder {
-    fn call(&self, py: Python, buffer: Bytes) -> PyResult<PyBytes> {
+    fn call(&self, py: Python, buffer: Bytes) -> PyResult<Vec<u8>> {
         let kwargs = PyDict::new(py);
         kwargs.set_item(intern!(py, "buffer"), PyBytes::new(buffer))?;
         let result = self.0.call(py, PyTuple::empty(py), Some(&kwargs))?;
@@ -79,9 +79,8 @@ impl Decoder for PyDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
-    ) -> AsyncTiffResult<Bytes> {
-        let decoded_buffer = Python::attach(|py| self.call(py, buffer))
-            .map_err(|err| AsyncTiffError::General(err.to_string()))?;
-        Ok(decoded_buffer.into_inner())
+    ) -> AsyncTiffResult<Vec<u8>> {
+        Python::attach(|py| self.call(py, buffer))
+            .map_err(|err| AsyncTiffError::General(err.to_string()))
     }
 }
