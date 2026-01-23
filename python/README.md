@@ -21,7 +21,7 @@ from async_tiff.store import S3Store
 store = S3Store("naip-visualization", region="us-west-2", request_payer=True)
 path = "ny/2022/60cm/rgb/40073/m_4007307_sw_18_060_20220803.tif"
 
-tiff = await TIFF.open(path, store=store)
+tiff = await TIFF.open_async(path, store=store)
 primary_ifd = tiff.ifds[0]
 
 primary_ifd.geo_key_directory.citation
@@ -65,7 +65,7 @@ from async_tiff.store import S3Store
 store = S3Store("sentinel-cogs", region="us-west-2", skip_signature=True)
 path = "sentinel-s2-l2a-cogs/12/S/UF/2022/6/S2B_12SUF_20220609_0_L2A/B04.tif"
 
-tiff = await TIFF.open(path, store=store)
+tiff = await TIFF.open_async(path, store=store)
 primary_ifd = tiff.ifds[0]
 # Text readable citation
 primary_ifd.geo_key_directory.citation

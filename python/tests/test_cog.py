@@ -7,12 +7,12 @@ from async_tiff.store import LocalStore, S3Store
 
 async def test_cog_s3():
     """
-    Ensure that TIFF.open can open a Sentinel-2 Cloud-Optimized GeoTIFF file from an
-    s3 bucket, read IFDs and GeoKeyDirectory metadata.
+    Ensure that TIFF.open_async can open a Sentinel-2 Cloud-Optimized GeoTIFF file from
+    an s3 bucket, read IFDs and GeoKeyDirectory metadata.
     """
     path = "sentinel-s2-l2a-cogs/12/S/UF/2022/6/S2B_12SUF_20220609_0_L2A/B04.tif"
     store = S3Store("sentinel-cogs", region="us-west-2", skip_signature=True)
-    tiff = await TIFF.open(path=path, store=store)
+    tiff = await TIFF.open_async(path=path, store=store)
 
     assert tiff.endianness == enums.Endianness.LittleEndian
 
@@ -47,4 +47,4 @@ async def test_cog_missing_file():
     """
     store = LocalStore()
     with pytest.raises(FileNotFoundError):
-        await TIFF.open(path="imaginary_file.tif", store=store)
+        await TIFF.open_async(path="imaginary_file.tif", store=store)

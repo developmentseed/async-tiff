@@ -15,7 +15,7 @@ FIXTURES_DIR = Path(__file__).parent.parent.parent / "tests" / "images"
 async def load_tiff(filename: str):
     path = FIXTURES_DIR / filename
     store = LocalStore()
-    tiff = await TIFF.open(path=str(path), store=store)
+    tiff = await TIFF.open_async(path=str(path), store=store)
     return tiff
 
 
