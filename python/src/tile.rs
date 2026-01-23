@@ -1,11 +1,11 @@
 use async_tiff::Tile;
-use bytes::Bytes;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3_async_runtimes::tokio::future_into_py;
 use pyo3_bytes::PyBytes;
 use tokio_rayon::AsyncThreadPool;
 
+use crate::array::PyArray;
 use crate::decoder::get_default_decoder_registry;
 use crate::enums::PyCompressionMethod;
 use crate::thread_pool::{get_default_pool, PyThreadPool};
@@ -75,8 +75,7 @@ impl PyTile {
                 .spawn_async(move || tile.decode(&decoder_registry))
                 .await
                 .map_err(|e| PyValueError::new_err(e.to_string()))?;
-            let (array, _shape, _data_type) = array.into_inner();
-            Ok(PyBytes::new(Bytes::from_owner(array)))
+            PyArray::try_new(array)
         })
     }
 }
