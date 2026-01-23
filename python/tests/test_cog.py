@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 
 from async_tiff import TIFF, enums
 from async_tiff.store import LocalStore, S3Store
@@ -28,6 +29,11 @@ async def test_cog_s3():
     assert gkd is not None, "GeoKeyDirectory should exist"
     assert gkd.citation == "WGS 84 / UTM zone 12N"
     assert gkd.projected_type == 32612
+
+    tile = await tiff.fetch_tile(0, 0, 0)
+    array = await tile.decode_async()
+    np_array = np.asarray(array, copy=False)
+    assert np_array.shape == (1024, 1024, 1)
 
 
 async def test_cog_missing_file():
