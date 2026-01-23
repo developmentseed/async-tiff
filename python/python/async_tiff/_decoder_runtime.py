@@ -1,6 +1,6 @@
 import sys
-from typing import Protocol
 from collections.abc import Buffer
+from typing import Protocol
 
 if sys.version_info >= (3, 12):
     from collections.abc import Buffer

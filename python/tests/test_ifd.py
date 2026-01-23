@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from async_tiff import TIFF
 from async_tiff.enums import (
     CompressionMethod,
@@ -6,8 +8,6 @@ from async_tiff.enums import (
     SampleFormat,
 )
 from async_tiff.store import LocalStore
-from pathlib import Path
-
 
 FIXTURES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "other"
 

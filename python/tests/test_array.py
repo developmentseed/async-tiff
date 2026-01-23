@@ -1,6 +1,6 @@
-from async_tiff import Array
 import numpy as np
 import pytest
+from async_tiff import Array
 
 
 @pytest.mark.parametrize(

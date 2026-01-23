@@ -1,5 +1,5 @@
-from ._input import ObspecInput
 from ._ifd import ImageFileDirectory
+from ._input import ObspecInput
 from ._tile import Tile
 from .enums import Endianness
 from .store import ObjectStore

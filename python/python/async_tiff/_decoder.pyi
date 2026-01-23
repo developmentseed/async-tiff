@@ -1,5 +1,5 @@
-from .enums import CompressionMethod
 from ._decoder_runtime import Decoder
+from .enums import CompressionMethod
 
 class DecoderRegistry:
     """A registry holding multiple decoder methods."""
