@@ -221,6 +221,11 @@ impl PyImageFileDirectory {
     }
 
     #[getter]
+    pub fn model_transformation(&self) -> Option<&[f64]> {
+        self.0.model_transformation()
+    }
+
+    #[getter]
     pub fn gdal_nodata(&self) -> Option<&str> {
         self.0.gdal_nodata()
     }
@@ -337,6 +342,9 @@ impl PyImageFileDirectory {
         if self.model_tiepoint().is_some() {
             keys.push("model_tiepoint");
         }
+        if self.model_transformation().is_some() {
+            keys.push("model_transformation");
+        }
         if self.gdal_nodata().is_some() {
             keys.push("gdal_nodata");
         }
@@ -391,6 +399,7 @@ impl PyImageFileDirectory {
             "geo_key_directory" => self.geo_key_directory().into_bound_py_any(py),
             "model_pixel_scale" => self.model_pixel_scale().into_bound_py_any(py),
             "model_tiepoint" => self.model_tiepoint().into_bound_py_any(py),
+            "model_transformation" => self.model_transformation().into_bound_py_any(py),
             "other_tags" => self.other_tags().into_bound_py_any(py),
             "gdal_nodata" => self.gdal_nodata().into_bound_py_any(py),
             "gdal_metadata" => self.gdal_metadata().into_bound_py_any(py),

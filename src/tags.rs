@@ -128,12 +128,12 @@ pub enum Tag(u16) unknown("A private or extension tag") {
     // JPEG
     JPEGTables = 347,
     // GeoTIFF
-    ModelPixelScaleTag = 33550, // (SoftDesk)
-    ModelTransformationTag = 34264, // (JPL Carto Group)
-    ModelTiepointTag = 33922, // (Intergraph)
-    GeoKeyDirectoryTag = 34735, // (SPOT)
-    GeoDoubleParamsTag = 34736, // (SPOT)
-    GeoAsciiParamsTag = 34737, // (SPOT)
+    ModelPixelScale = 33550, // (SoftDesk)
+    ModelTransformation = 34264, // (JPL Carto Group)
+    ModelTiepoint = 33922, // (Intergraph)
+    GeoKeyDirectory = 34735, // (SPOT)
+    GeoDoubleParams = 34736, // (SPOT)
+    GeoAsciiParams = 34737, // (SPOT)
     GdalNodata = 42113, // Contains areas with missing data
     GdalMetadata = 42112, // XML metadata string
 }
