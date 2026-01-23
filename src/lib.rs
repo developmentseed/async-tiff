@@ -15,6 +15,8 @@ pub mod metadata;
 pub mod predictor;
 mod tag_value;
 pub mod tags;
+#[cfg(test)]
+mod test;
 mod tiff;
 mod tile;
 

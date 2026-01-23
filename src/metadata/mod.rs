@@ -21,7 +21,7 @@
 //! // Create new ObjectReader to map the ObjectStore to the AsyncFileReader trait
 //! let reader = ObjectReader::new(
 //!     store,
-//!     "tests/image_tiff/images/tiled-jpeg-rgb-u8.tif".into(),
+//!     "fixtures/image-tiff/tiled-jpeg-rgb-u8.tif".into(),
 //! );
 //!
 //! // Use ReadaheadMetadataCache to ensure that a given number of bytes at the start of the
