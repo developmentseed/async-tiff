@@ -13,7 +13,7 @@ use crate::tags::{
     CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat, Tag,
 };
-use crate::tile::Tile;
+use crate::{DataType, Tile};
 
 const DOCUMENT_NAME: u16 = 269;
 
@@ -697,9 +697,25 @@ impl ImageFileDirectory {
             .get_tile_byte_range(x, y)
             .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
         let compressed_bytes = reader.get_bytes(range).await?;
+        let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
+        let (width, height) = compute_tile_dimensions(
+            x,
+            y,
+            self.image_width,
+            self.image_height,
+            self.tile_width,
+            self.tile_height,
+            self.rows_per_strip,
+        );
+
         Ok(Tile {
             x,
             y,
+            data_type,
+            width,
+            height,
+            planar_configuration: self.planar_configuration,
+            samples_per_pixel: self.samples_per_pixel,
             predictor: self.predictor.unwrap_or(Predictor::None),
             predictor_info: PredictorInfo::from_ifd(self),
             compressed_bytes,
@@ -719,6 +735,7 @@ impl ImageFileDirectory {
         assert_eq!(x.len(), y.len(), "x and y should have same len");
 
         let predictor_info = PredictorInfo::from_ifd(self);
+        let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
 
         // 1: Get all the byte ranges for all tiles
         let byte_ranges = x
@@ -736,9 +753,25 @@ impl ImageFileDirectory {
         // 3: Create tile objects
         let mut tiles = vec![];
         for ((compressed_bytes, &x), &y) in buffers.into_iter().zip(x).zip(y) {
+            // Calculate actual tile dimensions accounting for edge tiles
+            let (width, height) = compute_tile_dimensions(
+                x,
+                y,
+                self.image_width,
+                self.image_height,
+                self.tile_width,
+                self.tile_height,
+                self.rows_per_strip,
+            );
+
             let tile = Tile {
                 x,
                 y,
+                data_type,
+                width,
+                height,
+                planar_configuration: self.planar_configuration,
+                samples_per_pixel: self.samples_per_pixel,
                 predictor: self.predictor.unwrap_or(Predictor::None),
                 predictor_info,
                 compressed_bytes,
@@ -757,5 +790,160 @@ impl ImageFileDirectory {
         let x_count = (self.image_width as f64 / self.tile_width? as f64).ceil();
         let y_count = (self.image_height as f64 / self.tile_height? as f64).ceil();
         Some((x_count as usize, y_count as usize))
+    }
+}
+
+/// Calculate the actual pixel dimensions of a tile at position (x, y).
+///
+/// Edge tiles may be smaller than the nominal tile dimensions when the image
+/// dimensions are not exact multiples of the tile dimensions.
+///
+/// # Arguments
+/// * `x` - Tile column index (0-based)
+/// * `y` - Tile row index (0-based)
+/// * `image_width` - Total image width in pixels
+/// * `image_height` - Total image height in pixels
+/// * `tile_width` - Nominal tile width (None for stripped images)
+/// * `tile_height` - Nominal tile height (None for stripped images)
+/// * `rows_per_strip` - Rows per strip for stripped images (None for tiled images)
+///
+/// # Returns
+/// A tuple of (actual_width, actual_height) in pixels
+pub(crate) fn compute_tile_dimensions(
+    x: usize,
+    y: usize,
+    image_width: u32,
+    image_height: u32,
+    tile_width: Option<u32>,
+    tile_height: Option<u32>,
+    rows_per_strip: Option<u32>,
+) -> (u32, u32) {
+    // For tiled images (both tile_width and tile_height must be present)
+    if let (Some(tile_width), Some(tile_height)) = (tile_width, tile_height) {
+        let x_offset = (x as u32) * tile_width;
+        let y_offset = (y as u32) * tile_height;
+
+        let actual_width = std::cmp::min(tile_width, image_width.saturating_sub(x_offset));
+        let actual_height = std::cmp::min(tile_height, image_height.saturating_sub(y_offset));
+
+        (actual_width, actual_height)
+    } else {
+        // For stripped images (or fallback)
+        let strip_height = rows_per_strip.unwrap_or(image_height);
+        let y_offset = (y as u32) * strip_height;
+        let actual_height = std::cmp::min(strip_height, image_height.saturating_sub(y_offset));
+
+        (image_width, actual_height)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tile_dimensions_full_tiles() {
+        // 512x512 image with 256x256 tiles - all tiles are full size
+        assert_eq!(
+            compute_tile_dimensions(0, 0, 512, 512, Some(256), Some(256), None),
+            (256, 256),
+            "Top-left tile should be full size"
+        );
+        assert_eq!(
+            compute_tile_dimensions(1, 0, 512, 512, Some(256), Some(256), None),
+            (256, 256),
+            "Top-right tile should be full size"
+        );
+        assert_eq!(
+            compute_tile_dimensions(0, 1, 512, 512, Some(256), Some(256), None),
+            (256, 256),
+            "Bottom-left tile should be full size"
+        );
+        assert_eq!(
+            compute_tile_dimensions(1, 1, 512, 512, Some(256), Some(256), None),
+            (256, 256),
+            "Bottom-right tile should be full size"
+        );
+    }
+
+    #[test]
+    fn test_tile_dimensions_edge_tiles() {
+        // 500x500 image with 256x256 tiles - edge tiles are partial
+        assert_eq!(
+            compute_tile_dimensions(0, 0, 500, 500, Some(256), Some(256), None),
+            (256, 256),
+            "Top-left tile should be full size"
+        );
+        assert_eq!(
+            compute_tile_dimensions(1, 0, 500, 500, Some(256), Some(256), None),
+            (244, 256),
+            "Top-right edge tile should be 244 pixels wide"
+        );
+        assert_eq!(
+            compute_tile_dimensions(0, 1, 500, 500, Some(256), Some(256), None),
+            (256, 244),
+            "Bottom-left edge tile should be 244 pixels tall"
+        );
+        assert_eq!(
+            compute_tile_dimensions(1, 1, 500, 500, Some(256), Some(256), None),
+            (244, 244),
+            "Bottom-right corner tile should be 244x244"
+        );
+    }
+
+    #[test]
+    fn test_strip_dimensions() {
+        // 1024x768 stripped image with 128 rows per strip
+        assert_eq!(
+            compute_tile_dimensions(0, 0, 1024, 768, None, None, Some(128)),
+            (1024, 128),
+            "First strip should be full width and height"
+        );
+        assert_eq!(
+            compute_tile_dimensions(0, 5, 1024, 768, None, None, Some(128)),
+            (1024, 128),
+            "Middle strip should be full size"
+        );
+        assert_eq!(
+            compute_tile_dimensions(0, 5, 1024, 768, None, None, Some(128)),
+            (1024, 128),
+            "Last strip (768 / 128 = 6 strips, index 5) should be full height"
+        );
+    }
+
+    #[test]
+    fn test_strip_dimensions_partial_last_strip() {
+        // 1024x700 stripped image with 128 rows per strip
+        // Last strip should be: 700 - (5 * 128) = 60 rows
+        assert_eq!(
+            compute_tile_dimensions(0, 0, 1024, 700, None, None, Some(128)),
+            (1024, 128),
+            "First strip should be full height"
+        );
+        assert_eq!(
+            compute_tile_dimensions(0, 5, 1024, 700, None, None, Some(128)),
+            (1024, 60),
+            "Last strip should be 60 pixels tall"
+        );
+    }
+
+    #[test]
+    fn test_single_tile_image() {
+        // Image smaller than tile size
+        assert_eq!(
+            compute_tile_dimensions(0, 0, 100, 100, Some(256), Some(256), None),
+            (100, 100),
+            "Single tile should match image dimensions"
+        );
+    }
+
+    #[test]
+    fn test_strip_default_height() {
+        // Stripped image with no rows_per_strip (defaults to full image height)
+        assert_eq!(
+            compute_tile_dimensions(0, 0, 1024, 768, None, None, None),
+            (1024, 768),
+            "Strip should default to full image height"
+        );
     }
 }

@@ -1,4 +1,5 @@
 use async_tiff::Tile;
+use bytes::Bytes;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3_async_runtimes::tokio::future_into_py;
@@ -70,11 +71,12 @@ impl PyTile {
         let tile = self.0.take().unwrap();
 
         future_into_py(py, async move {
-            let decoded_bytes = pool
+            let array = pool
                 .spawn_async(move || tile.decode(&decoder_registry))
                 .await
-                .unwrap();
-            Ok(PyBytes::new(decoded_bytes))
+                .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            let (array, _shape, _data_type) = array.into_inner();
+            Ok(PyBytes::new(Bytes::from_owner(array)))
         })
     }
 }

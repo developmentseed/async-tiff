@@ -57,7 +57,7 @@ pub trait Decoder: Debug + Send + Sync {
         buffer: Bytes,
         photometric_interpretation: PhotometricInterpretation,
         jpeg_tables: Option<&[u8]>,
-    ) -> AsyncTiffResult<Bytes>;
+    ) -> AsyncTiffResult<Vec<u8>>;
 }
 
 /// A decoder for the Deflate compression method.
@@ -70,11 +70,11 @@ impl Decoder for DeflateDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
-    ) -> AsyncTiffResult<Bytes> {
+    ) -> AsyncTiffResult<Vec<u8>> {
         let mut decoder = ZlibDecoder::new(Cursor::new(buffer));
         let mut buf = Vec::new();
         decoder.read_to_end(&mut buf)?;
-        Ok(buf.into())
+        Ok(buf)
     }
 }
 
@@ -88,7 +88,7 @@ impl Decoder for JPEGDecoder {
         buffer: Bytes,
         photometric_interpretation: PhotometricInterpretation,
         jpeg_tables: Option<&[u8]>,
-    ) -> AsyncTiffResult<Bytes> {
+    ) -> AsyncTiffResult<Vec<u8>> {
         decode_modern_jpeg(buffer, photometric_interpretation, jpeg_tables)
     }
 }
@@ -103,11 +103,11 @@ impl Decoder for LZWDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
-    ) -> AsyncTiffResult<Bytes> {
+    ) -> AsyncTiffResult<Vec<u8>> {
         // https://github.com/image-rs/image-tiff/blob/90ae5b8e54356a35e266fb24e969aafbcb26e990/src/decoder/stream.rs#L147
         let mut decoder = weezl::decode::Decoder::with_tiff_size_switch(weezl::BitOrder::Msb, 8);
         let decoded = decoder.decode(&buffer).expect("failed to decode LZW data");
-        Ok(decoded.into())
+        Ok(decoded)
     }
 }
 
@@ -121,8 +121,8 @@ impl Decoder for UncompressedDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
-    ) -> AsyncTiffResult<Bytes> {
-        Ok(buffer)
+    ) -> AsyncTiffResult<Vec<u8>> {
+        Ok(buffer.to_vec())
     }
 }
 
@@ -136,11 +136,11 @@ impl Decoder for ZstdDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
-    ) -> AsyncTiffResult<Bytes> {
+    ) -> AsyncTiffResult<Vec<u8>> {
         let mut decoder = zstd::Decoder::new(Cursor::new(buffer))?;
         let mut buf = Vec::new();
         decoder.read_to_end(&mut buf)?;
-        Ok(buf.into())
+        Ok(buf)
     }
 }
 
@@ -149,7 +149,7 @@ fn decode_modern_jpeg(
     buf: Bytes,
     photometric_interpretation: PhotometricInterpretation,
     jpeg_tables: Option<&[u8]>,
-) -> AsyncTiffResult<Bytes> {
+) -> AsyncTiffResult<Vec<u8>> {
     // Construct new jpeg_reader wrapping a SmartReader.
     //
     // JPEG compression in TIFF allows saving quantization and/or huffman tables in one central
@@ -195,5 +195,5 @@ fn decode_modern_jpeg(
     }
 
     let data = decoder.decode()?;
-    Ok(data.into())
+    Ok(data)
 }
