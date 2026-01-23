@@ -32,7 +32,7 @@ impl Array {
         // Validate that the data length matches the expected size
         let expected_len = shape[0] * shape[1] * shape[2];
 
-        let typed_data = TypedArray::new(data, data_type);
+        let typed_data = TypedArray::try_new(data, data_type)?;
         if typed_data.len() != expected_len {
             return Err(AsyncTiffError::General(format!("Internal error: incorrect shape or data length passed to Array::try_new. Got data length {}, expected {}", typed_data.len(), expected_len)));
         }
@@ -100,80 +100,146 @@ pub enum TypedArray {
 
 impl TypedArray {
     /// Create a new TypedArray from raw byte data and a specified DataType.
-    pub fn new(data: Vec<u8>, data_type: Option<DataType>) -> Self {
+    ///
+    /// Returns an error if the data length is not divisible by the element size.
+    pub fn try_new(data: Vec<u8>, data_type: Option<DataType>) -> AsyncTiffResult<Self> {
         match data_type {
-            None | Some(DataType::UInt8) => TypedArray::UInt8(data),
+            None | Some(DataType::UInt8) => Ok(TypedArray::UInt8(data)),
             Some(DataType::UInt16) => {
-                TypedArray::UInt16(try_cast_vec(data).unwrap_or_else(|(_, data)| {
-                    // Fallback to manual conversion when not aligned
-                    data.chunks_exact(2)
-                        .map(|b| u16::from_ne_bytes([b[0], b[1]]))
-                        .collect()
-                }))
+                if !data.len().is_multiple_of(2) {
+                    return Err(AsyncTiffError::General(format!(
+                        "Data length {} is not divisible by UInt16 size (2 bytes)",
+                        data.len()
+                    )));
+                }
+                Ok(TypedArray::UInt16(try_cast_vec(data).unwrap_or_else(
+                    |(_, data)| {
+                        // Fallback to manual conversion when not aligned
+                        data.chunks_exact(2)
+                            .map(|b| u16::from_ne_bytes([b[0], b[1]]))
+                            .collect()
+                    },
+                )))
             }
             Some(DataType::UInt32) => {
-                TypedArray::UInt32(try_cast_vec(data).unwrap_or_else(|(_, data)| {
-                    // Fallback to manual conversion when not aligned
-                    data.chunks_exact(4)
-                        .map(|b| u32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
-                        .collect()
-                }))
+                if !data.len().is_multiple_of(4) {
+                    return Err(AsyncTiffError::General(format!(
+                        "Data length {} is not divisible by UInt32 size (4 bytes)",
+                        data.len()
+                    )));
+                }
+                Ok(TypedArray::UInt32(try_cast_vec(data).unwrap_or_else(
+                    |(_, data)| {
+                        // Fallback to manual conversion when not aligned
+                        data.chunks_exact(4)
+                            .map(|b| u32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+                            .collect()
+                    },
+                )))
             }
             Some(DataType::UInt64) => {
-                TypedArray::UInt64(try_cast_vec(data).unwrap_or_else(|(_, data)| {
-                    // Fallback to manual conversion when not aligned
-                    data.chunks_exact(8)
-                        .map(|b| {
-                            u64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
-                        })
-                        .collect()
-                }))
+                if !data.len().is_multiple_of(8) {
+                    return Err(AsyncTiffError::General(format!(
+                        "Data length {} is not divisible by UInt64 size (8 bytes)",
+                        data.len()
+                    )));
+                }
+                Ok(TypedArray::UInt64(try_cast_vec(data).unwrap_or_else(
+                    |(_, data)| {
+                        // Fallback to manual conversion when not aligned
+                        data.chunks_exact(8)
+                            .map(|b| {
+                                u64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
+                            })
+                            .collect()
+                    },
+                )))
             }
             // Casting u8 to i8 is safe as they have the same memory representation
-            Some(DataType::Int8) => TypedArray::Int8(cast_vec(data)),
+            Some(DataType::Int8) => Ok(TypedArray::Int8(cast_vec(data))),
             Some(DataType::Int16) => {
-                TypedArray::Int16(try_cast_vec(data).unwrap_or_else(|(_, data)| {
-                    // Fallback to manual conversion when not aligned
-                    data.chunks_exact(2)
-                        .map(|b| i16::from_ne_bytes([b[0], b[1]]))
-                        .collect()
-                }))
+                if !data.len().is_multiple_of(2) {
+                    return Err(AsyncTiffError::General(format!(
+                        "Data length {} is not divisible by Int16 size (2 bytes)",
+                        data.len()
+                    )));
+                }
+                Ok(TypedArray::Int16(try_cast_vec(data).unwrap_or_else(
+                    |(_, data)| {
+                        // Fallback to manual conversion when not aligned
+                        data.chunks_exact(2)
+                            .map(|b| i16::from_ne_bytes([b[0], b[1]]))
+                            .collect()
+                    },
+                )))
             }
             Some(DataType::Int32) => {
-                TypedArray::Int32(try_cast_vec(data).unwrap_or_else(|(_, data)| {
-                    // Fallback to manual conversion when not aligned
-                    data.chunks_exact(4)
-                        .map(|b| i32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
-                        .collect()
-                }))
+                if !data.len().is_multiple_of(4) {
+                    return Err(AsyncTiffError::General(format!(
+                        "Data length {} is not divisible by Int32 size (4 bytes)",
+                        data.len()
+                    )));
+                }
+                Ok(TypedArray::Int32(try_cast_vec(data).unwrap_or_else(
+                    |(_, data)| {
+                        // Fallback to manual conversion when not aligned
+                        data.chunks_exact(4)
+                            .map(|b| i32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+                            .collect()
+                    },
+                )))
             }
             Some(DataType::Int64) => {
-                TypedArray::Int64(try_cast_vec(data).unwrap_or_else(|(_, data)| {
-                    // Fallback to manual conversion when not aligned
-                    data.chunks_exact(8)
-                        .map(|b| {
-                            i64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
-                        })
-                        .collect()
-                }))
+                if !data.len().is_multiple_of(8) {
+                    return Err(AsyncTiffError::General(format!(
+                        "Data length {} is not divisible by Int64 size (8 bytes)",
+                        data.len()
+                    )));
+                }
+                Ok(TypedArray::Int64(try_cast_vec(data).unwrap_or_else(
+                    |(_, data)| {
+                        // Fallback to manual conversion when not aligned
+                        data.chunks_exact(8)
+                            .map(|b| {
+                                i64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
+                            })
+                            .collect()
+                    },
+                )))
             }
             Some(DataType::Float32) => {
-                TypedArray::Float32(try_cast_vec(data).unwrap_or_else(|(_, data)| {
-                    // Fallback to manual conversion when not aligned
-                    data.chunks_exact(4)
-                        .map(|b| f32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
-                        .collect()
-                }))
+                if !data.len().is_multiple_of(4) {
+                    return Err(AsyncTiffError::General(format!(
+                        "Data length {} is not divisible by Float32 size (4 bytes)",
+                        data.len()
+                    )));
+                }
+                Ok(TypedArray::Float32(try_cast_vec(data).unwrap_or_else(
+                    |(_, data)| {
+                        // Fallback to manual conversion when not aligned
+                        data.chunks_exact(4)
+                            .map(|b| f32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+                            .collect()
+                    },
+                )))
             }
             Some(DataType::Float64) => {
-                TypedArray::Float64(try_cast_vec(data).unwrap_or_else(|(_, data)| {
-                    // Fallback to manual conversion when not aligned
-                    data.chunks_exact(8)
-                        .map(|b| {
-                            f64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
-                        })
-                        .collect()
-                }))
+                if !data.len().is_multiple_of(8) {
+                    return Err(AsyncTiffError::General(format!(
+                        "Data length {} is not divisible by Float64 size (8 bytes)",
+                        data.len()
+                    )));
+                }
+                Ok(TypedArray::Float64(try_cast_vec(data).unwrap_or_else(
+                    |(_, data)| {
+                        // Fallback to manual conversion when not aligned
+                        data.chunks_exact(8)
+                            .map(|b| {
+                                f64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
+                            })
+                            .collect()
+                    },
+                )))
             }
         }
     }
