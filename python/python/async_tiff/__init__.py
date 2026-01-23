@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING
 
 from ._async_tiff import (
     Array,
-    Decoder,
     DecoderRegistry,
     GeoKeyDirectory,
     ImageFileDirectory,
@@ -11,6 +10,7 @@ from ._async_tiff import (
     ObspecInput,
     Tile,
 )
+from ._decoder_runtime import Decoder
 
 from ._async_tiff import ___version  # noqa: F403 # pyright:ignore[reportAttributeAccessIssue]
 
