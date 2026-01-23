@@ -30,8 +30,6 @@ jobs:
 
       # Use ruff-action so we get annotations in the Github UI
       - uses: astral-sh/ruff-action@v3
-        with:
-          args: "format --check --diff"
 
   test:
     name: Test

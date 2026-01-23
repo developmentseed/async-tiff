@@ -44,3 +44,6 @@ addopts = "--color=yes"
 asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.ruff.lint]
+select = ["I"]
