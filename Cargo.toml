@@ -20,15 +20,15 @@ jpeg2k = { version = "0.10.1", optional = true }
 ndarray = { version = "0.17", optional = true }
 num_enum = "0.7.3"
 object_store = { version = "0.13", optional = true }
-reqwest = { version = "0.12", default-features = false, optional = true }
-thiserror = "1"
+reqwest = { version = "0.13", default-features = false, optional = true }
+thiserror = "2"
 tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
 weezl = "0.1.0"
 zstd = "0.13"
 
 [dev-dependencies]
 object_store = { version = "0.13", features = ["http"] }
-tiff = "0.9.1"
+tiff = "0.11"
 tokio = { version = "1.9", features = [
     "macros",
     "fs",
