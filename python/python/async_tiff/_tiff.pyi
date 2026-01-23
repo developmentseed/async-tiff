@@ -1,15 +1,8 @@
-from typing import Protocol
-
-# Fix exports
-from obspec._get import GetRangeAsync, GetRangesAsync
-
+from ._input import ObspecInput
 from ._ifd import ImageFileDirectory
 from ._tile import Tile
 from .enums import Endianness
 from .store import ObjectStore
-
-class ObspecInput(GetRangeAsync, GetRangesAsync, Protocol):
-    """Supported obspec input to reader."""
 
 class TIFF:
     @classmethod

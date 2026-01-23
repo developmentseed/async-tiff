@@ -4,7 +4,6 @@ from ._geo import GeoKeyDirectory
 from ._ifd import ImageFileDirectory
 from ._thread_pool import ThreadPool
 from ._tiff import TIFF
-from ._tiff import ObspecInput
 from ._tile import Tile
 
 __all__ = [
@@ -14,6 +13,5 @@ __all__ = [
     "ImageFileDirectory",
     "ThreadPool",
     "TIFF",
-    "ObspecInput",
     "Tile",
 ]

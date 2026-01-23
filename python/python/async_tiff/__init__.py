@@ -7,10 +7,10 @@ from ._async_tiff import (
     ImageFileDirectory,
     ThreadPool,
     TIFF,
-    ObspecInput,
     Tile,
 )
 from ._decoder_runtime import Decoder
+from ._input import ObspecInput
 
 from ._async_tiff import ___version  # noqa: F403 # pyright:ignore[reportAttributeAccessIssue]
 
