@@ -125,28 +125,22 @@ impl Decoder for JPEG2kDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
-    ) -> AsyncTiffResult<Bytes> {
+    ) -> AsyncTiffResult<Vec<u8>> {
         let decoder = jpeg2k::DecodeParameters::new();
 
         let image = jpeg2k::Image::from_bytes_with(&buffer, decoder)?;
 
         let id = image.get_pixels(None)?;
-
-        let out = match id.data {
+        match id.data {
             jpeg2k::ImagePixelData::L8(items)
             | jpeg2k::ImagePixelData::La8(items)
             | jpeg2k::ImagePixelData::Rgb8(items)
-            | jpeg2k::ImagePixelData::Rgba8(items) => Bytes::from_owner(items),
+            | jpeg2k::ImagePixelData::Rgba8(items) => Ok(items),
             jpeg2k::ImagePixelData::L16(items)
             | jpeg2k::ImagePixelData::La16(items)
             | jpeg2k::ImagePixelData::Rgb16(items)
-            | jpeg2k::ImagePixelData::Rgba16(items) => {
-                let bytes = bytemuck::try_cast_slice(&items).unwrap();
-                Bytes::from_owner(bytes.to_vec())
-            }
-        };
-
-        Ok(Bytes::from_owner(out))
+            | jpeg2k::ImagePixelData::Rgba16(items) => Ok(bytemuck::cast_vec(items)),
+        }
     }
 }
 
