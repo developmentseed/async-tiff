@@ -65,7 +65,7 @@ fn data_type_to_numpy_char(dtype: &DataType) -> char {
     }
 }
 
-/// Returns the buffer protocol format string including endianness.
+/// Returns the buffer protocol format string type character (without endianness prefix).
 ///
 /// The format string uses Python's struct module syntax:
 ///   - 'B'/'b' = unsigned/signed 8-bit
@@ -94,6 +94,24 @@ fn data_type_to_buffer_format(data_type: &DataType) -> &'static CStr {
     }
 }
 
+/// Parses a buffer protocol format string into a DataType.
+///
+/// Accepts format strings with optional endianness prefixes:
+/// - '<' = little-endian
+/// - '>' = big-endian
+/// - '@', '=', '|' = native endianness
+///
+/// Followed by a type character:
+/// - 'B'/'b' = unsigned/signed 8-bit
+/// - 'H'/'h' = unsigned/signed 16-bit
+/// - 'I'/'i' = unsigned/signed 32-bit
+/// - 'Q'/'q' = unsigned/signed 64-bit
+/// - 'f'/'d' = 32/64-bit float
+///
+/// Examples: "<H", ">f", "B", "@i"
+///
+/// Note: The endianness prefix is accepted but not returned. Callers should
+/// validate that the actual data endianness matches separately if needed.
 fn parse_buffer_format_string(s: &str) -> PyResult<DataType> {
     let mut chars = s.chars();
 
@@ -173,7 +191,7 @@ pub struct PyArray {
     /// Stored as `Box` for the same reason as `shape`.
     strides: Box<[isize; 3]>,
 
-    /// The data type and endianness of array elements.
+    /// The data type of array elements.
     data_type: DataType,
 }
 
@@ -287,7 +305,7 @@ impl PyArray {
 
         // Only provide format string if requested (PyBUF_FORMAT flag)
         (*view).format = if flags & ffi::PyBUF_FORMAT != 0 {
-            // SAFETY: buffer_format() returns a pointer to a static CStr
+            // SAFETY: data_type_to_buffer_format() returns a pointer to a static CStr
             data_type_to_buffer_format(&slf.data_type).as_ptr() as *mut std::ffi::c_char
         } else {
             std::ptr::null_mut()
