@@ -15,7 +15,7 @@ use crate::reader::StoreInput;
 use crate::tile::PyTile;
 use crate::PyImageFileDirectory;
 
-#[pyclass(name = "TIFF", frozen)]
+#[pyclass(name = "TIFF", frozen, subclass)]
 pub(crate) struct PyTIFF {
     tiff: TIFF,
     reader: Arc<dyn AsyncFileReader>,

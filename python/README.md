@@ -38,22 +38,18 @@ primary_ifd.bits_per_sample
 # [8, 8, 8]
 
 tile = await tiff.fetch_tile(0, 0, 4)
-decoded_bytes = await tile.decode_async()
+array = await tile.decode_async()
 
 # Use rasterio and matplotlib for visualization
 import numpy as np
 from rasterio.plot import reshape_as_raster, show
 
-# Wrap the rust buffer into a numpy array
-arr = np.frombuffer(decoded_bytes, np.uint8)
-
-# We first need to reshape the array into the *existing* "image" axes
-arr = arr.reshape(512, 512, 3)
+# Zero-copy conversion of the rust array into a numpy array
+np_array = np.asarray(array)
 
 # Then we need to reshape the "image" axes into "raster" axes
 # https://rasterio.readthedocs.io/en/stable/topics/image_processing.html
-arr = reshape_as_raster(arr)
-show(arr, adjust=True)
+show(reshape_as_raster(np_array), adjust=True)
 ```
 
 ![](assets/naip-example.jpg)
@@ -62,6 +58,7 @@ show(arr, adjust=True)
 ### Reading Sentinel 2 L2A
 
 ```py
+import numpy as np
 from async_tiff import TIFF
 from async_tiff.store import S3Store
 
@@ -81,6 +78,11 @@ primary_ifd.bits_per_sample[0]
 # 16
 
 tile = await tiff.fetch_tile(0, 0, 0)
-decoded_bytes = await tile.decode_async()
+array = await tile.decode_async()
+
+# Zero-copy conversion of the rust array into a numpy array
+np_array = np.asarray(array)
+np_array.shape
+# (1024, 1024, 1)
 ```
 

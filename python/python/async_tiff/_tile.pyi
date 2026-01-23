@@ -1,5 +1,6 @@
 from collections.abc import Buffer
 
+from ._array import Array
 from .enums import CompressionMethod
 from ._decoder import DecoderRegistry
 from ._thread_pool import ThreadPool
@@ -23,7 +24,7 @@ class Tile:
         *,
         decoder_registry: DecoderRegistry | None = None,
         pool: ThreadPool | None = None,
-    ) -> Buffer:
+    ) -> Array:
         """Decode this tile's data.
 
         Keyword Args:
@@ -31,5 +32,5 @@ class Tile:
             pool: the thread pool on which to run decompression. Defaults to None.
 
         Returns:
-            Decoded tile data as a buffer.
+            Decoded tile data as an Array instance.
         """

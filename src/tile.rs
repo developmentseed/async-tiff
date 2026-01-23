@@ -1,9 +1,11 @@
 use bytes::Bytes;
 
+use crate::array::Array;
 use crate::decoder::DecoderRegistry;
 use crate::error::{AsyncTiffResult, TiffError, TiffUnsupportedError};
 use crate::predictor::{fix_endianness, unpredict_float, unpredict_hdiff, PredictorInfo};
-use crate::tags::{CompressionMethod, PhotometricInterpretation, Predictor};
+use crate::tags::{CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor};
+use crate::DataType;
 
 /// A TIFF Tile response.
 ///
@@ -13,10 +15,15 @@ use crate::tags::{CompressionMethod, PhotometricInterpretation, Predictor};
 /// This is returned by `fetch_tile`.
 ///
 /// A strip of a stripped tiff is an image-width, rows-per-strip tile.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Tile {
     pub(crate) x: usize,
     pub(crate) y: usize,
+    pub(crate) data_type: Option<DataType>,
+    pub(crate) samples_per_pixel: u16,
+    pub(crate) width: u32,
+    pub(crate) height: u32,
+    pub(crate) planar_configuration: PlanarConfiguration,
     pub(crate) predictor: Predictor,
     pub(crate) predictor_info: PredictorInfo,
     pub(crate) compressed_bytes: Bytes,
@@ -64,7 +71,7 @@ impl Tile {
     ///
     /// Decoding is separate from fetching so that sync and async operations do not block the same
     /// runtime.
-    pub fn decode(self, decoder_registry: &DecoderRegistry) -> AsyncTiffResult<Bytes> {
+    pub fn decode(self, decoder_registry: &DecoderRegistry) -> AsyncTiffResult<Array> {
         let decoder = decoder_registry
             .as_ref()
             .get(&self.compression_method)
@@ -72,24 +79,47 @@ impl Tile {
                 TiffUnsupportedError::UnsupportedCompressionMethod(self.compression_method),
             ))?;
 
-        let decoded_tile = decoder.decode_tile(
+        let mut decoded_tile = decoder.decode_tile(
             self.compressed_bytes.clone(),
             self.photometric_interpretation,
             self.jpeg_tables.as_deref(),
         )?;
 
-        match self.predictor {
-            Predictor::None => Ok(fix_endianness(
-                decoded_tile,
-                self.predictor_info.endianness(),
-                self.predictor_info.bits_per_sample(),
-            )),
+        let decoded = match self.predictor {
+            Predictor::None => {
+                fix_endianness(
+                    &mut decoded_tile,
+                    self.predictor_info.endianness(),
+                    self.predictor_info.bits_per_sample(),
+                );
+                Ok(decoded_tile)
+            }
             Predictor::Horizontal => {
                 unpredict_hdiff(decoded_tile, &self.predictor_info, self.x as _)
             }
             Predictor::FloatingPoint => {
                 unpredict_float(decoded_tile, &self.predictor_info, self.x as _, self.y as _)
             }
-        }
+        }?;
+
+        let shape = infer_shape(
+            self.planar_configuration,
+            self.width as _,
+            self.height as _,
+            self.samples_per_pixel as _,
+        );
+        Array::try_new(decoded, shape, self.data_type)
+    }
+}
+
+fn infer_shape(
+    planar_configuration: PlanarConfiguration,
+    width: usize,
+    height: usize,
+    samples_per_pixel: usize,
+) -> [usize; 3] {
+    match planar_configuration {
+        PlanarConfiguration::Chunky => [height, width, samples_per_pixel],
+        PlanarConfiguration::Planar => [samples_per_pixel, height, width],
     }
 }

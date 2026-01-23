@@ -5,6 +5,7 @@ use pyo3_async_runtimes::tokio::future_into_py;
 use pyo3_bytes::PyBytes;
 use tokio_rayon::AsyncThreadPool;
 
+use crate::array::PyArray;
 use crate::decoder::get_default_decoder_registry;
 use crate::enums::PyCompressionMethod;
 use crate::thread_pool::{get_default_pool, PyThreadPool};
@@ -70,11 +71,11 @@ impl PyTile {
         let tile = self.0.take().unwrap();
 
         future_into_py(py, async move {
-            let decoded_bytes = pool
+            let array = pool
                 .spawn_async(move || tile.decode(&decoder_registry))
                 .await
-                .unwrap();
-            Ok(PyBytes::new(decoded_bytes))
+                .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            PyArray::try_new(array)
         })
     }
 }

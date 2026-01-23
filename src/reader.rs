@@ -225,6 +225,19 @@ pub enum Endianness {
     BigEndian,
 }
 
+impl Endianness {
+    /// Check if the endianness matches the native endianness of the host system.
+    pub fn is_native(&self) -> bool {
+        let native_endianness = if cfg!(target_endian = "little") {
+            Endianness::LittleEndian
+        } else {
+            Endianness::BigEndian
+        };
+
+        *self == native_endianness
+    }
+}
+
 pub(crate) struct EndianAwareReader {
     reader: Reader<Bytes>,
     endianness: Endianness,
