@@ -9,7 +9,7 @@ from async_tiff.store import LocalStore
 from pathlib import Path
 
 
-FIXTURES_DIR = Path(__file__).parent.parent.parent / "tests" / "images"
+FIXTURES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "other"
 
 
 async def load_tiff(filename: str):
