@@ -1,10 +1,11 @@
 use std::env::current_dir;
 use std::sync::Arc;
 
+use object_store::local::LocalFileSystem;
+
 use crate::metadata::TiffMetadataReader;
 use crate::reader::{AsyncFileReader, ObjectReader};
 use crate::TIFF;
-use object_store::local::LocalFileSystem;
 
 const TEST_IMAGE_DIR: &str = "fixtures/image-tiff/";
 

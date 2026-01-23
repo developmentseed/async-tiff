@@ -1,10 +1,11 @@
 use std::env;
 use std::sync::Arc;
 
+use object_store::local::LocalFileSystem;
+
 use crate::metadata::cache::ReadaheadMetadataCache;
 use crate::metadata::TiffMetadataReader;
 use crate::reader::{AsyncFileReader, ObjectReader};
-use object_store::local::LocalFileSystem;
 
 #[tokio::test]
 async fn test_parse_file_with_unknown_geokey() {

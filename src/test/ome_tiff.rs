@@ -2,12 +2,13 @@
 
 use std::sync::Arc;
 
+use reqwest::Url;
+
 use crate::metadata::cache::ReadaheadMetadataCache;
 use crate::metadata::TiffMetadataReader;
 use crate::reader::{AsyncFileReader, ObjectReader};
 use crate::tags::PhotometricInterpretation;
 use crate::TIFF;
-use reqwest::Url;
 
 async fn open_remote_tiff(url: &str) -> TIFF {
     let parsed_url = Url::parse(url).expect("failed parsing url");

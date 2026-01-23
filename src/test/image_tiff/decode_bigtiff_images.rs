@@ -1,7 +1,6 @@
 extern crate tiff;
 
 use crate::tags::PhotometricInterpretation;
-
 use crate::test::image_tiff::util::open_tiff;
 
 #[tokio::test]
