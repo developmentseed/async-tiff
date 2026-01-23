@@ -139,8 +139,8 @@ pub struct ImageFileDirectory {
     pub(crate) model_tiepoint: Option<Vec<f64>>,
 
     // GDAL tags
-    // no_data
-    // gdal_metadata
+    pub(crate) gdal_nodata: Option<String>,
+    pub(crate) gdal_metadata: Option<String>,
     pub(crate) other_tags: HashMap<Tag, TagValue>,
 }
 
@@ -188,6 +188,8 @@ impl ImageFileDirectory {
         let mut model_tiepoint = None;
         let mut geo_ascii_params: Option<String> = None;
         let mut geo_double_params: Option<Vec<f64>> = None;
+        let mut gdal_nodata = None;
+        let mut gdal_metadata = None;
 
         let mut other_tags = HashMap::new();
 
@@ -256,7 +258,8 @@ impl ImageFileDirectory {
                 Tag::ModelTiepointTag => model_tiepoint = Some(value.into_f64_vec()?),
                 Tag::GeoAsciiParamsTag => geo_ascii_params = Some(value.into_string()?),
                 Tag::GeoDoubleParamsTag => geo_double_params = Some(value.into_f64_vec()?),
-                // Tag::GdalNodata
+                Tag::GdalNodata => gdal_nodata = Some(value.into_string()?),
+                Tag::GdalMetadata => gdal_metadata = Some(value.into_string()?),
                 // Tags for which the tiff crate doesn't have a hard-coded enum variant
                 Tag::Unknown(DOCUMENT_NAME) => document_name = Some(value.into_string()?),
                 _ => {
@@ -402,6 +405,8 @@ impl ImageFileDirectory {
             geo_key_directory,
             model_pixel_scale,
             model_tiepoint,
+            gdal_nodata,
+            gdal_metadata,
             other_tags,
         })
     }
@@ -636,6 +641,20 @@ impl ImageFileDirectory {
     /// <https://web.archive.org/web/20240329145303/https://www.awaresystems.be/imaging/tiff/tifftags/modeltiepointtag.html>
     pub fn model_tiepoint(&self) -> Option<&[f64]> {
         self.model_tiepoint.as_deref()
+    }
+
+    /// GDAL NoData value
+    /// <https://gdal.org/en/stable/drivers/raster/gtiff.html#nodata-value>
+    pub fn gdal_nodata(&self) -> Option<&str> {
+        self.gdal_nodata.as_deref()
+    }
+
+    /// GDAL Metadata XML information
+    ///
+    /// Non standard metadata items are grouped together into a XML string stored in the non
+    /// standard `TIFFTAG_GDAL_METADATA` ASCII tag (code `42112`).
+    pub fn gdal_metadata(&self) -> Option<&str> {
+        self.gdal_metadata.as_deref()
     }
 
     /// Tags for which the tiff crate doesn't have a hard-coded enum variant.

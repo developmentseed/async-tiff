@@ -221,6 +221,16 @@ impl PyImageFileDirectory {
     }
 
     #[getter]
+    pub fn gdal_nodata(&self) -> Option<&str> {
+        self.0.gdal_nodata()
+    }
+
+    #[getter]
+    pub fn gdal_metadata(&self) -> Option<&str> {
+        self.0.gdal_metadata()
+    }
+
+    #[getter]
     pub fn other_tags(&self) -> HashMap<u16, PyValue> {
         let iter = self
             .0
@@ -327,6 +337,12 @@ impl PyImageFileDirectory {
         if self.model_tiepoint().is_some() {
             keys.push("model_tiepoint");
         }
+        if self.gdal_nodata().is_some() {
+            keys.push("gdal_nodata");
+        }
+        if self.gdal_metadata().is_some() {
+            keys.push("gdal_metadata");
+        }
 
         keys
     }
@@ -376,6 +392,8 @@ impl PyImageFileDirectory {
             "model_pixel_scale" => self.model_pixel_scale().into_bound_py_any(py),
             "model_tiepoint" => self.model_tiepoint().into_bound_py_any(py),
             "other_tags" => self.other_tags().into_bound_py_any(py),
+            "gdal_nodata" => self.gdal_nodata().into_bound_py_any(py),
+            "gdal_metadata" => self.gdal_metadata().into_bound_py_any(py),
             _ => Err(pyo3::exceptions::PyKeyError::new_err(format!(
                 "Unknown IFD property: {}",
                 key

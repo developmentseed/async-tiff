@@ -24,6 +24,11 @@ async def test_cog_s3():
     assert ifd.tile_height == 1024
     assert ifd.tile_width == 1024
     assert ifd.photometric_interpretation == enums.PhotometricInterpretation.BlackIsZero
+    assert ifd.gdal_nodata == "0"
+    assert (
+        ifd.gdal_metadata
+        == '<GDALMetadata>\n  <Item name="OVR_RESAMPLING_ALG">AVERAGE</Item>\n</GDALMetadata>\n'
+    )
 
     gkd = ifd.geo_key_directory
     assert gkd is not None, "GeoKeyDirectory should exist"
