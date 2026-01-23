@@ -32,5 +32,5 @@ class Tile:
             pool: the thread pool on which to run decompression. Defaults to None.
 
         Returns:
-            Decoded tile data as a buffer.
+            Decoded tile data as an Array instance.
         """
