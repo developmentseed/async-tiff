@@ -7,8 +7,7 @@ use async_tiff::TIFF;
 use pyo3::exceptions::{PyIndexError, PyTypeError};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
-use pyo3_async_runtimes::tokio::future_into_py;
-use pyo3_async_runtimes::tokio::get_runtime;
+use pyo3_async_runtimes::tokio::{future_into_py, get_runtime};
 
 use crate::enums::PyEndianness;
 use crate::error::PyAsyncTiffResult;
