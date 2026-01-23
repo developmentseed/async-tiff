@@ -16,7 +16,7 @@ use async_tiff::error::{AsyncTiffError, AsyncTiffResult};
 use async_tiff::metadata::cache::ReadaheadMetadataCache;
 use async_tiff::metadata::TiffMetadataReader;
 use async_tiff::reader::{AsyncFileReader, ObjectReader};
-use async_tiff::{ImageFileDirectory, Tile};
+use async_tiff::{Array, ImageFileDirectory, Tile};
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use object_store::path::Path;
 use object_store::{parse_url, ObjectStore};
@@ -74,7 +74,7 @@ fn open_tiff(fpath: &str) -> AsyncTiffResult<Vec<Tile>> {
 }
 
 // Do actual decoding of compressed TIFF tiles using multi-threading
-fn decode_tiff(tiles: Vec<Tile>) -> AsyncTiffResult<Vec<u8>> {
+fn decode_tiff(tiles: Vec<Tile>) -> AsyncTiffResult<Vec<Array>> {
     let decoder_registry = DecoderRegistry::default();
 
     // Do actual decoding of TIFF tile data (multi-threaded using rayon)
@@ -83,21 +83,21 @@ fn decode_tiff(tiles: Vec<Tile>) -> AsyncTiffResult<Vec<u8>> {
         .build()
         .map_err(|err| AsyncTiffError::External(Box::new(err)))?;
 
-    let tile_bytes: Vec<u8> = pool.install(|| {
+    let tile_arrays: Vec<Array> = pool.install(|| {
         tiles
             .into_par_iter()
-            .flat_map_iter(|tile| tile.decode(&decoder_registry).unwrap())
+            .map(|tile| tile.decode(&decoder_registry).unwrap())
             .collect()
     });
-    assert_eq!(tile_bytes.len(), 363528192); // 363528192 = 1849 * 196608, should be
-                                             // 361681200 if mask padding is removed
+    assert_eq!(tile_arrays.len(), 363528192); // 363528192 = 1849 * 196608, should be
+                                              // 361681200 if mask padding is removed
 
-    Ok(tile_bytes)
+    Ok(tile_arrays)
 }
 
 fn read_tiff(fpath: &str) -> AsyncTiffResult<()> {
     let compressed_tiles: Vec<Tile> = open_tiff(fpath)?;
-    let _decoded_tiles: Vec<u8> = decode_tiff(compressed_tiles)?;
+    let _decoded_tiles: Vec<Array> = decode_tiff(compressed_tiles)?;
     Ok(())
 }
 
