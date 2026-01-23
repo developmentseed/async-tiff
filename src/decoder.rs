@@ -45,6 +45,8 @@ impl Default for DecoderRegistry {
         registry.insert(CompressionMethod::LZW, Box::new(LZWDecoder) as _);
         registry.insert(CompressionMethod::ModernJPEG, Box::new(JPEGDecoder) as _);
         registry.insert(CompressionMethod::ZSTD, Box::new(ZstdDecoder) as _);
+        #[cfg(feature = "jpeg2k")]
+        registry.insert(CompressionMethod::JPEG2k, Box::new(JPEG2kDecoder) as _);
         Self(registry)
     }
 }
@@ -108,6 +110,37 @@ impl Decoder for LZWDecoder {
         let mut decoder = weezl::decode::Decoder::with_tiff_size_switch(weezl::BitOrder::Msb, 8);
         let decoded = decoder.decode(&buffer).expect("failed to decode LZW data");
         Ok(decoded)
+    }
+}
+
+/// A decoder for the LZW compression method.
+#[cfg(feature = "jpeg2k")]
+#[derive(Debug, Clone)]
+pub struct JPEG2kDecoder;
+
+#[cfg(feature = "jpeg2k")]
+impl Decoder for JPEG2kDecoder {
+    fn decode_tile(
+        &self,
+        buffer: Bytes,
+        _photometric_interpretation: PhotometricInterpretation,
+        _jpeg_tables: Option<&[u8]>,
+    ) -> AsyncTiffResult<Vec<u8>> {
+        let decoder = jpeg2k::DecodeParameters::new();
+
+        let image = jpeg2k::Image::from_bytes_with(&buffer, decoder)?;
+
+        let id = image.get_pixels(None)?;
+        match id.data {
+            jpeg2k::ImagePixelData::L8(items)
+            | jpeg2k::ImagePixelData::La8(items)
+            | jpeg2k::ImagePixelData::Rgb8(items)
+            | jpeg2k::ImagePixelData::Rgba8(items) => Ok(items),
+            jpeg2k::ImagePixelData::L16(items)
+            | jpeg2k::ImagePixelData::La16(items)
+            | jpeg2k::ImagePixelData::Rgb16(items)
+            | jpeg2k::ImagePixelData::Rgba16(items) => Ok(bytemuck::cast_vec(items)),
+        }
     }
 }
 

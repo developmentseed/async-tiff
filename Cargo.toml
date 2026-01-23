@@ -11,10 +11,13 @@ readme = "README.md"
 [dependencies]
 async-trait = "0.1.89"
 byteorder = "1"
+bytemuck = { version = "1.24", features = ["extern_crate_alloc"] }
 bytes = "1.7.0"
 flate2 = "1.0.20"
 futures = "0.3.31"
 jpeg = { package = "jpeg-decoder", version = "0.3.0", default-features = false }
+jpeg2k = { version = "0.10.1", optional = true }
+ndarray = { version = "0.17", optional = true }
 num_enum = "0.7.3"
 object_store = { version = "0.12", optional = true }
 reqwest = { version = "0.12", default-features = false, optional = true }
@@ -38,9 +41,11 @@ tokio-test = "0.4.4"
 
 [features]
 default = ["object_store", "reqwest"]
-tokio = ["tokio/io-util"]
-reqwest = ["dep:reqwest"]
+jpeg2k = ["dep:jpeg2k"]
+ndarray = ["dep:ndarray"]
 object_store = ["dep:object_store"]
+reqwest = ["dep:reqwest"]
+tokio = ["tokio/io-util"]
 
 [package.metadata.cargo-all-features]
 

@@ -135,6 +135,7 @@ pub enum Tag(u16) unknown("A private or extension tag") {
     GeoDoubleParamsTag = 34736, // (SPOT)
     GeoAsciiParamsTag = 34737, // (SPOT)
     GdalNodata = 42113, // Contains areas with missing data
+    GdalMetadata = 42112, // XML metadata string
 }
 }
 
@@ -191,6 +192,7 @@ pub enum CompressionMethod(u16) unknown("A custom compression method") {
     Deflate = 8,
     OldDeflate = 0x80B2,
     PackBits = 0x8005,
+    JPEG2k = 34712,
 
     // Self-assigned by libtiff
     ZSTD = 0xC350,

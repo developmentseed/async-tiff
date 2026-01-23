@@ -36,6 +36,11 @@ pub enum AsyncTiffError {
     #[error(transparent)]
     JPEGDecodingError(#[from] jpeg::Error),
 
+    /// Error while decoding JPEG2000 data.
+    #[cfg(feature = "jpeg2k")]
+    #[error(transparent)]
+    JPEG2kDecodingError(#[from] jpeg2k::error::Error),
+
     /// Error while fetching data using object store.
     #[cfg(feature = "object_store")]
     #[error(transparent)]

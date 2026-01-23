@@ -37,6 +37,7 @@ mod test {
     use crate::metadata::cache::ReadaheadMetadataCache;
     use crate::metadata::TiffMetadataReader;
     use crate::reader::{AsyncFileReader, ObjectReader};
+    use crate::TypedArray;
 
     #[ignore = "local file"]
     #[tokio::test]
@@ -52,8 +53,12 @@ mod test {
 
         let ifd = &tiff.ifds[1];
         let tile = ifd.fetch_tile(0, 0, reader.as_ref()).await.unwrap();
-        let tile = tile.decode(&Default::default()).unwrap();
-        std::fs::write("img.buf", tile).unwrap();
+        let array = tile.decode(&Default::default()).unwrap();
+        let contents = match array.data() {
+            TypedArray::UInt8(data) => data,
+            _ => panic!("unexpected data type"),
+        };
+        std::fs::write("img.buf", contents).unwrap();
     }
 
     #[ignore = "local file"]
