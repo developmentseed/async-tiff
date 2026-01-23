@@ -1,4 +1,4 @@
-use std::env::current_dir;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use object_store::local::LocalFileSystem;
@@ -10,7 +10,8 @@ use crate::TIFF;
 const TEST_IMAGE_DIR: &str = "fixtures/image-tiff/";
 
 pub(crate) async fn open_tiff(filename: &str) -> TIFF {
-    let store = Arc::new(LocalFileSystem::new_with_prefix(current_dir().unwrap()).unwrap());
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let store = Arc::new(LocalFileSystem::new_with_prefix(&manifest_dir).unwrap());
     let path = format!("{TEST_IMAGE_DIR}/{filename}");
     let reader = Arc::new(ObjectReader::new(store.clone(), path.as_str().into()))
         as Arc<dyn AsyncFileReader>;
