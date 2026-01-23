@@ -37,8 +37,3 @@ class Array(Buffer):
         - PlanarConfiguration=2 (planar): (bands, height, width)
         """
         ...
-
-    @property
-    def buffer(self) -> Buffer:
-        """The raw bytes backing the array."""
-        ...
