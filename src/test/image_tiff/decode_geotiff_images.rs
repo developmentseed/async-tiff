@@ -1,6 +1,6 @@
 extern crate tiff;
 
-use crate::test::image_tiff::util::open_tiff;
+use crate::test::util::open_tiff;
 
 #[tokio::test]
 async fn test_geo_tiff() {
