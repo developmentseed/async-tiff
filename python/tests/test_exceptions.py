@@ -3,9 +3,8 @@ Unit tests to ensure that proper errors are raised instead of a panic.
 """
 
 import pytest
-from async_tiff.store import HTTPStore
-
 from async_tiff import TIFF
+from async_tiff.store import HTTPStore
 
 
 async def test_raise_typeerror_fetch_tile_striped_tiff():

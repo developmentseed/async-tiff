@@ -1,5 +1,7 @@
 from collections.abc import Iterable
 from typing import Any
+
+from ._geo import GeoKeyDirectory
 from .enums import (
     CompressionMethod,
     PhotometricInterpretation,
@@ -8,7 +10,6 @@ from .enums import (
     ResolutionUnit,
     SampleFormat,
 )
-from ._geo import GeoKeyDirectory
 
 Value = int | float | str | tuple[int, int] | list[Value]
 
