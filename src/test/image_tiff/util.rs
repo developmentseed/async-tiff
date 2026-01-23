@@ -7,7 +7,7 @@ use crate::metadata::TiffMetadataReader;
 use crate::reader::{AsyncFileReader, ObjectReader};
 use crate::TIFF;
 
-const TEST_IMAGE_DIR: &str = "fixtures/image-tiff/";
+const TEST_IMAGE_DIR: &str = "fixtures/";
 
 pub(crate) async fn open_tiff(filename: &str) -> TIFF {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
