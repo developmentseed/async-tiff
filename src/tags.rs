@@ -191,6 +191,7 @@ pub enum CompressionMethod(u16) unknown("A custom compression method") {
     Deflate = 8,
     OldDeflate = 0x80B2,
     PackBits = 0x8005,
+    JPEG2k = 34712,
 
     // Self-assigned by libtiff
     ZSTD = 0xC350,
