@@ -1,8 +1,8 @@
 extern crate tiff;
 
-use async_tiff::tags::PhotometricInterpretation;
+use crate::tags::PhotometricInterpretation;
 
-use crate::image_tiff::util::open_tiff;
+use crate::test::image_tiff::util::open_tiff;
 
 #[tokio::test]
 async fn cmyk_u8() {

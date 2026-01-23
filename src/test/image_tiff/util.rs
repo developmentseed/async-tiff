@@ -1,12 +1,12 @@
 use std::env::current_dir;
 use std::sync::Arc;
 
-use async_tiff::metadata::TiffMetadataReader;
-use async_tiff::reader::{AsyncFileReader, ObjectReader};
-use async_tiff::TIFF;
+use crate::metadata::TiffMetadataReader;
+use crate::reader::{AsyncFileReader, ObjectReader};
+use crate::TIFF;
 use object_store::local::LocalFileSystem;
 
-const TEST_IMAGE_DIR: &str = "tests/image_tiff/images/";
+const TEST_IMAGE_DIR: &str = "fixtures/image-tiff/";
 
 pub(crate) async fn open_tiff(filename: &str) -> TIFF {
     let store = Arc::new(LocalFileSystem::new_with_prefix(current_dir().unwrap()).unwrap());
