@@ -8,7 +8,6 @@ async fn test_geo_tiff() {
     for filename in filenames.iter() {
         let (_, tiff) = open_tiff(filename).await;
         let ifd = &tiff.ifds()[0];
-        dbg!(&ifd);
         assert_eq!(ifd.image_height(), 10);
         assert_eq!(ifd.image_width(), 10);
         assert_eq!(ifd.bits_per_sample(), vec![16; 5]);

@@ -1,31 +1,26 @@
+use crate::decoder::DecoderRegistry;
 use crate::tags::PhotometricInterpretation;
 use crate::test::util::open_tiff;
 
 #[tokio::test]
-async fn test_big_tiff() {
-    let filenames = [
-        "image-tiff/bigtiff/BigTIFF.tif",
-        "image-tiff/bigtiff/BigTIFFMotorola.tif",
-        "image-tiff/bigtiff/BigTIFFLong.tif",
-    ];
-    for filename in filenames.iter() {
-        let tiff = open_tiff(filename).await;
-        let ifd = &tiff.ifds()[0];
-        assert_eq!(ifd.image_height(), 64);
-        assert_eq!(ifd.image_width(), 64);
-        assert_eq!(
-            ifd.photometric_interpretation(),
-            PhotometricInterpretation::RGB
-        );
-        assert!(ifd.bits_per_sample().iter().all(|x| *x == 8));
-        assert_eq!(
-            ifd.strip_offsets().expect("Cannot get StripOffsets"),
-            vec![16]
-        );
-        assert_eq!(ifd.rows_per_strip().expect("Cannot get RowsPerStrip"), 64);
-        assert_eq!(
-            ifd.strip_byte_counts().expect("Cannot get StripByteCounts"),
-            vec![12288]
-        );
-    }
+async fn test_unaligned() {
+    let filename =
+        "geotiff-test-data/rasterio_generated/fixtures/uint8_1band_deflate_block128_unaligned.tif";
+    let (reader, tiff) = open_tiff(filename).await;
+    let ifd = &tiff.ifds()[0];
+    assert_eq!(ifd.image_height(), 266);
+    assert_eq!(ifd.image_width(), 265);
+    assert_eq!(
+        ifd.photometric_interpretation(),
+        PhotometricInterpretation::BlackIsZero
+    );
+    assert_eq!(ifd.tile_width(), Some(128));
+    assert_eq!(ifd.tile_height(), Some(128));
+
+    let tile: crate::Tile = ifd.fetch_tile(2, 0, &reader).await.unwrap();
+
+    let decoder_registry = DecoderRegistry::default();
+    let array = tile.decode(&decoder_registry).unwrap();
+
+    assert_eq!(array.shape, [128, 128, 1])
 }
