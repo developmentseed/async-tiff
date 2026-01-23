@@ -146,9 +146,11 @@ impl Decoder for JPEG2kDecoder {
 }
 
 /// A decoder for the WebP compression method.
+#[cfg(feature = "webp")]
 #[derive(Debug, Clone)]
 pub struct WebPDecoder;
 
+#[cfg(feature = "webp")]
 impl Decoder for WebPDecoder {
     fn decode_tile(
         &self,
