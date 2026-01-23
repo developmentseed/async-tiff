@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 import sys
 from collections.abc import Buffer
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-if sys.version_info >= (3, 12):
-    from collections.abc import Buffer
-else:
-    from typing_extensions import Buffer
+if TYPE_CHECKING:
+    if sys.version_info >= (3, 12):
+        from collections.abc import Buffer
+    else:
+        from typing_extensions import Buffer
 
 
 class Decoder(Protocol):
