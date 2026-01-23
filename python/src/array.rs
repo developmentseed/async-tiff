@@ -33,11 +33,10 @@
 use std::ffi::CStr;
 use std::os::raw::c_int;
 
+use async_tiff::{Array, DataType, TypedArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::ffi;
 use pyo3::prelude::*;
-
-use async_tiff::{Array, DataType, TypedArray};
 use pyo3_bytes::PyBytes;
 
 /// Returns the numpy dtype type character for this data type.
