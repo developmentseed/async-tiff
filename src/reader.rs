@@ -147,6 +147,8 @@ impl ObjectReader {
     }
 
     async fn make_range_request(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        use object_store::ObjectStoreExt;
+
         let range = range.start as _..range.end as _;
         self.store
             .get_range(&self.path, range)
