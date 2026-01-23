@@ -9,12 +9,12 @@ use crate::TIFF;
 
 const TEST_IMAGE_DIR: &str = "fixtures/";
 
-pub(crate) async fn open_tiff(filename: &str) -> TIFF {
+pub(crate) async fn open_tiff(filename: &str) -> (Arc<dyn AsyncFileReader>, TIFF) {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let store = Arc::new(LocalFileSystem::new_with_prefix(&manifest_dir).unwrap());
     let path = format!("{TEST_IMAGE_DIR}/{filename}");
     let reader = Arc::new(ObjectReader::new(store.clone(), path.as_str().into()))
         as Arc<dyn AsyncFileReader>;
     let mut metadata_reader = TiffMetadataReader::try_open(&reader).await.unwrap();
-    metadata_reader.read(&reader).await.unwrap()
+    (reader.clone(), metadata_reader.read(&reader).await.unwrap())
 }

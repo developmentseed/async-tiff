@@ -11,7 +11,7 @@ async fn test_big_tiff() {
         "image-tiff/bigtiff/BigTIFFLong.tif",
     ];
     for filename in filenames.iter() {
-        let tiff = open_tiff(filename).await;
+        let (_, tiff) = open_tiff(filename).await;
         let ifd = &tiff.ifds()[0];
         assert_eq!(ifd.image_height(), 64);
         assert_eq!(ifd.image_width(), 64);
