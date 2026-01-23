@@ -7,7 +7,7 @@ use std::io::{Cursor, Read};
 use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
 
-use crate::error::{AsyncTiffResult, TiffError, TiffUnsupportedError};
+use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffUnsupportedError};
 use crate::tags::{CompressionMethod, PhotometricInterpretation};
 
 /// A registry of decoders.
@@ -44,9 +44,10 @@ impl Default for DecoderRegistry {
         registry.insert(CompressionMethod::OldDeflate, Box::new(DeflateDecoder) as _);
         registry.insert(CompressionMethod::LZW, Box::new(LZWDecoder) as _);
         registry.insert(CompressionMethod::ModernJPEG, Box::new(JPEGDecoder) as _);
-        registry.insert(CompressionMethod::ZSTD, Box::new(ZstdDecoder) as _);
         #[cfg(feature = "jpeg2k")]
         registry.insert(CompressionMethod::JPEG2k, Box::new(JPEG2kDecoder) as _);
+        registry.insert(CompressionMethod::WebP, Box::new(WebPDecoder) as _);
+        registry.insert(CompressionMethod::ZSTD, Box::new(ZstdDecoder) as _);
         Self(registry)
     }
 }
@@ -141,6 +142,24 @@ impl Decoder for JPEG2kDecoder {
             | jpeg2k::ImagePixelData::Rgb16(items)
             | jpeg2k::ImagePixelData::Rgba16(items) => Ok(bytemuck::cast_vec(items)),
         }
+    }
+}
+
+/// A decoder for the WebP compression method.
+#[derive(Debug, Clone)]
+pub struct WebPDecoder;
+
+impl Decoder for WebPDecoder {
+    fn decode_tile(
+        &self,
+        buffer: Bytes,
+        _photometric_interpretation: PhotometricInterpretation,
+        _jpeg_tables: Option<&[u8]>,
+    ) -> AsyncTiffResult<Vec<u8>> {
+        let decoded = webp::Decoder::new(&buffer)
+            .decode()
+            .ok_or(AsyncTiffError::General("WebP decoding failed".to_string()))?;
+        Ok(decoded.to_vec())
     }
 }
 
