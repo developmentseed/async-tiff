@@ -1,6 +1,6 @@
 extern crate tiff;
 
-use async_tiff::tiff::tags::PhotometricInterpretation;
+use async_tiff::tags::PhotometricInterpretation;
 
 use crate::image_tiff::util::open_tiff;
 
@@ -220,6 +220,17 @@ async fn test_int16_rgb() {
     assert!(matches!(
         ifd.photometric_interpretation(),
         PhotometricInterpretation::RGB
+    ));
+    assert!(ifd.bits_per_sample().iter().all(|x| *x == 16));
+}
+
+#[tokio::test]
+async fn test_zstd_compression() {
+    let tiff = open_tiff("int16_zstd.tif").await;
+    let ifd = &tiff.ifds()[0];
+    assert!(matches!(
+        ifd.photometric_interpretation(),
+        PhotometricInterpretation::BlackIsZero
     ));
     assert!(ifd.bits_per_sample().iter().all(|x| *x == 16));
 }

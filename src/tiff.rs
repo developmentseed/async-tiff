@@ -1,20 +1,27 @@
 use crate::ifd::ImageFileDirectory;
+use crate::reader::Endianness;
 
 /// A TIFF file.
 #[derive(Debug, Clone)]
 pub struct TIFF {
+    endianness: Endianness,
     ifds: Vec<ImageFileDirectory>,
 }
 
 impl TIFF {
     /// Create a new TIFF from existing IFDs.
-    pub fn new(ifds: Vec<ImageFileDirectory>) -> Self {
-        Self { ifds }
+    pub fn new(ifds: Vec<ImageFileDirectory>, endianness: Endianness) -> Self {
+        Self { ifds, endianness }
     }
 
     /// Access the underlying Image File Directories.
     pub fn ifds(&self) -> &[ImageFileDirectory] {
         &self.ifds
+    }
+
+    /// Get the endianness of the TIFF file.
+    pub fn endianness(&self) -> Endianness {
+        self.endianness
     }
 }
 
@@ -23,12 +30,14 @@ mod test {
     use std::io::BufReader;
     use std::sync::Arc;
 
-    use crate::metadata::{PrefetchBuffer, TiffMetadataReader};
-    use crate::reader::{AsyncFileReader, ObjectReader};
-
-    use super::*;
     use object_store::local::LocalFileSystem;
     use tiff::decoder::{DecodingResult, Limits};
+
+    use super::*;
+    use crate::metadata::cache::ReadaheadMetadataCache;
+    use crate::metadata::TiffMetadataReader;
+    use crate::reader::{AsyncFileReader, ObjectReader};
+    use crate::TypedArray;
 
     #[ignore = "local file"]
     #[tokio::test]
@@ -37,22 +46,19 @@ mod test {
         let path = object_store::path::Path::parse("m_4007307_sw_18_060_20220803.tif").unwrap();
         let store = Arc::new(LocalFileSystem::new_with_prefix(folder).unwrap());
         let reader = Arc::new(ObjectReader::new(store, path)) as Arc<dyn AsyncFileReader>;
-        let prefetch_reader = PrefetchBuffer::new(reader.clone(), 32 * 1024)
-            .await
-            .unwrap();
-        let mut metadata_reader = TiffMetadataReader::try_open(&prefetch_reader)
-            .await
-            .unwrap();
-        let ifds = metadata_reader
-            .read_all_ifds(&prefetch_reader)
-            .await
-            .unwrap();
-        let tiff = TIFF::new(ifds);
+        let cached_reader = ReadaheadMetadataCache::new(reader.clone());
+        let mut metadata_reader = TiffMetadataReader::try_open(&cached_reader).await.unwrap();
+        let ifds = metadata_reader.read_all_ifds(&cached_reader).await.unwrap();
+        let tiff = TIFF::new(ifds, metadata_reader.endianness());
 
         let ifd = &tiff.ifds[1];
         let tile = ifd.fetch_tile(0, 0, reader.as_ref()).await.unwrap();
-        let tile = tile.decode(&Default::default()).unwrap();
-        std::fs::write("img.buf", tile).unwrap();
+        let array = tile.decode(&Default::default()).unwrap();
+        let contents = match array.data() {
+            TypedArray::UInt8(data) => data,
+            _ => panic!("unexpected data type"),
+        };
+        std::fs::write("img.buf", contents).unwrap();
     }
 
     #[ignore = "local file"]

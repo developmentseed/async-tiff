@@ -1,7 +1,9 @@
 #![deny(clippy::undocumented_unsafe_blocks)]
 
+mod array;
 mod decoder;
 mod enums;
+mod error;
 mod geo;
 mod ifd;
 mod reader;
@@ -12,6 +14,7 @@ mod value;
 
 use pyo3::prelude::*;
 
+use crate::array::PyArray;
 use crate::decoder::PyDecoderRegistry;
 use crate::geo::PyGeoKeyDirectory;
 use crate::ifd::PyImageFileDirectory;
@@ -55,6 +58,7 @@ fn _async_tiff(py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<PyImageFileDirectory>()?;
     m.add_class::<PyThreadPool>()?;
     m.add_class::<PyTIFF>()?;
+    m.add_class::<PyArray>()?;
 
     pyo3_object_store::register_store_module(py, m, "async_tiff", "store")?;
     pyo3_object_store::register_exceptions_module(py, m, "async_tiff", "exceptions")?;

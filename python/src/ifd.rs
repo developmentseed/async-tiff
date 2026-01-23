@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use async_tiff::ImageFileDirectory;
 use pyo3::prelude::*;
+use pyo3::IntoPyObjectExt;
 
 use crate::enums::{
     PyCompressionMethod, PyPhotometricInterpretation, PyPlanarConfiguration, PyPredictor,
@@ -10,7 +11,8 @@ use crate::enums::{
 use crate::geo::PyGeoKeyDirectory;
 use crate::value::PyValue;
 
-#[pyclass(name = "ImageFileDirectory")]
+#[pyclass(name = "ImageFileDirectory", frozen, eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct PyImageFileDirectory(ImageFileDirectory);
 
 #[pymethods]
@@ -219,6 +221,16 @@ impl PyImageFileDirectory {
     }
 
     #[getter]
+    pub fn gdal_nodata(&self) -> Option<&str> {
+        self.0.gdal_nodata()
+    }
+
+    #[getter]
+    pub fn gdal_metadata(&self) -> Option<&str> {
+        self.0.gdal_metadata()
+    }
+
+    #[getter]
     pub fn other_tags(&self) -> HashMap<u16, PyValue> {
         let iter = self
             .0
@@ -226,6 +238,167 @@ impl PyImageFileDirectory {
             .iter()
             .map(|(key, val)| (key.to_u16(), val.clone().into()));
         HashMap::from_iter(iter)
+    }
+
+    /// This exists to implement the Mapping protocol, so we support `dict(ifd)`.`
+    fn keys(&self) -> Vec<&'static str> {
+        // Always present keys
+        let mut keys = vec![
+            "image_width",
+            "image_height",
+            "bits_per_sample",
+            "compression",
+            "photometric_interpretation",
+            "samples_per_pixel",
+            "planar_configuration",
+            "sample_format",
+            "other_tags",
+        ];
+
+        // Optional keys
+        if self.new_subfile_type().is_some() {
+            keys.push("new_subfile_type");
+        }
+        if self.document_name().is_some() {
+            keys.push("document_name");
+        }
+        if self.image_description().is_some() {
+            keys.push("image_description");
+        }
+        if self.strip_offsets().is_some() {
+            keys.push("strip_offsets");
+        }
+        if self.orientation().is_some() {
+            keys.push("orientation");
+        }
+        if self.rows_per_strip().is_some() {
+            keys.push("rows_per_strip");
+        }
+        if self.strip_byte_counts().is_some() {
+            keys.push("strip_byte_counts");
+        }
+        if self.min_sample_value().is_some() {
+            keys.push("min_sample_value");
+        }
+        if self.max_sample_value().is_some() {
+            keys.push("max_sample_value");
+        }
+        if self.x_resolution().is_some() {
+            keys.push("x_resolution");
+        }
+        if self.y_resolution().is_some() {
+            keys.push("y_resolution");
+        }
+        if self.resolution_unit().is_some() {
+            keys.push("resolution_unit");
+        }
+        if self.software().is_some() {
+            keys.push("software");
+        }
+        if self.date_time().is_some() {
+            keys.push("date_time");
+        }
+        if self.artist().is_some() {
+            keys.push("artist");
+        }
+        if self.host_computer().is_some() {
+            keys.push("host_computer");
+        }
+        if self.predictor().is_some() {
+            keys.push("predictor");
+        }
+        if self.tile_width().is_some() {
+            keys.push("tile_width");
+        }
+        if self.tile_height().is_some() {
+            keys.push("tile_height");
+        }
+        if self.tile_offsets().is_some() {
+            keys.push("tile_offsets");
+        }
+        if self.tile_byte_counts().is_some() {
+            keys.push("tile_byte_counts");
+        }
+        if self.extra_samples().is_some() {
+            keys.push("extra_samples");
+        }
+        if self.jpeg_tables().is_some() {
+            keys.push("jpeg_tables");
+        }
+        if self.copyright().is_some() {
+            keys.push("copyright");
+        }
+        if self.geo_key_directory().is_some() {
+            keys.push("geo_key_directory");
+        }
+        if self.model_pixel_scale().is_some() {
+            keys.push("model_pixel_scale");
+        }
+        if self.model_tiepoint().is_some() {
+            keys.push("model_tiepoint");
+        }
+        if self.gdal_nodata().is_some() {
+            keys.push("gdal_nodata");
+        }
+        if self.gdal_metadata().is_some() {
+            keys.push("gdal_metadata");
+        }
+
+        keys
+    }
+
+    /// This exists to implement the Mapping protocol, so we support `dict(ifd)`.`
+    fn __iter__<'py>(&'py self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        self.keys().into_pyobject(py)?.call_method0("__iter__")
+    }
+
+    /// Get an IFD property by name
+    /// This exists to implement the Mapping protocol, so we support `dict(ifd)`.`
+    fn __getitem__<'py>(&self, py: Python<'py>, key: &str) -> PyResult<Bound<'py, PyAny>> {
+        match key {
+            "new_subfile_type" => self.new_subfile_type().into_bound_py_any(py),
+            "image_width" => self.image_width().into_bound_py_any(py),
+            "image_height" => self.image_height().into_bound_py_any(py),
+            "bits_per_sample" => self.bits_per_sample().into_bound_py_any(py),
+            "compression" => self.compression().into_bound_py_any(py),
+            "photometric_interpretation" => self.photometric_interpretation().into_bound_py_any(py),
+            "document_name" => self.document_name().into_bound_py_any(py),
+            "image_description" => self.image_description().into_bound_py_any(py),
+            "strip_offsets" => self.strip_offsets().into_bound_py_any(py),
+            "orientation" => self.orientation().into_bound_py_any(py),
+            "samples_per_pixel" => self.samples_per_pixel().into_bound_py_any(py),
+            "rows_per_strip" => self.rows_per_strip().into_bound_py_any(py),
+            "strip_byte_counts" => self.strip_byte_counts().into_bound_py_any(py),
+            "min_sample_value" => self.min_sample_value().into_bound_py_any(py),
+            "max_sample_value" => self.max_sample_value().into_bound_py_any(py),
+            "x_resolution" => self.x_resolution().into_bound_py_any(py),
+            "y_resolution" => self.y_resolution().into_bound_py_any(py),
+            "planar_configuration" => self.planar_configuration().into_bound_py_any(py),
+            "resolution_unit" => self.resolution_unit().into_bound_py_any(py),
+            "software" => self.software().into_bound_py_any(py),
+            "date_time" => self.date_time().into_bound_py_any(py),
+            "artist" => self.artist().into_bound_py_any(py),
+            "host_computer" => self.host_computer().into_bound_py_any(py),
+            "predictor" => self.predictor().into_bound_py_any(py),
+            "tile_width" => self.tile_width().into_bound_py_any(py),
+            "tile_height" => self.tile_height().into_bound_py_any(py),
+            "tile_offsets" => self.tile_offsets().into_bound_py_any(py),
+            "tile_byte_counts" => self.tile_byte_counts().into_bound_py_any(py),
+            "extra_samples" => self.extra_samples().into_bound_py_any(py),
+            "sample_format" => self.sample_format().into_bound_py_any(py),
+            "jpeg_tables" => self.jpeg_tables().into_bound_py_any(py),
+            "copyright" => self.copyright().into_bound_py_any(py),
+            "geo_key_directory" => self.geo_key_directory().into_bound_py_any(py),
+            "model_pixel_scale" => self.model_pixel_scale().into_bound_py_any(py),
+            "model_tiepoint" => self.model_tiepoint().into_bound_py_any(py),
+            "other_tags" => self.other_tags().into_bound_py_any(py),
+            "gdal_nodata" => self.gdal_nodata().into_bound_py_any(py),
+            "gdal_metadata" => self.gdal_metadata().into_bound_py_any(py),
+            _ => Err(pyo3::exceptions::PyKeyError::new_err(format!(
+                "Unknown IFD property: {}",
+                key
+            ))),
+        }
     }
 }
 

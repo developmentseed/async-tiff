@@ -24,4 +24,5 @@ Download the following file for use in the tests.
 
 ```shell
 aws s3 cp s3://naip-visualization/ny/2022/60cm/rgb/40073/m_4007307_sw_18_060_20220803.tif ./ --request-payer
+aws s3 cp s3://prd-tnm/StagedProducts/Elevation/13/TIFF/current/s14w171/USGS_13_s14w171.tif ./ --no-sign-request --region us-west-2
 ```

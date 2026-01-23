@@ -1,18 +1,26 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
+mod array;
+mod data_type;
+#[cfg(feature = "ndarray")]
+pub mod ndarray;
 pub mod reader;
 // TODO: maybe rename this mod
-mod cog;
 pub mod decoder;
 pub mod error;
 pub mod geo;
 mod ifd;
 pub mod metadata;
 pub mod predictor;
-pub mod tiff;
+mod tag_value;
+pub mod tags;
+mod tiff;
 mod tile;
 
-pub use cog::TIFF;
+pub use array::{Array, TypedArray};
+pub use data_type::DataType;
 pub use ifd::ImageFileDirectory;
+pub use tag_value::TagValue;
+pub use tiff::TIFF;
 pub use tile::Tile;

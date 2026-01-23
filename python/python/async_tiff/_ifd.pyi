@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+from typing import Any
 from .enums import (
     CompressionMethod,
     PhotometricInterpretation,
@@ -11,6 +13,14 @@ from ._geo import GeoKeyDirectory
 Value = int | float | str | tuple[int, int] | list[Value]
 
 class ImageFileDirectory:
+    def keys(self) -> list[str]:
+        """A list of string keys representing the IFD fields."""
+    def __eq__(self, value: object) -> bool: ...
+    def __iter__(self) -> Iterable[str]:
+        """An iterable of string keys representing the IFD fields."""
+    def __getitem__(self, key: str) -> Any:
+        """Access IFD fields by string key."""
+
     @property
     def new_subfile_type(self) -> int | None: ...
     @property
@@ -103,5 +113,9 @@ class ImageFileDirectory:
     def model_pixel_scale(self) -> list[float] | None: ...
     @property
     def model_tiepoint(self) -> list[float] | None: ...
+    @property
+    def gdal_nodata(self) -> str | None: ...
+    @property
+    def gdal_metadata(self) -> str | None: ...
     @property
     def other_tags(self) -> dict[int, Value]: ...

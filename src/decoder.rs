@@ -7,9 +7,8 @@ use std::io::{Cursor, Read};
 use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
 
-use crate::error::AsyncTiffResult;
-use crate::tiff::tags::{CompressionMethod, PhotometricInterpretation};
-use crate::tiff::{TiffError, TiffUnsupportedError};
+use crate::error::{AsyncTiffResult, TiffError, TiffUnsupportedError};
+use crate::tags::{CompressionMethod, PhotometricInterpretation};
 
 /// A registry of decoders.
 ///
@@ -39,12 +38,15 @@ impl AsMut<HashMap<CompressionMethod, Box<dyn Decoder>>> for DecoderRegistry {
 
 impl Default for DecoderRegistry {
     fn default() -> Self {
-        let mut registry = HashMap::with_capacity(5);
+        let mut registry = HashMap::with_capacity(6);
         registry.insert(CompressionMethod::None, Box::new(UncompressedDecoder) as _);
         registry.insert(CompressionMethod::Deflate, Box::new(DeflateDecoder) as _);
         registry.insert(CompressionMethod::OldDeflate, Box::new(DeflateDecoder) as _);
         registry.insert(CompressionMethod::LZW, Box::new(LZWDecoder) as _);
         registry.insert(CompressionMethod::ModernJPEG, Box::new(JPEGDecoder) as _);
+        registry.insert(CompressionMethod::ZSTD, Box::new(ZstdDecoder) as _);
+        #[cfg(feature = "jpeg2k")]
+        registry.insert(CompressionMethod::JPEG2k, Box::new(JPEG2kDecoder) as _);
         Self(registry)
     }
 }
@@ -57,7 +59,7 @@ pub trait Decoder: Debug + Send + Sync {
         buffer: Bytes,
         photometric_interpretation: PhotometricInterpretation,
         jpeg_tables: Option<&[u8]>,
-    ) -> AsyncTiffResult<Bytes>;
+    ) -> AsyncTiffResult<Vec<u8>>;
 }
 
 /// A decoder for the Deflate compression method.
@@ -70,11 +72,11 @@ impl Decoder for DeflateDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
-    ) -> AsyncTiffResult<Bytes> {
+    ) -> AsyncTiffResult<Vec<u8>> {
         let mut decoder = ZlibDecoder::new(Cursor::new(buffer));
         let mut buf = Vec::new();
         decoder.read_to_end(&mut buf)?;
-        Ok(buf.into())
+        Ok(buf)
     }
 }
 
@@ -88,7 +90,7 @@ impl Decoder for JPEGDecoder {
         buffer: Bytes,
         photometric_interpretation: PhotometricInterpretation,
         jpeg_tables: Option<&[u8]>,
-    ) -> AsyncTiffResult<Bytes> {
+    ) -> AsyncTiffResult<Vec<u8>> {
         decode_modern_jpeg(buffer, photometric_interpretation, jpeg_tables)
     }
 }
@@ -103,11 +105,42 @@ impl Decoder for LZWDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
-    ) -> AsyncTiffResult<Bytes> {
+    ) -> AsyncTiffResult<Vec<u8>> {
         // https://github.com/image-rs/image-tiff/blob/90ae5b8e54356a35e266fb24e969aafbcb26e990/src/decoder/stream.rs#L147
         let mut decoder = weezl::decode::Decoder::with_tiff_size_switch(weezl::BitOrder::Msb, 8);
         let decoded = decoder.decode(&buffer).expect("failed to decode LZW data");
-        Ok(decoded.into())
+        Ok(decoded)
+    }
+}
+
+/// A decoder for the LZW compression method.
+#[cfg(feature = "jpeg2k")]
+#[derive(Debug, Clone)]
+pub struct JPEG2kDecoder;
+
+#[cfg(feature = "jpeg2k")]
+impl Decoder for JPEG2kDecoder {
+    fn decode_tile(
+        &self,
+        buffer: Bytes,
+        _photometric_interpretation: PhotometricInterpretation,
+        _jpeg_tables: Option<&[u8]>,
+    ) -> AsyncTiffResult<Vec<u8>> {
+        let decoder = jpeg2k::DecodeParameters::new();
+
+        let image = jpeg2k::Image::from_bytes_with(&buffer, decoder)?;
+
+        let id = image.get_pixels(None)?;
+        match id.data {
+            jpeg2k::ImagePixelData::L8(items)
+            | jpeg2k::ImagePixelData::La8(items)
+            | jpeg2k::ImagePixelData::Rgb8(items)
+            | jpeg2k::ImagePixelData::Rgba8(items) => Ok(items),
+            jpeg2k::ImagePixelData::L16(items)
+            | jpeg2k::ImagePixelData::La16(items)
+            | jpeg2k::ImagePixelData::Rgb16(items)
+            | jpeg2k::ImagePixelData::Rgba16(items) => Ok(bytemuck::cast_vec(items)),
+        }
     }
 }
 
@@ -121,8 +154,26 @@ impl Decoder for UncompressedDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
-    ) -> AsyncTiffResult<Bytes> {
-        Ok(buffer)
+    ) -> AsyncTiffResult<Vec<u8>> {
+        Ok(buffer.to_vec())
+    }
+}
+
+/// A decoder for the Zstd compression method.
+#[derive(Debug, Clone)]
+pub struct ZstdDecoder;
+
+impl Decoder for ZstdDecoder {
+    fn decode_tile(
+        &self,
+        buffer: Bytes,
+        _photometric_interpretation: PhotometricInterpretation,
+        _jpeg_tables: Option<&[u8]>,
+    ) -> AsyncTiffResult<Vec<u8>> {
+        let mut decoder = zstd::Decoder::new(Cursor::new(buffer))?;
+        let mut buf = Vec::new();
+        decoder.read_to_end(&mut buf)?;
+        Ok(buf)
     }
 }
 
@@ -131,7 +182,7 @@ fn decode_modern_jpeg(
     buf: Bytes,
     photometric_interpretation: PhotometricInterpretation,
     jpeg_tables: Option<&[u8]>,
-) -> AsyncTiffResult<Bytes> {
+) -> AsyncTiffResult<Vec<u8>> {
     // Construct new jpeg_reader wrapping a SmartReader.
     //
     // JPEG compression in TIFF allows saving quantization and/or huffman tables in one central
@@ -177,5 +228,5 @@ fn decode_modern_jpeg(
     }
 
     let data = decoder.decode()?;
-    Ok(data.into())
+    Ok(data)
 }

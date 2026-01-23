@@ -1,4 +1,15 @@
+from collections.abc import Iterable
+from typing import Any
+
 class GeoKeyDirectory:
+    def keys(self) -> list[str]:
+        """A list of string keys representing the GeoKey fields."""
+    def __eq__(self, value: object) -> bool: ...
+    def __iter__(self) -> Iterable[str]:
+        """An iterable of string keys representing the GeoKey fields."""
+    def __getitem__(self, key: str) -> Any:
+        """Access GeoKey fields by string key."""
+
     @property
     def model_type(self) -> int | None: ...
     @property
