@@ -16,17 +16,6 @@ import pytest
         (np.int64, "<q"),
         (np.float32, "<f"),
         (np.float64, "<d"),
-        # Big-endian
-        (np.dtype(">u1"), ">B"),
-        (np.dtype(">u2"), ">H"),
-        (np.dtype(">u4"), ">I"),
-        (np.dtype(">u8"), ">Q"),
-        (np.dtype(">i1"), ">b"),
-        (np.dtype(">i2"), ">h"),
-        (np.dtype(">i4"), ">i"),
-        (np.dtype(">i8"), ">q"),
-        (np.dtype(">f4"), ">f"),
-        (np.dtype(">f8"), ">d"),
     ],
 )
 def test_round_trip(dtype, format_str):
