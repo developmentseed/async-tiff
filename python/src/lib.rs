@@ -20,6 +20,7 @@ use crate::geo::PyGeoKeyDirectory;
 use crate::ifd::PyImageFileDirectory;
 use crate::thread_pool::PyThreadPool;
 use crate::tiff::PyTIFF;
+use crate::tile::PyTile;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -58,6 +59,7 @@ fn _async_tiff(py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<PyImageFileDirectory>()?;
     m.add_class::<PyThreadPool>()?;
     m.add_class::<PyTIFF>()?;
+    m.add_class::<PyTile>()?;
     m.add_class::<PyArray>()?;
 
     pyo3_object_store::register_store_module(py, m, "async_tiff", "store")?;

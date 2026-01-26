@@ -7,6 +7,30 @@ on:
   pull_request:
 
 jobs:
+  lint-python:
+    name: Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+
+      - name: Install a specific version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      # Ensure docs build without warnings
+      - name: Check docs
+        if: "${{ matrix.python-version == 3.11 }}"
+        run: uv run --group docs mkdocs build --strict
+
+      # Use ruff-action so we get annotations in the Github UI
+      - uses: astral-sh/ruff-action@v3
+
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -14,7 +38,9 @@ jobs:
       run:
         working-directory: python
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -37,6 +63,9 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 

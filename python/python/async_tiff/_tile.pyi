@@ -1,9 +1,9 @@
 from collections.abc import Buffer
 
 from ._array import Array
-from .enums import CompressionMethod
 from ._decoder import DecoderRegistry
 from ._thread_pool import ThreadPool
+from .enums import CompressionMethod
 
 class Tile:
     """A representation of a TIFF image tile."""

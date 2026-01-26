@@ -1,6 +1,5 @@
-import pytest
 import numpy as np
-
+import pytest
 from async_tiff import TIFF, enums
 from async_tiff.store import LocalStore, S3Store
 

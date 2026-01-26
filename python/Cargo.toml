@@ -1,6 +1,6 @@
 [package]
 name = "py-async-tiff"
-version = "0.3.0"
+version = "0.4.0-beta.1"
 authors = ["Kyle Barron <kyle@developmentseed.org>"]
 edition = "2021"
 # description = "Fast, memory-efficient 2D spatial indexes for Python."
@@ -25,14 +25,14 @@ async-tiff = { path = "../", features = ["jpeg2k"] }
 async-trait = "0.1.89"
 bytes = "1.10.1"
 futures = "0.3.31"
-object_store = "0.12"
+object_store = "0.13"
 pyo3 = { version = "0.27.0", features = ["macros"] }
 pyo3-async-runtimes = "0.27"
 pyo3-bytes = "0.5"
-pyo3-object_store = "0.7.0"
+pyo3-object_store = "0.8.0"
 rayon = "1.11.0"
 tokio-rayon = "2.1.0"
-thiserror = "1"
+thiserror = "2"
 
 # We opt-in to using rustls as the TLS provider for reqwest, which is the HTTP
 # library used by object_store.

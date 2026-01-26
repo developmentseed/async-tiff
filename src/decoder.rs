@@ -14,12 +14,22 @@ use crate::tags::{CompressionMethod, PhotometricInterpretation};
 ///
 /// This allows end users to register their own decoders, for custom compression methods, or
 /// override the default decoder implementations.
+///
+/// ```
+/// use async_tiff::decoder::DecoderRegistry;
+///
+/// // Default registry includes Deflate, LZW, JPEG, ZSTD.
+/// let registry = DecoderRegistry::default();
+///
+/// // Empty registry for manual configuration.
+/// let empty = DecoderRegistry::empty();
+/// ```
 #[derive(Debug)]
 pub struct DecoderRegistry(HashMap<CompressionMethod, Box<dyn Decoder>>);
 
 impl DecoderRegistry {
     /// Create a new decoder registry with no decoders registered
-    pub fn new() -> Self {
+    pub fn empty() -> Self {
         Self(HashMap::new())
     }
 }
@@ -113,7 +123,7 @@ impl Decoder for LZWDecoder {
     }
 }
 
-/// A decoder for the LZW compression method.
+/// A decoder for the JPEG2000 compression method.
 #[cfg(feature = "jpeg2k")]
 #[derive(Debug, Clone)]
 pub struct JPEG2kDecoder;
