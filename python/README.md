@@ -38,7 +38,7 @@ primary_ifd.bits_per_sample
 # [8, 8, 8]
 
 tile = await tiff.fetch_tile(0, 0, 4)
-array = await tile.decode_async()
+array = await tile.decode()
 
 # Use rasterio and matplotlib for visualization
 import numpy as np
@@ -78,7 +78,7 @@ primary_ifd.bits_per_sample[0]
 # 16
 
 tile = await tiff.fetch_tile(0, 0, 0)
-array = await tile.decode_async()
+array = await tile.decode()
 
 # Zero-copy conversion of the rust array into a numpy array
 np_array = np.asarray(array)
