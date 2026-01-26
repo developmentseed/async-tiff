@@ -42,3 +42,18 @@ jobs:
         run: |
           cargo fmt --all --check -- --config imports_granularity=Module,group_imports=StdExternalCrate
           cargo fmt --all --check --manifest-path python/Cargo.toml -- --config imports_granularity=Module,group_imports=StdExternalCrate
+
+  docs-no-warnings:
+    name: Docs should build without warnings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: "recursive"
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Test that docs build without warnings
+        run: cargo doc --all-features --document-private-items
+        env:
+          RUSTDOCFLAGS: "-D warnings"
