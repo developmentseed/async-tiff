@@ -23,9 +23,10 @@ class Array(Buffer):
     ```
     """
 
-    def __init__(
-        self, data: Buffer, shape: tuple[int, int, int], format: str
-    ) -> None: ...
+    # This is intended only for tests
+    # def __init__(
+    #     self, data: Buffer, shape: tuple[int, int, int], format: str
+    # ) -> None: ...
     def __buffer__(self, flags: int) -> memoryview[int]: ...
     @property
     def shape(self) -> tuple[int, int, int]:

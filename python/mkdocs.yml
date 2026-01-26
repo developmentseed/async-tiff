@@ -26,6 +26,7 @@ nav:
       - api/tiff.md
       - api/ifd.md
       - api/tile.md
+      - api/array.md
       - api/geo.md
       - api/decoder.md
       - api/thread-pool.md
