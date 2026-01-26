@@ -3,6 +3,7 @@
 
 mod array;
 mod data_type;
+mod extension;
 #[cfg(feature = "ndarray")]
 pub mod ndarray;
 pub mod reader;
