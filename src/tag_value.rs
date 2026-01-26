@@ -13,7 +13,6 @@ use crate::error::{TiffError, TiffFormatError, TiffResult};
 /// Conversion methods like [`into_u16`](TagValue::into_u16) and
 /// [`into_f64_vec`](TagValue::into_f64_vec) handle widening casts and return an error on
 /// type mismatches.
-#[allow(unused_qualifications)]
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum TagValue {
