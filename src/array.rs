@@ -102,7 +102,7 @@ impl TypedArray {
     /// Create a new TypedArray from raw byte data and a specified DataType.
     ///
     /// Returns an error if the data length is not divisible by the element size.
-    pub fn try_new(data: Vec<u8>, data_type: Option<DataType>) -> AsyncTiffResult<Self> {
+    pub(crate) fn try_new(data: Vec<u8>, data_type: Option<DataType>) -> AsyncTiffResult<Self> {
         match data_type {
             None | Some(DataType::UInt8) => Ok(TypedArray::UInt8(data)),
             Some(DataType::UInt16) => {
