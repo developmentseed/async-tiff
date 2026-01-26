@@ -89,8 +89,15 @@ fn decode_tiff(tiles: Vec<Tile>) -> AsyncTiffResult<Vec<Array>> {
             .map(|tile| tile.decode(&decoder_registry).unwrap())
             .collect()
     });
-    assert_eq!(tile_arrays.len(), 363528192); // 363528192 = 1849 * 196608, should be
-                                              // 361681200 if mask padding is removed
+    assert_eq!(tile_arrays.len(), 1849); // x_count:43 * y_count:43 = 1849
+
+    // Verify byte length by summing all tiled arrays
+    let tile_bytes: usize = tile_arrays
+        .iter()
+        .map(|arr| arr.data().len())
+        .sum::<usize>();
+    assert_eq!(tile_bytes, 363528192); // 363528192 = 1849 * 196608, should be
+                                       // 361681200 if mask padding is removed
 
     Ok(tile_arrays)
 }
