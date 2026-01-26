@@ -32,7 +32,7 @@ async def test_ifd_dict():
         "photometric_interpretation": PhotometricInterpretation.BlackIsZero,
         "samples_per_pixel": 1,
         "planar_configuration": PlanarConfiguration.Chunky,
-        "sample_format": [SampleFormat.IEEEFP],
+        "sample_format": [SampleFormat.Float],
         "other_tags": {},
         "strip_offsets": [8],
         "rows_per_strip": 1,

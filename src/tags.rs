@@ -1,3 +1,5 @@
+//! TIFF tag definitions and enum types.
+
 #![allow(clippy::no_effect)]
 #![allow(missing_docs)]
 #![allow(clippy::upper_case_acronyms)]
@@ -200,6 +202,7 @@ pub enum CompressionMethod(u16) unknown("A custom compression method") {
 }
 
 tags! {
+/// The color space of the image data.
 pub enum PhotometricInterpretation(u16) {
     WhiteIsZero = 0,
     BlackIsZero = 1,
@@ -213,6 +216,7 @@ pub enum PhotometricInterpretation(u16) {
 }
 
 tags! {
+/// How pixel components are stored: contiguously (chunky) or in separate planes (planar).
 pub enum PlanarConfiguration(u16) {
     Chunky = 1,
     Planar = 2,
@@ -243,10 +247,11 @@ pub enum ResolutionUnit(u16) {
 }
 
 tags! {
+/// The format of sample values in each pixel (unsigned int, signed int, or floating point).
 pub enum SampleFormat(u16) unknown("An unknown extension sample format") {
     Uint = 1,
     Int = 2,
-    IEEEFP = 3,
+    Float = 3,
     Void = 4,
 }
 }
