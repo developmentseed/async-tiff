@@ -5,6 +5,7 @@ use bytes::Bytes;
 use num_enum::TryFromPrimitive;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError};
+use crate::extension::{ExtensionRegistry, TiffExtension};
 use crate::geo::{GeoKeyDirectory, GeoKeyTag};
 use crate::predictor::PredictorInfo;
 use crate::reader::{AsyncFileReader, Endianness};
@@ -133,15 +134,6 @@ pub struct ImageFileDirectory {
 
     pub(crate) copyright: Option<String>,
 
-    // Geospatial tags
-    pub(crate) geo_key_directory: Option<GeoKeyDirectory>,
-    pub(crate) model_pixel_scale: Option<Vec<f64>>,
-    pub(crate) model_tiepoint: Option<Vec<f64>>,
-    pub(crate) model_transformation: Option<Vec<f64>>,
-
-    // GDAL tags
-    pub(crate) gdal_nodata: Option<String>,
-    pub(crate) gdal_metadata: Option<String>,
     pub(crate) other_tags: HashMap<Tag, TagValue>,
 }
 
@@ -150,6 +142,7 @@ impl ImageFileDirectory {
     pub fn from_tags(
         tag_data: HashMap<Tag, TagValue>,
         endianness: Endianness,
+        extension_registry: &ExtensionRegistry,
     ) -> AsyncTiffResult<Self> {
         let mut new_subfile_type = None;
         let mut image_width = None;
@@ -184,16 +177,13 @@ impl ImageFileDirectory {
         let mut sample_format = None;
         let mut jpeg_tables = None;
         let mut copyright = None;
-        let mut geo_key_directory_data = None;
-        let mut model_pixel_scale = None;
-        let mut model_tiepoint = None;
-        let mut model_transformation = None;
-        let mut geo_ascii_params: Option<String> = None;
-        let mut geo_double_params: Option<Vec<f64>> = None;
-        let mut gdal_nodata = None;
-        let mut gdal_metadata = None;
 
         let mut other_tags = HashMap::new();
+        let mut extension_instances: HashMap<String, Box<dyn TiffExtension>> = extension_registry
+            .inner()
+            .iter()
+            .map(|(name, factory)| (name.clone(), factory.create()))
+            .collect();
 
         tag_data.into_iter().try_for_each(|(tag, value)| {
             match tag {
@@ -253,20 +243,15 @@ impl ImageFileDirectory {
                 Tag::JPEGTables => jpeg_tables = Some(value.into_u8_vec()?.into()),
                 Tag::Copyright => copyright = Some(value.into_string()?),
 
-                // Geospatial tags
-                // http://geotiff.maptools.org/spec/geotiff2.4.html
-                Tag::GeoKeyDirectory => geo_key_directory_data = Some(value.into_u16_vec()?),
-                Tag::ModelPixelScale => model_pixel_scale = Some(value.into_f64_vec()?),
-                Tag::ModelTiepoint => model_tiepoint = Some(value.into_f64_vec()?),
-                Tag::ModelTransformation => model_transformation = Some(value.into_f64_vec()?),
-                Tag::GeoAsciiParams => geo_ascii_params = Some(value.into_string()?),
-                Tag::GeoDoubleParams => geo_double_params = Some(value.into_f64_vec()?),
-                Tag::GdalNodata => gdal_nodata = Some(value.into_string()?),
-                Tag::GdalMetadata => gdal_metadata = Some(value.into_string()?),
                 // Tags for which the tiff crate doesn't have a hard-coded enum variant
                 Tag::Unknown(DOCUMENT_NAME) => document_name = Some(value.into_string()?),
-                _ => {
-                    other_tags.insert(tag, value);
+                Tag::Unknown(extension_tag_name) => {
+                    for extension in extension_instances.values() {
+                        if extension.supported_tags().contains(&extension_tag_name) {
+                            extension.insert(extension_tag_name, value);
+                            return Ok(());
+                        }
+                    }
                 }
             };
             Ok::<_, TiffError>(())
@@ -629,43 +614,43 @@ impl ImageFileDirectory {
         self.copyright.as_deref()
     }
 
-    /// Geospatial tags
-    /// <https://web.archive.org/web/20240329145313/https://www.awaresystems.be/imaging/tiff/tifftags/geokeydirectorytag.html>
-    pub fn geo_key_directory(&self) -> Option<&GeoKeyDirectory> {
-        self.geo_key_directory.as_ref()
-    }
+    // /// Geospatial tags
+    // /// <https://web.archive.org/web/20240329145313/https://www.awaresystems.be/imaging/tiff/tifftags/geokeydirectorytag.html>
+    // pub fn geo_key_directory(&self) -> Option<&GeoKeyDirectory> {
+    //     self.geo_key_directory.as_ref()
+    // }
 
-    /// Used in interchangeable GeoTIFF files.
-    /// <https://web.archive.org/web/20240329145238/https://www.awaresystems.be/imaging/tiff/tifftags/modelpixelscaletag.html>
-    pub fn model_pixel_scale(&self) -> Option<&[f64]> {
-        self.model_pixel_scale.as_deref()
-    }
+    // /// Used in interchangeable GeoTIFF files.
+    // /// <https://web.archive.org/web/20240329145238/https://www.awaresystems.be/imaging/tiff/tifftags/modelpixelscaletag.html>
+    // pub fn model_pixel_scale(&self) -> Option<&[f64]> {
+    //     self.model_pixel_scale.as_deref()
+    // }
 
-    /// Used in interchangeable GeoTIFF files.
-    /// <https://web.archive.org/web/20240329145303/https://www.awaresystems.be/imaging/tiff/tifftags/modeltiepointtag.html>
-    pub fn model_tiepoint(&self) -> Option<&[f64]> {
-        self.model_tiepoint.as_deref()
-    }
+    // /// Used in interchangeable GeoTIFF files.
+    // /// <https://web.archive.org/web/20240329145303/https://www.awaresystems.be/imaging/tiff/tifftags/modeltiepointtag.html>
+    // pub fn model_tiepoint(&self) -> Option<&[f64]> {
+    //     self.model_tiepoint.as_deref()
+    // }
 
-    /// Stores a full 4×4 affine transformation matrix that maps pixel/line coordinates directly
-    /// into model (map) coordinates.
-    pub fn model_transformation(&self) -> Option<&[f64]> {
-        self.model_transformation.as_deref()
-    }
+    // /// Stores a full 4×4 affine transformation matrix that maps pixel/line coordinates directly
+    // /// into model (map) coordinates.
+    // pub fn model_transformation(&self) -> Option<&[f64]> {
+    //     self.model_transformation.as_deref()
+    // }
 
-    /// GDAL NoData value
-    /// <https://gdal.org/en/stable/drivers/raster/gtiff.html#nodata-value>
-    pub fn gdal_nodata(&self) -> Option<&str> {
-        self.gdal_nodata.as_deref()
-    }
+    // /// GDAL NoData value
+    // /// <https://gdal.org/en/stable/drivers/raster/gtiff.html#nodata-value>
+    // pub fn gdal_nodata(&self) -> Option<&str> {
+    //     self.gdal_nodata.as_deref()
+    // }
 
-    /// GDAL Metadata XML information
-    ///
-    /// Non standard metadata items are grouped together into a XML string stored in the non
-    /// standard `TIFFTAG_GDAL_METADATA` ASCII tag (code `42112`).
-    pub fn gdal_metadata(&self) -> Option<&str> {
-        self.gdal_metadata.as_deref()
-    }
+    // /// GDAL Metadata XML information
+    // ///
+    // /// Non standard metadata items are grouped together into a XML string stored in the non
+    // /// standard `TIFFTAG_GDAL_METADATA` ASCII tag (code `42112`).
+    // pub fn gdal_metadata(&self) -> Option<&str> {
+    //     self.gdal_metadata.as_deref()
+    // }
 
     /// Tags for which the tiff crate doesn't have a hard-coded enum variant.
     pub fn other_tags(&self) -> &HashMap<Tag, TagValue> {

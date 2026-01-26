@@ -2,6 +2,7 @@
 #![allow(missing_docs)]
 #![allow(clippy::upper_case_acronyms)]
 
+#[macro_export]
 macro_rules! tags {
     {
         // Permit arbitrary meta items, which include documentation.
@@ -127,15 +128,6 @@ pub enum Tag(u16) unknown("A private or extension tag") {
     SMaxSampleValue = 341, // TODO add support
     // JPEG
     JPEGTables = 347,
-    // GeoTIFF
-    ModelPixelScale = 33550, // (SoftDesk)
-    ModelTransformation = 34264, // (JPL Carto Group)
-    ModelTiepoint = 33922, // (Intergraph)
-    GeoKeyDirectory = 34735, // (SPOT)
-    GeoDoubleParams = 34736, // (SPOT)
-    GeoAsciiParams = 34737, // (SPOT)
-    GdalNodata = 42113, // Contains areas with missing data
-    GdalMetadata = 42112, // XML metadata string
 }
 }
 
