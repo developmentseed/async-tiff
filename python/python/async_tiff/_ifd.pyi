@@ -1,5 +1,7 @@
 from collections.abc import Iterable
 from typing import Any
+
+from ._geo import GeoKeyDirectory
 from .enums import (
     CompressionMethod,
     PhotometricInterpretation,
@@ -8,7 +10,6 @@ from .enums import (
     ResolutionUnit,
     SampleFormat,
 )
-from ._geo import GeoKeyDirectory
 
 Value = int | float | str | tuple[int, int] | list[Value]
 
@@ -113,6 +114,8 @@ class ImageFileDirectory:
     def model_pixel_scale(self) -> list[float] | None: ...
     @property
     def model_tiepoint(self) -> list[float] | None: ...
+    @property
+    def model_transformation(self) -> list[float] | None: ...
     @property
     def gdal_nodata(self) -> str | None: ...
     @property

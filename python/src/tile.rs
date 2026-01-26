@@ -8,6 +8,7 @@ use tokio_rayon::AsyncThreadPool;
 use crate::array::PyArray;
 use crate::decoder::get_default_decoder_registry;
 use crate::enums::PyCompressionMethod;
+use crate::error::PyAsyncTiffResult;
 use crate::thread_pool::{get_default_pool, PyThreadPool};
 use crate::PyDecoderRegistry;
 
@@ -55,8 +56,24 @@ impl PyTile {
             .map(|t| t.compression_method().into())
     }
 
+    fn decode_sync<'py>(
+        &mut self,
+        py: Python<'py>,
+        decoder_registry: Option<&PyDecoderRegistry>,
+    ) -> PyAsyncTiffResult<PyArray> {
+        let decoder_registry = decoder_registry
+            .map(|r| r.inner().clone())
+            .unwrap_or_else(|| get_default_decoder_registry(py));
+        let tile = self
+            .0
+            .take()
+            .ok_or(PyValueError::new_err("Tile has been consumed"))?;
+        let array = tile.decode(&decoder_registry)?;
+        PyArray::try_new(array)
+    }
+
     #[pyo3(signature = (*, decoder_registry=None, pool=None))]
-    fn decode_async<'py>(
+    fn decode<'py>(
         &mut self,
         py: Python<'py>,
         decoder_registry: Option<&PyDecoderRegistry>,
@@ -68,14 +85,17 @@ impl PyTile {
         let pool = pool
             .map(|p| Ok(p.inner().clone()))
             .unwrap_or_else(|| get_default_pool(py))?;
-        let tile = self.0.take().unwrap();
+        let tile = self
+            .0
+            .take()
+            .ok_or(PyValueError::new_err("Tile has been consumed"))?;
 
         future_into_py(py, async move {
             let array = pool
-                .spawn_async(move || tile.decode(&decoder_registry))
+                .spawn_fifo_async(move || tile.decode(&decoder_registry))
                 .await
                 .map_err(|e| PyValueError::new_err(e.to_string()))?;
-            PyArray::try_new(array)
+            PyArray::try_new(array).map_err(|err| err.into())
         })
     }
 }

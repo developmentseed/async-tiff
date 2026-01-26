@@ -1,4 +1,4 @@
-//! Predictors for no predictor, horizontal and floating-point
+//! TIFF predictor implementations for reversing lossless pre-compression transforms.
 use std::fmt::Debug;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult};
