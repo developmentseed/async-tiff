@@ -14,7 +14,7 @@ class TIFF:
         prefetch: int = 32768,
         multiplier: int | float = 2.0,
     ) -> TIFF:
-        """Open a new TIFF.
+        """Open a new TIFF, asynchronously.
 
         Args:
             path: The path within the store to read from.
@@ -37,7 +37,9 @@ class TIFF:
         prefetch: int = 32768,
         multiplier: int | float = 2.0,
     ) -> TIFF:
-        """Open a new TIFF.
+        """Open a new TIFF, synchronously.
+
+        This will block the current thread while reading and parsing the TIFF metadata.
 
         Args:
             path: The path within the store to read from.
