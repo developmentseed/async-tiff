@@ -14,7 +14,7 @@ async def test_raise_typeerror_fetch_tile_striped_tiff():
     store = HTTPStore(url="https://github.com/")
     path = "OSGeo/gdal/raw/refs/tags/v3.11.0/autotest/gdrivers/data/gtiff/int8.tif"
 
-    tiff = await TIFF.open_async(path=path, store=store)
+    tiff = await TIFF.open(path=path, store=store)
     assert len(tiff.ifds) >= 1
 
     with pytest.raises(TypeError):

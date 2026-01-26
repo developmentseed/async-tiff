@@ -38,7 +38,7 @@ async fn open(
 impl PyTIFF {
     #[classmethod]
     #[pyo3(signature = (path, *, store, prefetch=32768, multiplier=2.0))]
-    fn open<'py>(
+    fn open_sync<'py>(
         _cls: &'py Bound<PyType>,
         py: Python<'py>,
         path: String,
@@ -54,7 +54,7 @@ impl PyTIFF {
 
     #[classmethod]
     #[pyo3(signature = (path, *, store, prefetch=32768, multiplier=2.0))]
-    fn open_async<'py>(
+    fn open<'py>(
         _cls: &'py Bound<PyType>,
         py: Python<'py>,
         path: String,

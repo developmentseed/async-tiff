@@ -6,7 +6,7 @@ from .store import ObjectStore
 
 class TIFF:
     @classmethod
-    def open(
+    async def open(
         cls,
         path: str,
         *,
@@ -29,7 +29,7 @@ class TIFF:
             A TIFF instance.
         """
     @classmethod
-    async def open_async(
+    def open_sync(
         cls,
         path: str,
         *,
