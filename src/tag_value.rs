@@ -183,7 +183,7 @@ impl TagValue {
         }
     }
 
-    /// Convert this TagValue into a Vec<u32>, returning an error if the type is incompatible.
+    /// Convert this TagValue into a `Vec<u32>`, returning an error if the type is incompatible.
     pub fn into_u32_vec(self) -> TiffResult<Vec<u32>> {
         match self {
             List(vec) => {
@@ -210,7 +210,7 @@ impl TagValue {
         }
     }
 
-    /// Convert this TagValue into a Vec<u8>, returning an error if the type is incompatible.
+    /// Convert this TagValue into a `Vec<u8>`, returning an error if the type is incompatible.
     pub fn into_u8_vec(self) -> TiffResult<Vec<u8>> {
         match self {
             List(vec) => {
@@ -225,7 +225,7 @@ impl TagValue {
         }
     }
 
-    /// Convert this TagValue into a Vec<u16>, returning an error if the type is incompatible.
+    /// Convert this TagValue into a `Vec<u16>`, returning an error if the type is incompatible.
     pub fn into_u16_vec(self) -> TiffResult<Vec<u16>> {
         match self {
             List(vec) => {
@@ -241,7 +241,7 @@ impl TagValue {
         }
     }
 
-    /// Convert this TagValue into a Vec<i32>, returning an error if the type is incompatible.
+    /// Convert this TagValue into a `Vec<i32>`, returning an error if the type is incompatible.
     pub fn into_i32_vec(self) -> TiffResult<Vec<i32>> {
         match self {
             List(vec) => {
@@ -275,7 +275,7 @@ impl TagValue {
         }
     }
 
-    /// Convert this TagValue into a Vec<f32>, returning an error if the type is incompatible.
+    /// Convert this TagValue into a `Vec<f32>`, returning an error if the type is incompatible.
     pub fn into_f32_vec(self) -> TiffResult<Vec<f32>> {
         match self {
             List(vec) => {
@@ -292,7 +292,7 @@ impl TagValue {
         }
     }
 
-    /// Convert this TagValue into a Vec<f64>, returning an error if the type is incompatible.
+    /// Convert this TagValue into a `Vec<f64>`, returning an error if the type is incompatible.
     pub fn into_f64_vec(self) -> TiffResult<Vec<f64>> {
         match self {
             List(vec) => {
@@ -309,7 +309,7 @@ impl TagValue {
         }
     }
 
-    /// Convert this TagValue into a Vec<f64>, returning an error if the type is incompatible.
+    /// Convert this TagValue into a `Vec<u64>`, returning an error if the type is incompatible.
     pub fn into_u64_vec(self) -> TiffResult<Vec<u64>> {
         match self {
             List(vec) => {
@@ -334,7 +334,7 @@ impl TagValue {
         }
     }
 
-    /// Convert this TagValue into a Vec<i64>, returning an error if the type is incompatible.
+    /// Convert this TagValue into a `Vec<i64>`, returning an error if the type is incompatible.
     pub fn into_i64_vec(self) -> TiffResult<Vec<i64>> {
         match self {
             List(vec) => {

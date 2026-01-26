@@ -53,6 +53,8 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - uses: Swatinem/rust-cache@v2
+
       - name: Test that docs build without warnings
         run: cargo doc --all-features --document-private-items
         env:
