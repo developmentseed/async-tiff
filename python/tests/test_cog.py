@@ -35,7 +35,7 @@ async def test_cog_s3():
     assert gkd.projected_type == 32612
 
     tile = await tiff.fetch_tile(0, 0, 0)
-    array = await tile.decode_async()
+    array = await tile.decode()
     np_array = np.asarray(array, copy=False)
     assert np_array.shape == (1024, 1024, 1)
 
