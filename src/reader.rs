@@ -147,6 +147,8 @@ impl ObjectReader {
     }
 
     async fn make_range_request(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        use object_store::ObjectStoreExt;
+
         let range = range.start as _..range.end as _;
         self.store
             .get_range(&self.path, range)
@@ -227,6 +229,18 @@ pub enum Endianness {
 
 impl Endianness {
     /// Check if the endianness matches the native endianness of the host system.
+    ///
+    /// ```
+    /// use async_tiff::reader::Endianness;
+    ///
+    /// if cfg!(target_endian = "little") {
+    ///     assert!(Endianness::LittleEndian.is_native());
+    ///     assert!(!Endianness::BigEndian.is_native());
+    /// } else {
+    ///     assert!(Endianness::BigEndian.is_native());
+    ///     assert!(!Endianness::LittleEndian.is_native());
+    /// }
+    /// ```
     pub fn is_native(&self) -> bool {
         let native_endianness = if cfg!(target_endian = "little") {
             Endianness::LittleEndian

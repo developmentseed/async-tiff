@@ -74,6 +74,23 @@ impl Array {
 }
 
 /// An enum representing a typed view of the array data.
+///
+/// ```
+/// use async_tiff::{DataType, TypedArray};
+///
+/// let data = TypedArray::try_new(vec![10, 20, 30], Some(DataType::UInt8)).unwrap();
+/// match &data {
+///     TypedArray::UInt8(v) => assert_eq!(v, &[10, 20, 30]),
+///     _ => panic!("expected UInt8"),
+/// }
+///
+/// let bytes = std::f32::consts::PI.to_ne_bytes().to_vec();
+/// let data = TypedArray::try_new(bytes, Some(DataType::Float32)).unwrap();
+/// match &data {
+///     TypedArray::Float32(v) => assert_eq!(v[0], std::f32::consts::PI),
+///     _ => panic!("expected Float32"),
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub enum TypedArray {
     /// Unsigned 8-bit integer array.

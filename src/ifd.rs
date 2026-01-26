@@ -137,6 +137,7 @@ pub struct ImageFileDirectory {
     pub(crate) geo_key_directory: Option<GeoKeyDirectory>,
     pub(crate) model_pixel_scale: Option<Vec<f64>>,
     pub(crate) model_tiepoint: Option<Vec<f64>>,
+    pub(crate) model_transformation: Option<Vec<f64>>,
 
     // GDAL tags
     pub(crate) gdal_nodata: Option<String>,
@@ -186,6 +187,7 @@ impl ImageFileDirectory {
         let mut geo_key_directory_data = None;
         let mut model_pixel_scale = None;
         let mut model_tiepoint = None;
+        let mut model_transformation = None;
         let mut geo_ascii_params: Option<String> = None;
         let mut geo_double_params: Option<Vec<f64>> = None;
         let mut gdal_nodata = None;
@@ -253,11 +255,12 @@ impl ImageFileDirectory {
 
                 // Geospatial tags
                 // http://geotiff.maptools.org/spec/geotiff2.4.html
-                Tag::GeoKeyDirectoryTag => geo_key_directory_data = Some(value.into_u16_vec()?),
-                Tag::ModelPixelScaleTag => model_pixel_scale = Some(value.into_f64_vec()?),
-                Tag::ModelTiepointTag => model_tiepoint = Some(value.into_f64_vec()?),
-                Tag::GeoAsciiParamsTag => geo_ascii_params = Some(value.into_string()?),
-                Tag::GeoDoubleParamsTag => geo_double_params = Some(value.into_f64_vec()?),
+                Tag::GeoKeyDirectory => geo_key_directory_data = Some(value.into_u16_vec()?),
+                Tag::ModelPixelScale => model_pixel_scale = Some(value.into_f64_vec()?),
+                Tag::ModelTiepoint => model_tiepoint = Some(value.into_f64_vec()?),
+                Tag::ModelTransformation => model_transformation = Some(value.into_f64_vec()?),
+                Tag::GeoAsciiParams => geo_ascii_params = Some(value.into_string()?),
+                Tag::GeoDoubleParams => geo_double_params = Some(value.into_f64_vec()?),
                 Tag::GdalNodata => gdal_nodata = Some(value.into_string()?),
                 Tag::GdalMetadata => gdal_metadata = Some(value.into_string()?),
                 // Tags for which the tiff crate doesn't have a hard-coded enum variant
@@ -311,9 +314,9 @@ impl ImageFileDirectory {
 
                 if tag_location == 0 {
                     tags.insert(tag_name, TagValue::Short(value_offset));
-                } else if Tag::from_u16_exhaustive(tag_location) == Tag::GeoAsciiParamsTag {
-                    // If the tag_location points to the value of Tag::GeoAsciiParamsTag, then we
-                    // need to extract a subslice from GeoAsciiParamsTag
+                } else if Tag::from_u16_exhaustive(tag_location) == Tag::GeoAsciiParams {
+                    // If the tag_location points to the value of Tag::GeoAsciiParams, then we
+                    // need to extract a subslice from GeoAsciiParams
 
                     let geo_ascii_params = geo_ascii_params
                         .as_ref()
@@ -328,9 +331,9 @@ impl ImageFileDirectory {
                     }
 
                     tags.insert(tag_name, TagValue::Ascii(s.to_string()));
-                } else if Tag::from_u16_exhaustive(tag_location) == Tag::GeoDoubleParamsTag {
-                    // If the tag_location points to the value of Tag::GeoDoubleParamsTag, then we
-                    // need to extract a subslice from GeoDoubleParamsTag
+                } else if Tag::from_u16_exhaustive(tag_location) == Tag::GeoDoubleParams {
+                    // If the tag_location points to the value of Tag::GeoDoubleParams, then we
+                    // need to extract a subslice from GeoDoubleParams
 
                     let geo_double_params = geo_double_params
                         .as_ref()
@@ -405,6 +408,7 @@ impl ImageFileDirectory {
             geo_key_directory,
             model_pixel_scale,
             model_tiepoint,
+            model_transformation,
             gdal_nodata,
             gdal_metadata,
             other_tags,
@@ -643,6 +647,12 @@ impl ImageFileDirectory {
         self.model_tiepoint.as_deref()
     }
 
+    /// Stores a full 4×4 affine transformation matrix that maps pixel/line coordinates directly
+    /// into model (map) coordinates.
+    pub fn model_transformation(&self) -> Option<&[f64]> {
+        self.model_transformation.as_deref()
+    }
+
     /// GDAL NoData value
     /// <https://gdal.org/en/stable/drivers/raster/gtiff.html#nodata-value>
     pub fn gdal_nodata(&self) -> Option<&str> {
@@ -657,7 +667,7 @@ impl ImageFileDirectory {
         self.gdal_metadata.as_deref()
     }
 
-    /// Tags for which the tiff crate doesn't have a hard-coded enum variant.
+    /// Tags for which this crate doesn't have a hard-coded enum variant.
     pub fn other_tags(&self) -> &HashMap<Tag, TagValue> {
         &self.other_tags
     }
