@@ -667,7 +667,7 @@ impl ImageFileDirectory {
         self.gdal_metadata.as_deref()
     }
 
-    /// Tags for which the tiff crate doesn't have a hard-coded enum variant.
+    /// Tags for which this crate doesn't have a hard-coded enum variant.
     pub fn other_tags(&self) -> &HashMap<Tag, TagValue> {
         &self.other_tags
     }

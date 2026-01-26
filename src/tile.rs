@@ -67,10 +67,10 @@ impl Tile {
         self.jpeg_tables.as_ref()
     }
 
-    /// Decode this tile.
+    /// Decode this tile to an [`Array`].
     ///
-    /// Decoding is separate from fetching so that sync and async operations do not block the same
-    /// runtime.
+    /// Decoding is separate from data fetching so that sync and async operations do not block the
+    /// same runtime.
     pub fn decode(self, decoder_registry: &DecoderRegistry) -> AsyncTiffResult<Array> {
         let decoder = decoder_registry
             .as_ref()

@@ -57,5 +57,5 @@ class ResolutionUnit(IntEnum):
 class SampleFormat(IntEnum):
     Uint = 1
     Int = 2
-    IEEEFP = 3
+    Float = 3
     Void = 4
