@@ -74,6 +74,23 @@ impl Array {
 }
 
 /// An enum representing a typed view of the array data.
+///
+/// ```
+/// use async_tiff::{DataType, TypedArray};
+///
+/// let data = TypedArray::try_new(vec![10, 20, 30], Some(DataType::UInt8)).unwrap();
+/// match &data {
+///     TypedArray::UInt8(v) => assert_eq!(v, &[10, 20, 30]),
+///     _ => panic!("expected UInt8"),
+/// }
+///
+/// let bytes = std::f32::consts::PI.to_ne_bytes().to_vec();
+/// let data = TypedArray::try_new(bytes, Some(DataType::Float32)).unwrap();
+/// match &data {
+///     TypedArray::Float32(v) => assert_eq!(v[0], std::f32::consts::PI),
+///     _ => panic!("expected Float32"),
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub enum TypedArray {
     /// Unsigned 8-bit integer array.
@@ -102,7 +119,7 @@ impl TypedArray {
     /// Create a new TypedArray from raw byte data and a specified DataType.
     ///
     /// Returns an error if the data length is not divisible by the element size.
-    pub(crate) fn try_new(data: Vec<u8>, data_type: Option<DataType>) -> AsyncTiffResult<Self> {
+    pub fn try_new(data: Vec<u8>, data_type: Option<DataType>) -> AsyncTiffResult<Self> {
         match data_type {
             None | Some(DataType::UInt8) => Ok(TypedArray::UInt8(data)),
             Some(DataType::UInt16) => {
