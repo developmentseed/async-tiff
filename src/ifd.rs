@@ -727,22 +727,12 @@ impl ImageFileDirectory {
             .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
         let compressed_bytes = reader.get_bytes(range).await?;
         let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
-        let (width, height) = compute_tile_dimensions(
-            x,
-            y,
-            self.image_width,
-            self.image_height,
-            self.tile_width,
-            self.tile_height,
-            self.rows_per_strip,
-        );
-
         Ok(Tile {
             x,
             y,
             data_type,
-            width,
-            height,
+            width: self.tile_width.unwrap_or(self.image_width),
+            height: self.tile_height.unwrap_or(self.image_height),
             planar_configuration: self.planar_configuration,
             samples_per_pixel: self.samples_per_pixel,
             predictor: self.predictor.unwrap_or(Predictor::None),
@@ -782,23 +772,12 @@ impl ImageFileDirectory {
         // 3: Create tile objects
         let mut tiles = vec![];
         for ((compressed_bytes, &x), &y) in buffers.into_iter().zip(x).zip(y) {
-            // Calculate actual tile dimensions accounting for edge tiles
-            let (width, height) = compute_tile_dimensions(
-                x,
-                y,
-                self.image_width,
-                self.image_height,
-                self.tile_width,
-                self.tile_height,
-                self.rows_per_strip,
-            );
-
             let tile = Tile {
                 x,
                 y,
                 data_type,
-                width,
-                height,
+                width: self.tile_width.unwrap_or(self.image_width),
+                height: self.tile_height.unwrap_or(self.image_height),
                 planar_configuration: self.planar_configuration,
                 samples_per_pixel: self.samples_per_pixel,
                 predictor: self.predictor.unwrap_or(Predictor::None),
@@ -838,6 +817,10 @@ impl ImageFileDirectory {
 ///
 /// # Returns
 /// A tuple of (actual_width, actual_height) in pixels
+#[allow(dead_code)]
+// Note: this was originally implemented with the idea that the last tile (if unaligned) would be
+// this size, but apparently the end tile is still the same size as the others, just with padding.
+// Leaving this here in case it's useful later.
 pub(crate) fn compute_tile_dimensions(
     x: usize,
     y: usize,

@@ -1,14 +1,13 @@
 extern crate tiff;
 
-use crate::test::image_tiff::util::open_tiff;
+use crate::test::util::open_tiff;
 
 #[tokio::test]
 async fn test_geo_tiff() {
-    let filenames = ["geo-5b.tif"];
+    let filenames = ["image-tiff/geo-5b.tif"];
     for filename in filenames.iter() {
-        let tiff = open_tiff(filename).await;
+        let (_, tiff) = open_tiff(filename).await;
         let ifd = &tiff.ifds()[0];
-        dbg!(&ifd);
         assert_eq!(ifd.image_height(), 10);
         assert_eq!(ifd.image_width(), 10);
         assert_eq!(ifd.bits_per_sample(), vec![16; 5]);

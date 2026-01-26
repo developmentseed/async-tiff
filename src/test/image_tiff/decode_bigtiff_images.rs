@@ -1,17 +1,17 @@
 extern crate tiff;
 
 use crate::tags::PhotometricInterpretation;
-use crate::test::image_tiff::util::open_tiff;
+use crate::test::util::open_tiff;
 
 #[tokio::test]
 async fn test_big_tiff() {
     let filenames = [
-        "bigtiff/BigTIFF.tif",
-        "bigtiff/BigTIFFMotorola.tif",
-        "bigtiff/BigTIFFLong.tif",
+        "image-tiff/bigtiff/BigTIFF.tif",
+        "image-tiff/bigtiff/BigTIFFMotorola.tif",
+        "image-tiff/bigtiff/BigTIFFLong.tif",
     ];
     for filename in filenames.iter() {
-        let tiff = open_tiff(filename).await;
+        let (_, tiff) = open_tiff(filename).await;
         let ifd = &tiff.ifds()[0];
         assert_eq!(ifd.image_height(), 64);
         assert_eq!(ifd.image_width(), 64);
