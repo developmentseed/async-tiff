@@ -72,7 +72,7 @@ impl PyTile {
 
         future_into_py(py, async move {
             let array = pool
-                .spawn_async(move || tile.decode(&decoder_registry))
+                .spawn_fifo_async(move || tile.decode(&decoder_registry))
                 .await
                 .map_err(|e| PyValueError::new_err(e.to_string()))?;
             PyArray::try_new(array)
