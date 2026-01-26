@@ -1,11 +1,15 @@
-//! [`ndarray`] integration for async-tiff
+//! [`ndarray`] integration for async-tiff.
+//!
+//! Use [`Tile::decode`][crate::Tile::decode] to decode a tile into an [`Array`], then use the
+//! `TryFrom<Array>` implementation on [`NdArray`] for easier manipulation with the [`ndarray`]
+//! crate.
 
 use ndarray::Array3;
 
 use crate::error::AsyncTiffError;
 use crate::{Array, TypedArray};
 
-/// An enum representing a view of a 3D ndarray with various possible data types.
+/// An enum representing a view of a [`ndarray::Array3`] with various possible data types.
 pub enum NdArray {
     /// Unsigned 8-bit integer array
     Uint8(Array3<u8>),
