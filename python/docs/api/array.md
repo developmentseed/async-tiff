@@ -1,5 +1,5 @@
-# GeoKeyDirectory
+# Array
 
-::: async_tiff.GeoKeyDirectory
+::: async_tiff.Array
     options:
         show_if_no_docstring: true

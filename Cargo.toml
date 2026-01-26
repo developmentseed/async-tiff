@@ -1,11 +1,11 @@
 [package]
 name = "async-tiff"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Kyle Barron <kyle@developmentseed.org>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/developmentseed/async-tiff"
-description = "Low-level asynchronous TIFF reader."
+description = "Asynchronous TIFF reader."
 readme = "README.md"
 
 [dependencies]
@@ -19,18 +19,18 @@ jpeg = { package = "jpeg-decoder", version = "0.3.0", default-features = false }
 jpeg2k = { version = "0.10.1", optional = true }
 ndarray = { version = "0.17", optional = true }
 num_enum = "0.7.3"
-object_store = { version = "0.12", optional = true }
-reqwest = { version = "0.12", default-features = false, optional = true }
-thiserror = "1"
+object_store = { version = "0.13", optional = true }
+reqwest = { version = "0.13", default-features = false, optional = true }
+thiserror = "2"
 tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
 weezl = "0.1.0"
 zstd = "0.13"
 
 [dev-dependencies]
 criterion = { package = "codspeed-criterion-compat", version = "4.1.0" }
-object_store = { version = "0.12", features = ["http"] }
+object_store = { version = "0.13", features = ["http"] }
 rayon = "1.11.0"
-tiff = "0.9.1"
+tiff = "0.11"
 tokio = { version = "1.9", features = [
     "macros",
     "fs",

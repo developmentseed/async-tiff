@@ -7,8 +7,9 @@ use bytes::Bytes;
 use crate::error::AsyncTiffResult;
 use crate::reader::{AsyncFileReader, EndianAwareReader, Endianness};
 
-/// A data source that can be used with [`TiffMetadataReader`] and [`ImageFileDirectoryReader`] to
-/// load [`ImageFileDirectory`]s.
+/// A data source that can be used with [`TiffMetadataReader`][crate::metadata::TiffMetadataReader]
+/// and [`ImageFileDirectoryReader`][crate::metadata::ImageFileDirectoryReader] to load
+/// [`ImageFileDirectory`][crate::ImageFileDirectory]s.
 ///
 /// Note that implementation is provided for [`AsyncFileReader`].
 #[async_trait]

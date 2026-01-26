@@ -27,6 +27,15 @@ pub enum DataType {
 
 impl DataType {
     /// The size in bytes of this data type.
+    ///
+    /// ```
+    /// use async_tiff::DataType;
+    ///
+    /// assert_eq!(DataType::UInt8.size(), 1);
+    /// assert_eq!(DataType::Int16.size(), 2);
+    /// assert_eq!(DataType::Float32.size(), 4);
+    /// assert_eq!(DataType::Float64.size(), 8);
+    /// ```
     pub fn size(&self) -> usize {
         match self {
             DataType::UInt8 | DataType::Int8 => 1,
@@ -69,8 +78,8 @@ impl DataType {
             (SampleFormat::Int, 16) => Some(DataType::Int16),
             (SampleFormat::Int, 32) => Some(DataType::Int32),
             (SampleFormat::Int, 64) => Some(DataType::Int64),
-            (SampleFormat::IEEEFP, 32) => Some(DataType::Float32),
-            (SampleFormat::IEEEFP, 64) => Some(DataType::Float64),
+            (SampleFormat::Float, 32) => Some(DataType::Float32),
+            (SampleFormat::Float, 64) => Some(DataType::Float64),
             // Unsupported combinations (e.g., Void, Unknown, or unusual bit depths)
             _ => None,
         }
@@ -132,14 +141,14 @@ mod tests {
     #[test]
     fn test_from_tags_float_types() {
         assert_eq!(
-            DataType::from_tags(&[SampleFormat::IEEEFP], &[32]),
+            DataType::from_tags(&[SampleFormat::Float], &[32]),
             Some(DataType::Float32),
-            "IEEEFP 32-bit should be Float32"
+            "Float 32-bit should be Float32"
         );
         assert_eq!(
-            DataType::from_tags(&[SampleFormat::IEEEFP], &[64]),
+            DataType::from_tags(&[SampleFormat::Float], &[64]),
             Some(DataType::Float64),
-            "IEEEFP 64-bit should be Float64"
+            "Float 64-bit should be Float64"
         );
     }
 

@@ -21,7 +21,7 @@
 //! // Create new ObjectReader to map the ObjectStore to the AsyncFileReader trait
 //! let reader = ObjectReader::new(
 //!     store,
-//!     "tests/image_tiff/images/tiled-jpeg-rgb-u8.tif".into(),
+//!     "fixtures/image-tiff/tiled-jpeg-rgb-u8.tif".into(),
 //! );
 //!
 //! // Use ReadaheadMetadataCache to ensure that a given number of bytes at the start of the
@@ -53,9 +53,9 @@
 //! [`MetadataFetch`] implementation.
 //!
 //! Thus, it is **imperative to always supply some sort of caching, prefetching, or buffering**
-//! middleware when reading metadata. [`ReadaheadMetadataCache`] is an example of this, which
-//! fetches the first `N` bytes out of a file, and then multiplies the size of any subsequent
-//! fetches by a given `multiplier`.
+//! middleware when reading metadata. [`ReadaheadMetadataCache`][cache::ReadaheadMetadataCache] is
+//! an example of this, which fetches the first `N` bytes out of a file, and then multiplies the
+//! size of any subsequent fetches by a given `multiplier`.
 
 pub mod cache;
 mod fetch;
