@@ -27,7 +27,9 @@ weezl = "0.1.0"
 zstd = "0.13"
 
 [dev-dependencies]
+criterion = { package = "codspeed-criterion-compat", version = "4.1.0" }
 object_store = { version = "0.13", features = ["http"] }
+rayon = "1.11.0"
 tiff = "0.11"
 tokio = { version = "1.9", features = [
     "macros",
@@ -46,3 +48,7 @@ reqwest = ["dep:reqwest"]
 tokio = ["tokio/io-util"]
 
 [package.metadata.cargo-all-features]
+
+[[bench]]
+name = "read_tiff"
+harness = false
