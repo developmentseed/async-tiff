@@ -16,7 +16,7 @@ macro_rules! tags {
         $( #[$enum_attr] )*
         #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
         #[non_exhaustive]
-        pub enum $name {
+        $vis enum $name {
             $($(#[$ident_attr])* $tag,)*
             $(
                 #[doc = $unknown_doc]
@@ -76,48 +76,47 @@ macro_rules! tags {
 
 // Note: These tags appear in the order they are mentioned in the TIFF reference
 tags! {
-/// TIFF tags
+/// Tag identifiers.
 pub enum Tag(u16) unknown("A private or extension tag") {
     // Baseline tags:
     Artist = 315,
     // grayscale images PhotometricInterpretation 1 or 3
     BitsPerSample = 258,
-    CellLength = 265, // TODO add support
-    CellWidth = 264, // TODO add support
+    CellLength = 265,
+    CellWidth = 264,
     // palette-color images (PhotometricInterpretation 3)
-    ColorMap = 320, // TODO add support
-    Compression = 259, // TODO add support for 2 and 32773
+    ColorMap = 320,
+    Compression = 259,
     Copyright = 33_432,
     DateTime = 306,
-    ExtraSamples = 338, // TODO add support
-    FillOrder = 266, // TODO add support
-    FreeByteCounts = 289, // TODO add support
-    FreeOffsets = 288, // TODO add support
-    GrayResponseCurve = 291, // TODO add support
-    GrayResponseUnit = 290, // TODO add support
+    ExtraSamples = 338,
+    FillOrder = 266,
+    FreeByteCounts = 289,
+    FreeOffsets = 288,
+    GrayResponseCurve = 291,
+    GrayResponseUnit = 290,
     HostComputer = 316,
     ImageDescription = 270,
     ImageLength = 257,
     ImageWidth = 256,
     Make = 271,
-    MaxSampleValue = 281, // TODO add support
-    MinSampleValue = 280, // TODO add support
+    MaxSampleValue = 281,
+    MinSampleValue = 280,
     Model = 272,
-    NewSubfileType = 254, // TODO add support
-    Orientation = 274, // TODO add support
+    NewSubfileType = 254,
+    Orientation = 274,
     PhotometricInterpretation = 262,
     PlanarConfiguration = 284,
-    ResolutionUnit = 296, // TODO add support
+    ResolutionUnit = 296,
     RowsPerStrip = 278,
     SamplesPerPixel = 277,
     Software = 305,
     StripByteCounts = 279,
     StripOffsets = 273,
-    SubfileType = 255, // TODO add support
-    Threshholding = 263, // TODO add support
+    SubfileType = 255,
+    Threshholding = 263,
     XResolution = 282,
     YResolution = 283,
-    // Advanced tags
     Predictor = 317,
     TileWidth = 322,
     TileLength = 323,
@@ -125,8 +124,8 @@ pub enum Tag(u16) unknown("A private or extension tag") {
     TileByteCounts = 325,
     // Data Sample Format
     SampleFormat = 339,
-    SMinSampleValue = 340, // TODO add support
-    SMaxSampleValue = 341, // TODO add support
+    SMinSampleValue = 340,
+    SMaxSampleValue = 341,
     // JPEG
     JPEGTables = 347,
     // GeoTIFF
@@ -180,6 +179,8 @@ pub enum Type(u16) {
 }
 
 tags! {
+/// Known compression methods.
+///
 /// See [TIFF compression tags](https://www.awaresystems.be/imaging/tiff/tifftags/compression.html)
 /// for reference.
 pub enum CompressionMethod(u16) unknown("A custom compression method") {
@@ -224,6 +225,7 @@ pub enum PlanarConfiguration(u16) {
 }
 
 tags! {
+/// A mathematical operator applied to image data before compression to improve compression ratios.
 pub enum Predictor(u16) {
     /// No changes were made to the data
     None = 1,
@@ -238,7 +240,7 @@ pub enum Predictor(u16) {
 }
 
 tags! {
-/// Type to represent resolution units
+/// The unit of pixel resolution.
 pub enum ResolutionUnit(u16) {
     None = 1,
     Inch = 2,
