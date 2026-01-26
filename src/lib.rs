@@ -1,18 +1,23 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(not(test), deny(unused_crate_dependencies))]
+#![doc(
+    html_logo_url = "https://github.com/developmentseed.png",
+    html_favicon_url = "https://github.com/developmentseed.png?size=32"
+)]
 
 mod array;
 mod data_type;
-#[cfg(feature = "ndarray")]
-pub mod ndarray;
-pub mod reader;
-// TODO: maybe rename this mod
 pub mod decoder;
 pub mod error;
 pub mod geo;
 mod ifd;
 pub mod metadata;
-pub mod predictor;
+#[cfg(feature = "ndarray")]
+pub mod ndarray;
+mod predictor;
+pub mod reader;
 mod tag_value;
 pub mod tags;
 #[cfg(test)]
