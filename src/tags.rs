@@ -251,8 +251,11 @@ pub enum ResolutionUnit(u16) {
 tags! {
 /// The format of sample values in each pixel (unsigned int, signed int, or floating point).
 pub enum SampleFormat(u16) unknown("An unknown extension sample format") {
+    /// Unsigned integer data
     Uint = 1,
+    /// Signed integer data
     Int = 2,
+    /// Floating point data (either 32-bit or 64-bit)
     Float = 3,
     Void = 4,
 }
