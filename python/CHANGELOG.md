@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.4.0] - 2026-01-26
+
+### What's Changed
+
+* feat: Allow Python-level subclassing of `TIFF` class by @kylebarron in https://github.com/developmentseed/async-tiff/pull/167
+* feat: Implement Array helper for structured, zero-copy data sharing with numpy by @kylebarron in https://github.com/developmentseed/async-tiff/pull/164
+* feat: add jpeg2k decoder as optional feature by @pmarks in https://github.com/developmentseed/async-tiff/pull/162
+* feat: Expose gdal_nodata and gdal_metadata tags by @kylebarron in https://github.com/developmentseed/async-tiff/pull/169
+* docs: Add TIFF references to develop.md by @kylebarron in https://github.com/developmentseed/async-tiff/pull/170
+* feat!: Parse ModelTransformation tag by @kylebarron in https://github.com/developmentseed/async-tiff/pull/179
+* chore!: Rename `SampleFormat::IEEEFP` to `SampleFormat::Float` by @kylebarron in https://github.com/developmentseed/async-tiff/pull/184
+* perf: Change from LIFO to FIFO ordering for tile decoding by @weiji14 in https://github.com/developmentseed/async-tiff/pull/133
+* feat!: Rename `decode_async` to `decode` and add blocking `decode` method by @kylebarron in https://github.com/developmentseed/async-tiff/pull/188
+
+## New Contributors
+* @pmarks made their first contribution in https://github.com/developmentseed/async-tiff/pull/162
+
+**Full Changelog**: https://github.com/developmentseed/async-tiff/compare/py-v0.3.0...py-v0.4.0
+
+
 ## [0.3.0] - 2025-12-12
 
 ### What's Changed
