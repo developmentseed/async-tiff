@@ -39,6 +39,8 @@ use pyo3::ffi;
 use pyo3::prelude::*;
 use pyo3_bytes::PyBytes;
 
+use crate::error::PyAsyncTiffResult;
+
 /// Returns the numpy dtype type character for this data type.
 ///
 /// Numpy uses single characters to identify type families:
@@ -195,7 +197,7 @@ pub struct PyArray {
 }
 
 impl PyArray {
-    pub(crate) fn try_new(array: Array) -> PyResult<Self> {
+    pub(crate) fn try_new(array: Array) -> PyAsyncTiffResult<Self> {
         let (array, shape, data_type) = array.into_inner();
         let data_type = data_type.ok_or(PyValueError::new_err(
             "Unknown data types are not currently supported.",

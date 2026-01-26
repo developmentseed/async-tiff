@@ -13,11 +13,18 @@ create_exception!(
 #[allow(missing_docs)]
 pub enum PyAsyncTiffError {
     AsyncTiffError(async_tiff::error::AsyncTiffError),
+    PyErr(PyErr),
 }
 
 impl From<AsyncTiffError> for PyAsyncTiffError {
     fn from(value: AsyncTiffError) -> Self {
         Self::AsyncTiffError(value)
+    }
+}
+
+impl From<PyErr> for PyAsyncTiffError {
+    fn from(value: PyErr) -> Self {
+        Self::PyErr(value)
     }
 }
 
@@ -33,6 +40,7 @@ impl From<PyAsyncTiffError> for PyErr {
                 },
                 _ => AsyncTiffException::new_err(err.to_string()),
             },
+            PyAsyncTiffError::PyErr(err) => err,
         }
     }
 }

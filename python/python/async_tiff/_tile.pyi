@@ -19,7 +19,25 @@ class Tile:
     @property
     def compression_method(self) -> CompressionMethod | int:
         """The compression method used by this tile."""
-    async def decode_async(
+    def decode_sync(
+        self,
+        *,
+        decoder_registry: DecoderRegistry | None = None,
+    ) -> Array:
+        """Decode this tile's data.
+
+        **Note**: This is a blocking function and will perform the tile decompression on
+        the current thread. Prefer using the asynchronous `decode` method, which will
+        offload decompression to a thread pool.
+
+        Keyword Args:
+            decoder_registry: the decoders to use for decompression. Defaults to None, in which case a default decoder registry is used.
+
+        Returns:
+            Decoded tile data as an Array instance.
+        """
+
+    async def decode(
         self,
         *,
         decoder_registry: DecoderRegistry | None = None,
@@ -27,9 +45,13 @@ class Tile:
     ) -> Array:
         """Decode this tile's data.
 
+        This is an asynchronous function that will offload the tile decompression to a
+        thread pool.
+
         Keyword Args:
-            decoder_registry: the decoders to use for decompression. Defaults to None.
-            pool: the thread pool on which to run decompression. Defaults to None.
+            decoder_registry: the decoders to use for decompression. Defaults to None, in which case a default decoder registry is used.
+            pool: the thread pool on which to run decompression. Defaults to None, in
+                which case, a default thread pool is used.
 
         Returns:
             Decoded tile data as an Array instance.
