@@ -46,3 +46,5 @@ println!("shape: {:?}, dtype: {:?}", array.shape(), array.data_type());
 ## Background
 
 The existing [`tiff` crate](https://crates.io/crates/tiff) is great, but only supports synchronous reading of TIFF files. Furthermore, due to low maintenance bandwidth it is not designed for extensibility (see [#250](https://github.com/image-rs/image-tiff/issues/250)).
+
+This crate was initially forked from the `tiff` crate, and still maintains some of its TIFF tag parsing code.
