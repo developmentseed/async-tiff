@@ -3,9 +3,7 @@ use crate::tags::SampleFormat;
 /// Supported numeric data types for array elements.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DataType {
-    /// Single-bit mask data.
-    ///
-    /// Stored in a Vec<u8>, with each bit representing a pixel.
+    /// Boolean mask data.
     Bool,
     /// Unsigned 8-bit integer.
     UInt8,
