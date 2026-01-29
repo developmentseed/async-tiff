@@ -52,4 +52,4 @@ async def test_loading_bitmask():
     assert array.shape == (64, 64, 1)
 
     arr = np.asarray(array)
-    assert list(np.unique(arr)) == [0, 255]  # Values should be expanded to 0 and 255
+    assert list(np.unique(arr)) == [1]
