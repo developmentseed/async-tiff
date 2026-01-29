@@ -105,6 +105,24 @@ impl Decoder for JPEGDecoder {
     }
 }
 
+/// A decoder for the LERC compression method.
+#[cfg(feature = "lerc")]
+#[derive(Debug, Clone)]
+pub struct LercDecoder;
+
+#[cfg(feature = "lerc")]
+impl Decoder for LercDecoder {
+    fn decode_tile(
+        &self,
+        buffer: Bytes,
+        _photometric_interpretation: PhotometricInterpretation,
+        _jpeg_tables: Option<&[u8]>,
+    ) -> AsyncTiffResult<Vec<u8>> {
+        use lerc as _;
+        todo!()
+    }
+}
+
 /// A decoder for the LZW compression method.
 #[derive(Debug, Clone)]
 pub struct LZWDecoder;
