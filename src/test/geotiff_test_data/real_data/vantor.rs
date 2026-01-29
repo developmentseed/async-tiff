@@ -46,18 +46,14 @@ async fn test_load_single_bit_mask() {
     let array = tile.decode(&Default::default()).unwrap();
 
     assert_eq!(array.shape, [64, 64, 1]);
-    assert_eq!(array.data_type, Some(DataType::BitMask));
+    assert_eq!(array.data_type, Some(DataType::Bool));
 
-    let (data, len) = match array.data {
-        TypedArray::BitMask { data, len } => {
-            assert_eq!(len, 64 * 64);
-            (data, len)
+    match array.data {
+        TypedArray::Bool(data) => {
+            assert_eq!(data.len(), 64 * 64);
         }
-        _ => panic!("Expected BitMask typed array"),
+        _ => panic!("Expected Bool typed array"),
     };
-
-    assert_eq!(len, 64 * 64);
-    assert_eq!(data.len(), 64 * 64 / 8);
 }
 
 #[tokio::test]

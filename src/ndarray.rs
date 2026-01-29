@@ -11,6 +11,9 @@ use crate::{Array, TypedArray};
 
 /// An enum representing a view of a [`ndarray::Array3`] with various possible data types.
 pub enum NdArray {
+    /// Boolean mask array
+    Bool(Array3<bool>),
+
     /// Unsigned 8-bit integer array
     Uint8(Array3<u8>),
 
@@ -51,9 +54,10 @@ impl TryFrom<Array> for NdArray {
             .data_type
             .ok_or_else(|| AsyncTiffError::General("Unknown data type".to_string()))?;
         match value.data {
-            TypedArray::BitMask { .. } => Err(AsyncTiffError::General(
-                "BitMask arrays cannot be converted to ndarray (sub-byte elements not supported)"
-                    .to_string(),
+            TypedArray::Bool(data) => Ok(NdArray::Bool(
+                Array3::from_shape_vec(value.shape, data).map_err(|e| {
+                    AsyncTiffError::General(format!("Failed to create ndarray: {}", e))
+                })?,
             )),
             TypedArray::UInt8(data) => Ok(NdArray::Uint8(
                 Array3::from_shape_vec(value.shape, data).map_err(|e| {
