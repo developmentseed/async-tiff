@@ -1098,7 +1098,7 @@ dependencies = [
 
 [[package]]
 name = "py-async-tiff"
-version = "0.4.0"
+version = "0.5.0-beta.1"
 dependencies = [
  "async-tiff",
  "async-trait",
