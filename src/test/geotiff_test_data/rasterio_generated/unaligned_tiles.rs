@@ -1,4 +1,3 @@
-use crate::decoder::DecoderRegistry;
 use crate::tags::PhotometricInterpretation;
 use crate::test::util::open_tiff;
 
@@ -19,8 +18,7 @@ async fn test_unaligned() {
 
     let tile: crate::Tile = ifd.fetch_tile(2, 0, &reader).await.unwrap();
 
-    let decoder_registry = DecoderRegistry::default();
-    let array = tile.decode(&decoder_registry).unwrap();
+    let array = tile.decode(&Default::default()).unwrap();
 
     assert_eq!(array.shape, [128, 128, 1])
 }

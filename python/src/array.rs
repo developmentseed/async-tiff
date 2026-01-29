@@ -53,6 +53,8 @@ use crate::error::PyAsyncTiffResult;
 #[expect(unused)]
 fn data_type_to_numpy_char(dtype: &DataType) -> char {
     match dtype {
+        // Represented as uint8 in numpy
+        DataType::Bool => 'u',
         DataType::UInt8 => 'u',
         DataType::UInt16 => 'u',
         DataType::UInt32 => 'u',
@@ -82,7 +84,7 @@ fn data_type_to_numpy_char(dtype: &DataType) -> char {
 fn data_type_to_buffer_format(data_type: &DataType) -> &'static CStr {
     use DataType::*;
     match data_type {
-        UInt8 => c"B",
+        Bool | UInt8 => c"B",
         UInt16 => c"H",
         UInt32 => c"I",
         UInt64 => c"Q",
@@ -198,7 +200,7 @@ pub struct PyArray {
 
 impl PyArray {
     pub(crate) fn try_new(array: Array) -> PyAsyncTiffResult<Self> {
-        let (array, shape, data_type) = array.into_inner();
+        let (typed_data, shape, data_type) = array.into_inner();
         let data_type = data_type.ok_or(PyValueError::new_err(
             "Unknown data types are not currently supported.",
         ))?;
@@ -213,7 +215,7 @@ impl PyArray {
             itemsize as isize,
         ]);
         Ok(Self {
-            data: array,
+            data: typed_data,
             shape: shape_isize,
             strides,
             data_type,
@@ -245,8 +247,8 @@ impl PyArray {
     }
 
     #[getter]
-    fn shape(&self) -> [isize; 3] {
-        *self.shape
+    fn shape(&self) -> (isize, isize, isize) {
+        (self.shape[0], self.shape[1], self.shape[2])
     }
 
     /// Implements the buffer protocol's `__getbuffer__` method (PEP 3118).
@@ -345,6 +347,8 @@ impl PyArray {
 
 fn data_as_ptr(data: &TypedArray) -> *mut std::ffi::c_void {
     match data {
+        // Bool is 1 byte per element with 0/1 values, same memory layout as u8
+        TypedArray::Bool(data) => data.as_ptr() as _,
         TypedArray::UInt8(data) => data.as_ptr() as _,
         TypedArray::UInt16(data) => data.as_ptr() as _,
         TypedArray::UInt32(data) => data.as_ptr() as _,

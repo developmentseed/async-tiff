@@ -29,13 +29,30 @@ impl Array {
         shape: [usize; 3],
         data_type: Option<DataType>,
     ) -> AsyncTiffResult<Self> {
-        // Validate that the data length matches the expected size
         let expected_len = shape[0] * shape[1] * shape[2];
 
-        let typed_data = TypedArray::try_new(data, data_type)?;
-        if typed_data.len() != expected_len {
-            return Err(AsyncTiffError::General(format!("Internal error: incorrect shape or data length passed to Array::try_new. Got data length {}, expected {}", typed_data.len(), expected_len)));
-        }
+        let typed_data = if data_type == Some(DataType::Bool) {
+            let required_bytes = expected_len.div_ceil(8);
+            if data.len() < required_bytes {
+                return Err(AsyncTiffError::General(format!(
+                    "Bool data length {} is less than required {} bytes for {} elements",
+                    data.len(),
+                    required_bytes,
+                    expected_len
+                )));
+            }
+            TypedArray::Bool(expand_bitmask(&data, expected_len))
+        } else {
+            let typed_data = TypedArray::try_new(data, data_type)?;
+            if typed_data.len() != expected_len {
+                return Err(AsyncTiffError::General(format!(
+                    "Internal error: incorrect shape or data length passed to Array::try_new. Got data length {}, expected {}",
+                    typed_data.len(),
+                    expected_len
+                )));
+            }
+            typed_data
+        };
 
         Ok(Self {
             data: typed_data,
@@ -93,6 +110,10 @@ impl Array {
 /// ```
 #[derive(Debug, Clone)]
 pub enum TypedArray {
+    /// Boolean mask array.
+    ///
+    /// Per TIFF spec, `true` = valid pixel, `false` = transparent/masked pixel.
+    Bool(Vec<bool>),
     /// Unsigned 8-bit integer array.
     UInt8(Vec<u8>),
     /// Unsigned 16-bit integer array.
@@ -122,6 +143,13 @@ impl TypedArray {
     pub fn try_new(data: Vec<u8>, data_type: Option<DataType>) -> AsyncTiffResult<Self> {
         match data_type {
             None | Some(DataType::UInt8) => Ok(TypedArray::UInt8(data)),
+            Some(DataType::Bool) => {
+                // Bool requires knowing the element count for expansion.
+                // Construct Bool directly via Array::try_new.
+                Err(AsyncTiffError::General(
+                    "Bool must be constructed via Array::try_new".to_string(),
+                ))
+            }
             Some(DataType::UInt16) => {
                 if !data.len().is_multiple_of(2) {
                     return Err(AsyncTiffError::General(format!(
@@ -264,6 +292,7 @@ impl TypedArray {
     /// Get the length (number of elements) of the typed array.
     pub fn len(&self) -> usize {
         match self {
+            TypedArray::Bool(data) => data.len(),
             TypedArray::UInt8(data) => data.len(),
             TypedArray::UInt16(data) => data.len(),
             TypedArray::UInt32(data) => data.len(),
@@ -286,6 +315,7 @@ impl TypedArray {
 impl AsRef<[u8]> for TypedArray {
     fn as_ref(&self) -> &[u8] {
         match self {
+            TypedArray::Bool(data) => cast_slice(data),
             TypedArray::UInt8(data) => data.as_slice(),
             TypedArray::UInt16(data) => cast_slice(data),
             TypedArray::UInt32(data) => cast_slice(data),
@@ -298,4 +328,18 @@ impl AsRef<[u8]> for TypedArray {
             TypedArray::Float64(data) => cast_slice(data),
         }
     }
+}
+
+/// Expands a packed bitmask to `Vec<bool>`.
+///
+/// Per TIFF spec, 1 = valid pixel, 0 = transparent/masked pixel.
+fn expand_bitmask(data: &[u8], len: usize) -> Vec<bool> {
+    let mut result = Vec::with_capacity(len);
+    for i in 0..len {
+        let byte_idx = i / 8;
+        let bit_idx = 7 - (i % 8); // MSB first within each byte
+        let bit = (data[byte_idx] >> bit_idx) & 1;
+        result.push(bit == 1);
+    }
+    result
 }
