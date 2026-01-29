@@ -29,13 +29,33 @@ impl Array {
         shape: [usize; 3],
         data_type: Option<DataType>,
     ) -> AsyncTiffResult<Self> {
-        // Validate that the data length matches the expected size
         let expected_len = shape[0] * shape[1] * shape[2];
 
-        let typed_data = TypedArray::try_new(data, data_type)?;
-        if typed_data.len() != expected_len {
-            return Err(AsyncTiffError::General(format!("Internal error: incorrect shape or data length passed to Array::try_new. Got data length {}, expected {}", typed_data.len(), expected_len)));
-        }
+        let typed_data = if data_type == Some(DataType::BitMask) {
+            let required_bytes = expected_len.div_ceil(8);
+            if data.len() < required_bytes {
+                return Err(AsyncTiffError::General(format!(
+                    "BitMask data length {} is less than required {} bytes for {} elements",
+                    data.len(),
+                    required_bytes,
+                    expected_len
+                )));
+            }
+            TypedArray::BitMask {
+                data,
+                len: expected_len,
+            }
+        } else {
+            let typed_data = TypedArray::try_new(data, data_type)?;
+            if typed_data.len() != expected_len {
+                return Err(AsyncTiffError::General(format!(
+                    "Internal error: incorrect shape or data length passed to Array::try_new. Got data length {}, expected {}",
+                    typed_data.len(),
+                    expected_len
+                )));
+            }
+            typed_data
+        };
 
         Ok(Self {
             data: typed_data,
@@ -93,6 +113,13 @@ impl Array {
 /// ```
 #[derive(Debug, Clone)]
 pub enum TypedArray {
+    /// Single-bit mask array.
+    BitMask {
+        /// The raw byte data storing the bitmask.
+        data: Vec<u8>,
+        /// The number of elements in the bitmask.
+        len: usize,
+    },
     /// Unsigned 8-bit integer array.
     UInt8(Vec<u8>),
     /// Unsigned 16-bit integer array.
@@ -122,6 +149,13 @@ impl TypedArray {
     pub fn try_new(data: Vec<u8>, data_type: Option<DataType>) -> AsyncTiffResult<Self> {
         match data_type {
             None | Some(DataType::UInt8) => Ok(TypedArray::UInt8(data)),
+            Some(DataType::BitMask) => {
+                // BitMask requires knowing the element count, which is only available
+                // at the Array level. Construct BitMask directly via Array::try_new.
+                Err(AsyncTiffError::General(
+                    "BitMask must be constructed via Array::try_new".to_string(),
+                ))
+            }
             Some(DataType::UInt16) => {
                 if !data.len().is_multiple_of(2) {
                     return Err(AsyncTiffError::General(format!(
@@ -264,6 +298,7 @@ impl TypedArray {
     /// Get the length (number of elements) of the typed array.
     pub fn len(&self) -> usize {
         match self {
+            TypedArray::BitMask { len, .. } => *len,
             TypedArray::UInt8(data) => data.len(),
             TypedArray::UInt16(data) => data.len(),
             TypedArray::UInt32(data) => data.len(),
@@ -286,7 +321,7 @@ impl TypedArray {
 impl AsRef<[u8]> for TypedArray {
     fn as_ref(&self) -> &[u8] {
         match self {
-            TypedArray::UInt8(data) => data.as_slice(),
+            TypedArray::BitMask { data, .. } | TypedArray::UInt8(data) => data.as_slice(),
             TypedArray::UInt16(data) => cast_slice(data),
             TypedArray::UInt32(data) => cast_slice(data),
             TypedArray::UInt64(data) => cast_slice(data),
