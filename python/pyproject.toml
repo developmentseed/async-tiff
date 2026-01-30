@@ -5,6 +5,7 @@ build-backend = "maturin"
 [project]
 name = "async-tiff"
 requires-python = ">=3.10"
+readme = "README.md"
 dependencies = ["obspec>=0.1.0"]
 dynamic = ["version"]
 classifiers = [
