@@ -1,6 +1,7 @@
 from collections.abc import Iterable, Sequence
 from typing import Any
 
+from ._colormap import Colormap
 from ._geo import GeoKeyDirectory
 from ._tile import Tile
 from .enums import (
@@ -123,6 +124,10 @@ class ImageFileDirectory:
     def gdal_metadata(self) -> str | None: ...
     @property
     def other_tags(self) -> dict[int, Value]: ...
+    @property
+    def colormap(self) -> Colormap | None:
+        """The colormap for palette-color images."""
+        ...
     async def fetch_tile(self, x: int, y: int) -> Tile:
         """Fetch a single tile.
 

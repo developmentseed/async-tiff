@@ -1,4 +1,9 @@
-from collections.abc import Buffer
+import sys
+
+if sys.version_info >= (3, 12):
+    from collections.abc import Buffer
+else:
+    from typing_extensions import Buffer
 
 class Array(Buffer):
     """A 3D array that implements Python's buffer protocol.

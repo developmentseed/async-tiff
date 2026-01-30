@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::ops::Range;
+use std::sync::Arc;
 
 use bytes::Bytes;
 use num_enum::TryFromPrimitive;
@@ -119,7 +120,7 @@ pub struct ImageFileDirectory {
     /// different from PaletteColor then next denotes the colorspace of the ColorMap entries.
     ///
     /// <https://web.archive.org/web/20240329145324/https://www.awaresystems.be/imaging/tiff/tifftags/colormap.html>
-    pub(crate) color_map: Option<Vec<u16>>,
+    pub(crate) color_map: Option<Arc<[u16]>>,
 
     pub(crate) tile_width: Option<u32>,
     pub(crate) tile_height: Option<u32>,
@@ -237,7 +238,7 @@ impl ImageFileDirectory {
                 Tag::Artist => artist = Some(value.into_string()?),
                 Tag::HostComputer => host_computer = Some(value.into_string()?),
                 Tag::Predictor => predictor = Predictor::from_u16(value.into_u16()?),
-                Tag::ColorMap => color_map = Some(value.into_u16_vec()?),
+                Tag::ColorMap => color_map = Some(Arc::from(value.into_u16_vec()?)),
                 Tag::TileWidth => tile_width = Some(value.into_u32()?),
                 Tag::TileLength => tile_height = Some(value.into_u32()?),
                 Tag::TileOffsets => tile_offsets = Some(value.into_u64_vec()?),
@@ -691,8 +692,8 @@ impl ImageFileDirectory {
     /// ColorMap must be included in all palette-color images.
     ///
     /// <https://web.archive.org/web/20240329145324/https://www.awaresystems.be/imaging/tiff/tifftags/colormap.html>
-    pub fn colormap(&self) -> Option<&[u16]> {
-        self.color_map.as_deref()
+    pub fn colormap(&self) -> Option<&Arc<[u16]>> {
+        self.color_map.as_ref()
     }
 
     fn get_tile_byte_range(&self, x: usize, y: usize) -> Option<Range<u64>> {

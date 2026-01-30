@@ -8,6 +8,7 @@ use pyo3::prelude::*;
 use pyo3::IntoPyObjectExt;
 use pyo3_async_runtimes::tokio::future_into_py;
 
+use crate::colormap::PyColormap;
 use crate::enums::{
     PyCompression, PyPhotometricInterpretation, PyPlanarConfiguration, PyPredictor,
     PyResolutionUnit, PySampleFormat,
@@ -267,8 +268,8 @@ impl PyImageFileDirectory {
     }
 
     #[getter]
-    pub fn colormap(&self) -> Option<HashMap<usize, [u8; 3]>> {
-        self.ifd.colormap()
+    pub fn colormap(&self) -> Option<PyColormap> {
+        self.ifd.colormap().map(|c| PyColormap::new(c.clone()))
     }
 
     /// This exists to implement the Mapping protocol, so we support `dict(ifd)`.`
