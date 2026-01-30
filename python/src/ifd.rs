@@ -9,7 +9,7 @@ use pyo3::IntoPyObjectExt;
 use pyo3_async_runtimes::tokio::future_into_py;
 
 use crate::enums::{
-    PyCompressionMethod, PyPhotometricInterpretation, PyPlanarConfiguration, PyPredictor,
+    PyCompression, PyPhotometricInterpretation, PyPlanarConfiguration, PyPredictor,
     PyResolutionUnit, PySampleFormat,
 };
 use crate::geo::PyGeoKeyDirectory;
@@ -57,7 +57,7 @@ impl PyImageFileDirectory {
     }
 
     #[getter]
-    pub fn compression(&self) -> PyCompressionMethod {
+    pub fn compression(&self) -> PyCompression {
         self.ifd.compression().into()
     }
 

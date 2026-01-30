@@ -8,7 +8,7 @@ use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffUnsupportedError};
-use crate::tags::{CompressionMethod, PhotometricInterpretation};
+use crate::tags::{Compression, PhotometricInterpretation};
 
 /// A registry of decoders.
 ///
@@ -25,7 +25,7 @@ use crate::tags::{CompressionMethod, PhotometricInterpretation};
 /// let empty = DecoderRegistry::empty();
 /// ```
 #[derive(Debug)]
-pub struct DecoderRegistry(HashMap<CompressionMethod, Box<dyn Decoder>>);
+pub struct DecoderRegistry(HashMap<Compression, Box<dyn Decoder>>);
 
 impl DecoderRegistry {
     /// Create a new decoder registry with no decoders registered
@@ -34,14 +34,14 @@ impl DecoderRegistry {
     }
 }
 
-impl AsRef<HashMap<CompressionMethod, Box<dyn Decoder>>> for DecoderRegistry {
-    fn as_ref(&self) -> &HashMap<CompressionMethod, Box<dyn Decoder>> {
+impl AsRef<HashMap<Compression, Box<dyn Decoder>>> for DecoderRegistry {
+    fn as_ref(&self) -> &HashMap<Compression, Box<dyn Decoder>> {
         &self.0
     }
 }
 
-impl AsMut<HashMap<CompressionMethod, Box<dyn Decoder>>> for DecoderRegistry {
-    fn as_mut(&mut self) -> &mut HashMap<CompressionMethod, Box<dyn Decoder>> {
+impl AsMut<HashMap<Compression, Box<dyn Decoder>>> for DecoderRegistry {
+    fn as_mut(&mut self) -> &mut HashMap<Compression, Box<dyn Decoder>> {
         &mut self.0
     }
 }
@@ -49,16 +49,16 @@ impl AsMut<HashMap<CompressionMethod, Box<dyn Decoder>>> for DecoderRegistry {
 impl Default for DecoderRegistry {
     fn default() -> Self {
         let mut registry = HashMap::with_capacity(6);
-        registry.insert(CompressionMethod::None, Box::new(UncompressedDecoder) as _);
-        registry.insert(CompressionMethod::Deflate, Box::new(DeflateDecoder) as _);
-        registry.insert(CompressionMethod::OldDeflate, Box::new(DeflateDecoder) as _);
-        registry.insert(CompressionMethod::LZW, Box::new(LZWDecoder) as _);
-        registry.insert(CompressionMethod::ModernJPEG, Box::new(JPEGDecoder) as _);
+        registry.insert(Compression::None, Box::new(UncompressedDecoder) as _);
+        registry.insert(Compression::Deflate, Box::new(DeflateDecoder) as _);
+        registry.insert(Compression::OldDeflate, Box::new(DeflateDecoder) as _);
+        registry.insert(Compression::LZW, Box::new(LZWDecoder) as _);
+        registry.insert(Compression::ModernJPEG, Box::new(JPEGDecoder) as _);
         #[cfg(feature = "jpeg2k")]
-        registry.insert(CompressionMethod::JPEG2k, Box::new(JPEG2kDecoder) as _);
+        registry.insert(Compression::JPEG2k, Box::new(JPEG2kDecoder) as _);
         #[cfg(feature = "webp")]
-        registry.insert(CompressionMethod::WebP, Box::new(WebPDecoder) as _);
-        registry.insert(CompressionMethod::ZSTD, Box::new(ZstdDecoder) as _);
+        registry.insert(Compression::WebP, Box::new(WebPDecoder) as _);
+        registry.insert(Compression::ZSTD, Box::new(ZstdDecoder) as _);
         Self(registry)
     }
 }

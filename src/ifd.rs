@@ -10,7 +10,7 @@ use crate::predictor::PredictorInfo;
 use crate::reader::{AsyncFileReader, Endianness};
 use crate::tag_value::TagValue;
 use crate::tags::{
-    CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
+    Compression, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat, Tag,
 };
 use crate::{DataType, Tile};
@@ -34,7 +34,7 @@ pub struct ImageFileDirectory {
 
     pub(crate) bits_per_sample: Vec<u16>,
 
-    pub(crate) compression: CompressionMethod,
+    pub(crate) compression: Compression,
 
     pub(crate) photometric_interpretation: PhotometricInterpretation,
 
@@ -202,7 +202,7 @@ impl ImageFileDirectory {
                 Tag::ImageLength => image_height = Some(value.into_u32()?),
                 Tag::BitsPerSample => bits_per_sample = Some(value.into_u16_vec()?),
                 Tag::Compression => {
-                    compression = Some(CompressionMethod::from_u16_exhaustive(value.into_u16()?))
+                    compression = Some(Compression::from_u16_exhaustive(value.into_u16()?))
                 }
                 Tag::PhotometricInterpretation => {
                     photometric_interpretation =
@@ -372,7 +372,7 @@ impl ImageFileDirectory {
             bits_per_sample: bits_per_sample.expect("bits per sample not found"),
             // Defaults to no compression
             // https://web.archive.org/web/20240329145331/https://www.awaresystems.be/imaging/tiff/tifftags/compression.html
-            compression: compression.unwrap_or(CompressionMethod::None),
+            compression: compression.unwrap_or(Compression::None),
             photometric_interpretation: photometric_interpretation
                 .expect("photometric interpretation not found"),
             document_name,
@@ -441,7 +441,7 @@ impl ImageFileDirectory {
 
     /// Compression scheme used on the image data.
     /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/compression.html>
-    pub fn compression(&self) -> CompressionMethod {
+    pub fn compression(&self) -> Compression {
         self.compression
     }
 

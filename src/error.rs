@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use crate::tag_value::TagValue;
 use crate::tags::{
-    CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, SampleFormat, Tag,
+    Compression, PhotometricInterpretation, PlanarConfiguration, Predictor, SampleFormat, Tag,
 };
 
 /// Enum with all errors in this crate.
@@ -200,8 +200,8 @@ pub enum TiffUnsupportedError {
     InconsistentBitsPerSample(Vec<u8>),
     InterpretationWithBits(PhotometricInterpretation, Vec<u8>),
     UnknownInterpretation,
-    UnknownCompressionMethod,
-    UnsupportedCompressionMethod(CompressionMethod),
+    UnknownCompression,
+    UnsupportedCompression(Compression),
     UnsupportedPredictor(Predictor),
     UnsupportedSampleDepth(u8),
     UnsupportedSampleFormat(Vec<SampleFormat>),
@@ -239,8 +239,8 @@ impl fmt::Display for TiffUnsupportedError {
                 fmt,
                 "The image is using an unknown photometric interpretation."
             ),
-            UnknownCompressionMethod => write!(fmt, "Unknown compression method."),
-            UnsupportedCompressionMethod(method) => {
+            UnknownCompression => write!(fmt, "Unknown compression method."),
+            UnsupportedCompression(method) => {
                 write!(fmt, "Compression method {method:?} is unsupported")
             }
             UnsupportedPredictor(p) => {

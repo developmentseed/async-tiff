@@ -12,7 +12,7 @@ use pyo3::sync::PyOnceLock;
 use pyo3::types::{PyDict, PyTuple};
 use pyo3_bytes::PyBytes;
 
-use crate::enums::PyCompressionMethod;
+use crate::enums::PyCompression;
 
 static DEFAULT_DECODER_REGISTRY: PyOnceLock<Arc<DecoderRegistry>> = PyOnceLock::new();
 
@@ -30,7 +30,7 @@ pub(crate) struct PyDecoderRegistry(Arc<DecoderRegistry>);
 impl PyDecoderRegistry {
     #[new]
     #[pyo3(signature = (custom_decoders = None))]
-    pub(crate) fn new(custom_decoders: Option<HashMap<PyCompressionMethod, PyDecoder>>) -> Self {
+    pub(crate) fn new(custom_decoders: Option<HashMap<PyCompression, PyDecoder>>) -> Self {
         let mut decoder_registry = DecoderRegistry::default();
         if let Some(custom_decoders) = custom_decoders {
             for (compression, decoder) in custom_decoders.into_iter() {

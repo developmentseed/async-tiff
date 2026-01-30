@@ -1,5 +1,5 @@
 from async_tiff.enums import (
-    CompressionMethod,
+    Compression,
     PhotometricInterpretation,
     PlanarConfiguration,
     SampleFormat,
@@ -17,7 +17,7 @@ async def test_ifd_dict():
         "image_width": 1,
         "image_height": 1,
         "bits_per_sample": [32],
-        "compression": CompressionMethod.Deflate,
+        "compression": Compression.Deflate,
         "photometric_interpretation": PhotometricInterpretation.BlackIsZero,
         "samples_per_pixel": 1,
         "planar_configuration": PlanarConfiguration.Chunky,
