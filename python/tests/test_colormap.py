@@ -8,4 +8,5 @@ async def test_ifd_dict():
     tiff = await load_tiff(name)
     first_ifd = tiff.ifds[0]
     cmap = np.asarray(first_ifd.colormap, copy=False)
+    assert cmap.dtype == np.uint16
     assert cmap.shape == (256, 3)
