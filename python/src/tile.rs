@@ -7,7 +7,7 @@ use tokio_rayon::AsyncThreadPool;
 
 use crate::array::PyArray;
 use crate::decoder::get_default_decoder_registry;
-use crate::enums::PyCompressionMethod;
+use crate::enums::PyCompression;
 use crate::error::PyAsyncTiffResult;
 use crate::thread_pool::{get_default_pool, PyThreadPool};
 use crate::PyDecoderRegistry;
@@ -49,7 +49,7 @@ impl PyTile {
     }
 
     #[getter]
-    fn compression_method(&self) -> PyResult<PyCompressionMethod> {
+    fn compression_method(&self) -> PyResult<PyCompression> {
         self.0
             .as_ref()
             .ok_or(PyValueError::new_err("Tile has been consumed"))

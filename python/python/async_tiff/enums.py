@@ -1,7 +1,7 @@
 from enum import IntEnum
 
 
-class CompressionMethod(IntEnum):
+class Compression(IntEnum):
     """
     See [TIFF compression
     tags](https://www.awaresystems.be/imaging/tiff/tifftags/compression.html) for
@@ -19,6 +19,9 @@ class CompressionMethod(IntEnum):
     Deflate = 8
     OldDeflate = 0x80B2
     PackBits = 0x8005
+    WebP = 50001
+    JPEG2k = 34712
+    ZSTD = 0xC350
 
 
 class Endianness(IntEnum):

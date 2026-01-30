@@ -4,7 +4,7 @@ from typing import Any
 from ._geo import GeoKeyDirectory
 from ._tile import Tile
 from .enums import (
-    CompressionMethod,
+    Compression,
     PhotometricInterpretation,
     PlanarConfiguration,
     Predictor,
@@ -36,11 +36,11 @@ class ImageFileDirectory:
     @property
     def bits_per_sample(self) -> list[int]: ...
     @property
-    def compression(self) -> CompressionMethod | int:
+    def compression(self) -> Compression | int:
         """Access the compression tag.
 
         An `int` will be returned if the compression is not one of the values in
-        `CompressionMethod`.
+        `Compression`.
         """
     @property
     def photometric_interpretation(self) -> PhotometricInterpretation: ...

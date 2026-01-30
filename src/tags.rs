@@ -183,7 +183,7 @@ tags! {
 ///
 /// See [TIFF compression tags](https://www.awaresystems.be/imaging/tiff/tifftags/compression.html)
 /// for reference.
-pub enum CompressionMethod(u16) unknown("A custom compression method") {
+pub enum Compression(u16) unknown("A custom compression method") {
     None = 1,
     Huffman = 2,
     Fax3 = 3,

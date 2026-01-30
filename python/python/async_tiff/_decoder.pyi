@@ -1,10 +1,10 @@
 from ._decoder_runtime import Decoder
-from .enums import CompressionMethod
+from .enums import Compression
 
 class DecoderRegistry:
     """A registry holding multiple decoder methods."""
     def __init__(
-        self, custom_decoders: dict[CompressionMethod | int, Decoder] | None = None
+        self, custom_decoders: dict[Compression | int, Decoder] | None = None
     ) -> None:
         """Construct a new decoder registry.
 
