@@ -117,6 +117,8 @@ pub struct ImageFileDirectory {
     /// In Specification Supplement 1, support was added for ColorMaps containing other then RGB
     /// values. This scheme includes the Indexed tag, with value 1, and a PhotometricInterpretation
     /// different from PaletteColor then next denotes the colorspace of the ColorMap entries.
+    ///
+    /// <https://web.archive.org/web/20240329145324/https://www.awaresystems.be/imaging/tiff/tifftags/colormap.html>
     pub(crate) color_map: Option<Vec<u16>>,
 
     pub(crate) tile_width: Option<u32>,
@@ -672,23 +674,25 @@ impl ImageFileDirectory {
         &self.other_tags
     }
 
-    /// Construct colormap from colormap tag
-    pub fn colormap(&self) -> Option<HashMap<usize, [u8; 3]>> {
-        if let Some(cmap_data) = &self.color_map {
-            let bits_per_sample = self.bits_per_sample[0];
-            let count = 2_usize.pow(bits_per_sample as u32);
-            let mut result = HashMap::new();
-
-            for idx in 0..count {
-                let color: [u8; 3] =
-                    std::array::from_fn(|i| (cmap_data[idx + i * count] >> 8) as u8);
-                result.insert(idx, color);
-            }
-
-            Some(result)
-        } else {
-            None
-        }
+    /// A color map for palette color images.
+    ///
+    /// This field defines a Red-Green-Blue color map (often called a lookup table) for
+    /// palette-color images. In a palette-color image, a pixel value is used to index into an RGB
+    /// lookup table. For example, a palette-color pixel having a value of 0 would be displayed
+    /// according to the 0th Red, Green, Blue triplet.
+    ///
+    /// In a TIFF ColorMap, all the Red values come first, followed by the Green values, then the
+    /// Blue values. The number of values for each color is `2**BitsPerSample`. Therefore, the
+    /// ColorMap field for an 8-bit palette-color image would have `3 * 256` values. The width of
+    /// each value is 16 bits, as implied by the type of SHORT. 0 represents the minimum intensity,
+    /// and 65535 represents the maximum intensity. Black is represented by 0,0,0, and white by
+    /// 65535, 65535, 65535.
+    ///
+    /// ColorMap must be included in all palette-color images.
+    ///
+    /// <https://web.archive.org/web/20240329145324/https://www.awaresystems.be/imaging/tiff/tifftags/colormap.html>
+    pub fn colormap(&self) -> Option<&[u16]> {
+        self.color_map.as_deref()
     }
 
     fn get_tile_byte_range(&self, x: usize, y: usize) -> Option<Range<u64>> {
