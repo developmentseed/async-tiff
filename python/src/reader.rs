@@ -45,9 +45,9 @@ impl ObspecBackend {
             kwargs.set_item(intern!(py, "start"), range.start)?;
             kwargs.set_item(intern!(py, "end"), range.end)?;
 
-            let coroutine = self
-                .0
-                .call_method(py, intern!(py, "get_range"), (), Some(&kwargs))?;
+            let coroutine =
+                self.0
+                    .call_method(py, intern!(py, "get_range_async"), (), Some(&kwargs))?;
             into_future(coroutine.bind(py).clone())
         })?;
         let result = future.await?;
@@ -64,9 +64,9 @@ impl ObspecBackend {
             kwargs.set_item(intern!(py, "starts"), starts)?;
             kwargs.set_item(intern!(py, "ends"), ends)?;
 
-            let coroutine = self
-                .0
-                .call_method(py, intern!(py, "get_range"), (), Some(&kwargs))?;
+            let coroutine =
+                self.0
+                    .call_method(py, intern!(py, "get_ranges_async"), (), Some(&kwargs))?;
             into_future(coroutine.bind(py).clone())
         })?;
         let result = future.await?;
