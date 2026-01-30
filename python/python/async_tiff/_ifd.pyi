@@ -1,7 +1,8 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any
 
 from ._geo import GeoKeyDirectory
+from ._tile import Tile
 from .enums import (
     CompressionMethod,
     PhotometricInterpretation,
@@ -122,3 +123,23 @@ class ImageFileDirectory:
     def gdal_metadata(self) -> str | None: ...
     @property
     def other_tags(self) -> dict[int, Value]: ...
+    async def fetch_tile(self, x: int, y: int) -> Tile:
+        """Fetch a single tile.
+
+        Args:
+            x: The column index within the ifd to read from.
+            y: The row index within the ifd to read from.
+
+        Returns:
+            Tile response.
+        """
+    async def fetch_tiles(self, x: Sequence[int], y: Sequence[int]) -> list[Tile]:
+        """Fetch multiple tiles concurrently.
+
+        Args:
+            x: The column indexes within the ifd to read from.
+            y: The row indexes within the ifd to read from.
+
+        Returns:
+            Tile responses.
+        """

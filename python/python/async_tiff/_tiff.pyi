@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from ._ifd import ImageFileDirectory
 from ._input import ObspecInput
 from ._tile import Tile
@@ -32,6 +34,17 @@ class TIFF:
     @property
     def endianness(self) -> Endianness:
         """The endianness of this TIFF file."""
+
+    def ifd(self, index: int) -> ImageFileDirectory:
+        """Access a specific IFD by index.
+
+        Args:
+            index: The IFD index to access.
+
+        Returns:
+            The requested IFD.
+        """
+
     @property
     def ifds(self) -> list[ImageFileDirectory]:
         """Access the underlying IFDs of this TIFF.
@@ -50,7 +63,9 @@ class TIFF:
         Returns:
             Tile response.
         """
-    async def fetch_tiles(self, x: list[int], y: list[int], z: int) -> list[Tile]:
+    async def fetch_tiles(
+        self, x: Sequence[int], y: Sequence[int], z: int
+    ) -> list[Tile]:
         """Fetch multiple tiles concurrently.
 
         Args:

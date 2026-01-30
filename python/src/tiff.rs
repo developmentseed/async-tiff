@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use async_tiff::metadata::cache::ReadaheadMetadataCache;
 use async_tiff::metadata::TiffMetadataReader;
-use async_tiff::reader::AsyncFileReader;
-use async_tiff::TIFF;
+use async_tiff::reader::{AsyncFileReader, Endianness};
+use async_tiff::ImageFileDirectory;
 use pyo3::exceptions::{PyIndexError, PyTypeError};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
@@ -17,7 +17,8 @@ use crate::PyImageFileDirectory;
 
 #[pyclass(name = "TIFF", frozen, subclass)]
 pub(crate) struct PyTIFF {
-    tiff: TIFF,
+    endianness: Endianness,
+    ifds: Vec<Arc<ImageFileDirectory>>,
     reader: Arc<dyn AsyncFileReader>,
 }
 
@@ -30,8 +31,12 @@ async fn open(
         .with_initial_size(prefetch)
         .with_multiplier(multiplier);
     let mut metadata_reader = TiffMetadataReader::try_open(&metadata_fetch).await?;
-    let tiff = metadata_reader.read(&metadata_fetch).await?;
-    Ok(PyTIFF { tiff, reader })
+    let ifds = metadata_reader.read_all_ifds(&metadata_fetch).await?;
+    Ok(PyTIFF {
+        endianness: metadata_reader.endianness(),
+        ifds: ifds.into_iter().map(Arc::new).collect(),
+        reader,
+    })
 }
 
 #[pymethods]
@@ -58,15 +63,23 @@ impl PyTIFF {
 
     #[getter]
     fn endianness(&self) -> PyEndianness {
-        self.tiff.endianness().into()
+        self.endianness.into()
+    }
+
+    fn ifd(&self, index: usize) -> PyResult<PyImageFileDirectory> {
+        let ifd = self
+            .ifds
+            .get(index)
+            .ok_or_else(|| PyIndexError::new_err(format!("No IFD found for index={index}")))?
+            .clone();
+        Ok(PyImageFileDirectory::new(ifd, self.reader.clone()))
     }
 
     #[getter]
     fn ifds(&self) -> Vec<PyImageFileDirectory> {
-        self.tiff
-            .ifds()
+        self.ifds
             .iter()
-            .map(|ifd| ifd.clone().into())
+            .map(|ifd| PyImageFileDirectory::new(ifd.clone(), self.reader.clone()))
             .collect()
     }
 
@@ -79,12 +92,9 @@ impl PyTIFF {
     ) -> PyResult<Bound<'py, PyAny>> {
         let reader = self.reader.clone();
         let ifd = self
-            .tiff
-            .ifds()
-            .as_ref()
+            .ifds
             .get(z)
             .ok_or_else(|| PyIndexError::new_err(format!("No IFD found for z={z}")))?
-            // TODO: avoid this clone; add Arc to underlying rust code?
             .clone();
         future_into_py(py, async move {
             let tile = ifd
@@ -105,12 +115,9 @@ impl PyTIFF {
     ) -> PyResult<Bound<'py, PyAny>> {
         let reader = self.reader.clone();
         let ifd = self
-            .tiff
-            .ifds()
-            .as_ref()
+            .ifds
             .get(z)
             .ok_or_else(|| PyIndexError::new_err(format!("No IFD found for z={z}")))?
-            // TODO: avoid this clone; add Arc to underlying rust code?
             .clone();
         future_into_py(py, async move {
             let tiles = ifd
