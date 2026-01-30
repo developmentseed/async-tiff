@@ -1,6 +1,9 @@
-from async_tiff import Array
 import numpy as np
 import pytest
+from async_tiff import Array
+from async_tiff.enums import PhotometricInterpretation
+
+from .utils import load_tiff
 
 
 @pytest.mark.parametrize(
@@ -30,3 +33,23 @@ def test_round_trip(dtype, format_str):
     assert np_view.shape == np_array.shape
     assert np_view.dtype == np_array.dtype
     assert np.array_equal(np_array, np_view)
+
+
+async def test_loading_bitmask():
+    tiff = await load_tiff(
+        "geotiff-test-data/real_data/vantor/maxar_opendata_yellowstone_visual.tif"
+    )
+
+    ifd_index = 1
+    ifd = tiff.ifds[ifd_index]
+
+    assert ifd.bits_per_sample == [1]
+    assert ifd.photometric_interpretation == PhotometricInterpretation.TransparencyMask
+
+    # IFD 1 is a bitmask
+    tile = await tiff.fetch_tile(0, 0, ifd_index)
+    array = await tile.decode()
+    assert array.shape == (64, 64, 1)
+
+    arr = np.asarray(array)
+    assert list(np.unique(arr)) == [1]

@@ -1,12 +1,19 @@
-//! [`ndarray`] integration for async-tiff
+//! [`ndarray`] integration for async-tiff.
+//!
+//! Use [`Tile::decode`][crate::Tile::decode] to decode a tile into an [`Array`], then use the
+//! `TryFrom<Array>` implementation on [`NdArray`] for easier manipulation with the [`ndarray`]
+//! crate.
 
 use ndarray::Array3;
 
 use crate::error::AsyncTiffError;
 use crate::{Array, TypedArray};
 
-/// An enum representing a view of a 3D ndarray with various possible data types.
+/// An enum representing a view of a [`ndarray::Array3`] with various possible data types.
 pub enum NdArray {
+    /// Boolean mask array
+    Bool(Array3<bool>),
+
     /// Unsigned 8-bit integer array
     Uint8(Array3<u8>),
 
@@ -47,6 +54,11 @@ impl TryFrom<Array> for NdArray {
             .data_type
             .ok_or_else(|| AsyncTiffError::General("Unknown data type".to_string()))?;
         match value.data {
+            TypedArray::Bool(data) => Ok(NdArray::Bool(
+                Array3::from_shape_vec(value.shape, data).map_err(|e| {
+                    AsyncTiffError::General(format!("Failed to create ndarray: {}", e))
+                })?,
+            )),
             TypedArray::UInt8(data) => Ok(NdArray::Uint8(
                 Array3::from_shape_vec(value.shape, data).map_err(|e| {
                     AsyncTiffError::General(format!("Failed to create ndarray: {}", e))

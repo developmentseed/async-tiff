@@ -25,7 +25,7 @@ checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
 name = "async-tiff"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "bytemuck",
@@ -37,8 +37,8 @@ dependencies = [
  "jpeg2k",
  "num_enum",
  "object_store",
- "reqwest",
- "thiserror 1.0.69",
+ "reqwest 0.13.1",
+ "thiserror 2.0.18",
  "tokio",
  "webp",
  "weezl",
@@ -930,9 +930,9 @@ dependencies = [
 
 [[package]]
 name = "object_store"
-version = "0.12.5"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbfbfff40aeccab00ec8a910b57ca8ecf4319b335c542f2edcd19dd25a1e2a00"
+checksum = "c2858065e55c148d294a9f3aae3b0fa9458edadb41a108397094566f4e3c0dfb"
 dependencies = [
  "async-trait",
  "base64",
@@ -951,9 +951,9 @@ dependencies = [
  "percent-encoding",
  "quick-xml",
  "rand",
- "reqwest",
+ "reqwest 0.12.28",
  "ring",
- "rustls-pemfile",
+ "rustls-pki-types",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -1115,7 +1115,7 @@ dependencies = [
 
 [[package]]
 name = "py-async-tiff"
-version = "0.3.0"
+version = "0.5.0-beta.1"
 dependencies = [
  "async-tiff",
  "async-trait",
@@ -1127,8 +1127,8 @@ dependencies = [
  "pyo3-bytes",
  "pyo3-object_store",
  "rayon",
- "reqwest",
- "thiserror 1.0.69",
+ "reqwest 0.12.28",
+ "thiserror 2.0.18",
  "tokio-rayon",
 ]
 
@@ -1220,9 +1220,9 @@ dependencies = [
 
 [[package]]
 name = "pyo3-object_store"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ef5552f108a4d65b78c924b27513471a9ba425341ada4be5ea0ca53806ae316"
+checksum = "a8b80a3a9af26abe307d2c01c13da487166c5c8ac5ac301a4d8e3c270e58ab50"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1422,6 +1422,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "reqwest"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04e9018c9d814e5f30cc16a0f03271aeab3571e609612d9fe78c1aa8d11c2f62"
+dependencies = [
+ "base64",
+ "bytes",
+ "futures-core",
+ "http",
+ "http-body",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "js-sys",
+ "log",
+ "percent-encoding",
+ "pin-project-lite",
+ "sync_wrapper",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tower-service",
+ "url",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "ring"
 version = "0.17.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1465,15 +1494,6 @@ dependencies = [
  "rustls-pki-types",
  "schannel",
  "security-framework",
-]
-
-[[package]]
-name = "rustls-pemfile"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dce314e5fee3f39953d46bb63bb8a46d40c2f8fb7cc5a3b6cab2bde9721d6e50"
-dependencies = [
- "rustls-pki-types",
 ]
 
 [[package]]

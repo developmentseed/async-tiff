@@ -33,7 +33,8 @@ use crate::error::AsyncTiffResult;
 pub trait AsyncFileReader: Debug + Send + Sync + 'static {
     /// Retrieve the bytes in `range` as part of a request for image data, not header metadata.
     ///
-    /// This is also used as the default implementation of [`MetadataFetch`] if not overridden.
+    /// This is also used as the default implementation of
+    /// [`MetadataFetch`][crate::metadata::MetadataFetch] if not overridden.
     async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes>;
 
     /// Retrieve multiple byte ranges as part of a request for image data, not header metadata. The
@@ -129,7 +130,7 @@ impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug + 'st
     }
 }
 
-/// An AsyncFileReader that reads from an [`ObjectStore`] instance.
+/// An AsyncFileReader that reads from an [`ObjectStore`][object_store::ObjectStore] instance.
 #[cfg(feature = "object_store")]
 #[derive(Clone, Debug)]
 pub struct ObjectReader {
@@ -139,14 +140,15 @@ pub struct ObjectReader {
 
 #[cfg(feature = "object_store")]
 impl ObjectReader {
-    /// Creates a new [`ObjectReader`] for the provided [`ObjectStore`] and path
-    ///
-    /// [`ObjectMeta`] can be obtained using [`ObjectStore::list`] or [`ObjectStore::head`]
+    /// Creates a new [`ObjectReader`] for the provided [`ObjectStore`][object_store::ObjectStore]
+    /// and path.
     pub fn new(store: Arc<dyn object_store::ObjectStore>, path: object_store::path::Path) -> Self {
         Self { store, path }
     }
 
     async fn make_range_request(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
+        use object_store::ObjectStoreExt;
+
         let range = range.start as _..range.end as _;
         self.store
             .get_range(&self.path, range)
@@ -227,6 +229,18 @@ pub enum Endianness {
 
 impl Endianness {
     /// Check if the endianness matches the native endianness of the host system.
+    ///
+    /// ```
+    /// use async_tiff::reader::Endianness;
+    ///
+    /// if cfg!(target_endian = "little") {
+    ///     assert!(Endianness::LittleEndian.is_native());
+    ///     assert!(!Endianness::BigEndian.is_native());
+    /// } else {
+    ///     assert!(Endianness::BigEndian.is_native());
+    ///     assert!(!Endianness::LittleEndian.is_native());
+    /// }
+    /// ```
     pub fn is_native(&self) -> bool {
         let native_endianness = if cfg!(target_endian = "little") {
             Endianness::LittleEndian

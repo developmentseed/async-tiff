@@ -1,26 +1,15 @@
-from async_tiff import TIFF
 from async_tiff.enums import (
     CompressionMethod,
     PhotometricInterpretation,
     PlanarConfiguration,
     SampleFormat,
 )
-from async_tiff.store import LocalStore
-from pathlib import Path
 
-
-FIXTURES_DIR = Path(__file__).parent.parent.parent / "tests" / "images"
-
-
-async def load_tiff(filename: str):
-    path = FIXTURES_DIR / filename
-    store = LocalStore()
-    tiff = await TIFF.open(path=str(path), store=store)
-    return tiff
+from .utils import load_tiff
 
 
 async def test_ifd_dict():
-    filename = "geogtowgs_subset_USGS_13_s14w171.tif"
+    filename = "other/geogtowgs_subset_USGS_13_s14w171.tif"
     tiff = await load_tiff(filename)
     first_ifd = tiff.ifds[0]
 
@@ -32,7 +21,7 @@ async def test_ifd_dict():
         "photometric_interpretation": PhotometricInterpretation.BlackIsZero,
         "samples_per_pixel": 1,
         "planar_configuration": PlanarConfiguration.Chunky,
-        "sample_format": [SampleFormat.IEEEFP],
+        "sample_format": [SampleFormat.Float],
         "other_tags": {},
         "strip_offsets": [8],
         "rows_per_strip": 1,

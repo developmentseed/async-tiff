@@ -63,7 +63,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "obspec", specifier = ">=0.1.0b3" }]
+requires-dist = [{ name = "obspec", specifier = ">=0.1.0" }]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1293,11 +1293,14 @@ wheels = [
 
 [[package]]
 name = "obspec"
-version = "0.1.0b3"
+version = "0.1.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e8/c7/27e2de129314bed5419405d649bdf050569de5ab76236ece881869d7e489/obspec-0.1.0b3.tar.gz", hash = "sha256:085a4b977fc2c4b5ff8431c8c0a7634411390bf8d0d938ad0d8a0732bf28b6e3", size = 90810, upload-time = "2025-03-13T21:14:27.061Z" }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e2/94/7a9ad6927cac6ec7680e11772fb692145a05a93bafd80b84f6f0ef12f4e7/obspec-0.1.0.tar.gz", hash = "sha256:b189781a53f82ef8d6abf0c9e77fd4c46ac9f244d5a91eb35ee61c2e2b204a4a", size = 117254, upload-time = "2025-06-25T05:24:00.002Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/4e/88974dfeff571b661127770f2a5a51ff638f96db4d3d391c044f3885b65c/obspec-0.1.0b3-py3-none-any.whl", hash = "sha256:f43ddfc79198ed614492c56c20e1c2a092d0ac368aef167aa3c6daa3115437e9", size = 15503, upload-time = "2025-03-13T21:14:26.012Z" },
+    { url = "https://files.pythonhosted.org/packages/bb/69/96feeac84ce0b871567225c78515f3b557c023e72ed9b4f1833f3662bd6b/obspec-0.1.0-py3-none-any.whl", hash = "sha256:307f0fa2c2998b324ecf0eed6a2a89049a4c40c9b1fa2b5e1af28f0ee72136b3", size = 15231, upload-time = "2025-06-25T05:23:58.735Z" },
 ]
 
 [[package]]
