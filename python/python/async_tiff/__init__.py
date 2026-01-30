@@ -2,6 +2,7 @@ from . import enums, store
 from ._async_tiff import (
     TIFF,
     Array,
+    Colormap,
     DecoderRegistry,
     GeoKeyDirectory,
     ImageFileDirectory,
@@ -18,6 +19,7 @@ __all__ = [
     "enums",
     "store",
     "Array",
+    "Colormap",
     "Decoder",
     "DecoderRegistry",
     "GeoKeyDirectory",

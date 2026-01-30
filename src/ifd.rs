@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::ops::Range;
+use std::sync::Arc;
 
 use bytes::Bytes;
 use num_enum::TryFromPrimitive;
@@ -117,7 +118,9 @@ pub struct ImageFileDirectory {
     /// In Specification Supplement 1, support was added for ColorMaps containing other then RGB
     /// values. This scheme includes the Indexed tag, with value 1, and a PhotometricInterpretation
     /// different from PaletteColor then next denotes the colorspace of the ColorMap entries.
-    pub(crate) color_map: Option<Vec<u16>>,
+    ///
+    /// <https://web.archive.org/web/20240329145324/https://www.awaresystems.be/imaging/tiff/tifftags/colormap.html>
+    pub(crate) color_map: Option<Arc<[u16]>>,
 
     pub(crate) tile_width: Option<u32>,
     pub(crate) tile_height: Option<u32>,
@@ -235,7 +238,7 @@ impl ImageFileDirectory {
                 Tag::Artist => artist = Some(value.into_string()?),
                 Tag::HostComputer => host_computer = Some(value.into_string()?),
                 Tag::Predictor => predictor = Predictor::from_u16(value.into_u16()?),
-                Tag::ColorMap => color_map = Some(value.into_u16_vec()?),
+                Tag::ColorMap => color_map = Some(Arc::from(value.into_u16_vec()?)),
                 Tag::TileWidth => tile_width = Some(value.into_u32()?),
                 Tag::TileLength => tile_height = Some(value.into_u32()?),
                 Tag::TileOffsets => tile_offsets = Some(value.into_u64_vec()?),
@@ -672,37 +675,25 @@ impl ImageFileDirectory {
         &self.other_tags
     }
 
-    /// Construct colormap from colormap tag
-    pub fn colormap(&self) -> Option<HashMap<usize, [u8; 3]>> {
-        fn cmap_transform(val: u16) -> u8 {
-            let val = ((val as f64 / 65535.0) * 255.0).floor();
-            if val >= 255.0 {
-                255
-            } else if val < 0.0 {
-                0
-            } else {
-                val as u8
-            }
-        }
-
-        if let Some(cmap_data) = &self.color_map {
-            let bits_per_sample = self.bits_per_sample[0];
-            let count = 2_usize.pow(bits_per_sample as u32);
-            let mut result = HashMap::new();
-
-            // TODO: support nodata
-            for idx in 0..count {
-                let color: [u8; 3] =
-                    std::array::from_fn(|i| cmap_transform(cmap_data[idx + i * count]));
-                // TODO: Handle nodata value
-
-                result.insert(idx, color);
-            }
-
-            Some(result)
-        } else {
-            None
-        }
+    /// A color map for palette color images.
+    ///
+    /// This field defines a Red-Green-Blue color map (often called a lookup table) for
+    /// palette-color images. In a palette-color image, a pixel value is used to index into an RGB
+    /// lookup table. For example, a palette-color pixel having a value of 0 would be displayed
+    /// according to the 0th Red, Green, Blue triplet.
+    ///
+    /// In a TIFF ColorMap, all the Red values come first, followed by the Green values, then the
+    /// Blue values. The number of values for each color is `2**BitsPerSample`. Therefore, the
+    /// ColorMap field for an 8-bit palette-color image would have `3 * 256` values. The width of
+    /// each value is 16 bits, as implied by the type of SHORT. 0 represents the minimum intensity,
+    /// and 65535 represents the maximum intensity. Black is represented by 0,0,0, and white by
+    /// 65535, 65535, 65535.
+    ///
+    /// ColorMap must be included in all palette-color images.
+    ///
+    /// <https://web.archive.org/web/20240329145324/https://www.awaresystems.be/imaging/tiff/tifftags/colormap.html>
+    pub fn colormap(&self) -> Option<&Arc<[u16]>> {
+        self.color_map.as_ref()
     }
 
     fn get_tile_byte_range(&self, x: usize, y: usize) -> Option<Range<u64>> {
