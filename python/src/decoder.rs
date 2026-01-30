@@ -79,6 +79,8 @@ impl Decoder for PyDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         Python::attach(|py| self.call(py, buffer))
             .map_err(|err| AsyncTiffError::General(err.to_string()))
