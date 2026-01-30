@@ -1,4 +1,4 @@
-from . import enums, store
+from . import enums
 from ._async_tiff import (
     TIFF,
     Array,
@@ -17,7 +17,6 @@ __version__: str = ___version()
 
 __all__ = [
     "enums",
-    "store",
     "Array",
     "Colormap",
     "Decoder",
