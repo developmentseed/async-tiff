@@ -2,8 +2,11 @@
 
 An async, low-level [TIFF](https://en.wikipedia.org/wiki/TIFF) reader for Rust and Python.
 
-[**Rust documentation**](https://docs.rs/async-tiff/) <br/>
-[**Python documentation**](https://developmentseed.org/async-tiff/latest/)
+- [**Rust documentation**](https://docs.rs/async-tiff/)
+- [**Python documentation**](https://developmentseed.org/async-tiff/latest/)
+    - For a higher-level Python API to read GeoTIFF files, see [`async-geotiff`][async-geotiff].
+
+[async-geotiff]: https://developmentseed.org/async-geotiff/latest/
 
 ## Features
 
