@@ -177,12 +177,11 @@ pub struct PyArray {
     /// The shape of the array as `[dim0, dim1, dim2]`.
     ///
     /// Stored as `isize` because the buffer protocol requires `Py_ssize_t` (= `isize`).
-    /// Using `Box` ensures a stable memory address that we can expose to Python.
     ///
     /// The interpretation depends on the PlanarConfiguration:
     /// - PlanarConfiguration=1 (chunky): (height, width, bands)
     /// - PlanarConfiguration=2 (planar): (bands, height, width)
-    shape: Box<[isize; 3]>,
+    shape: [isize; 3],
 
     /// Row-major (C-contiguous) strides in bytes.
     ///
@@ -190,9 +189,7 @@ pub struct PyArray {
     /// - strides[0] = d1 * d2 * itemsize (bytes to skip for next row)
     /// - strides[1] = d2 * itemsize (bytes to skip for next column)
     /// - strides[2] = itemsize (bytes to skip for next element)
-    ///
-    /// Stored as `Box` for the same reason as `shape`.
-    strides: Box<[isize; 3]>,
+    strides: [isize; 3],
 
     /// The data type of array elements.
     data_type: DataType,
