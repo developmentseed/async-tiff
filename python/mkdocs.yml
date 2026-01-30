@@ -120,7 +120,7 @@ plugins:
             extensions:
               - griffe_inherited_docstrings
 
-          import:
+          inventories:
             - https://docs.python.org/3/objects.inv
             - https://developmentseed.org/obstore/latest/objects.inv
 
