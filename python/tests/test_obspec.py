@@ -1,9 +1,14 @@
-from collections.abc import Buffer, Sequence
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from async_tiff import TIFF
 from obstore.store import LocalStore
+
+if TYPE_CHECKING:
+    from collections.abc import Buffer, Sequence
 
 FIXTURES_DIR = Path(__file__).parent.parent.parent / "fixtures"
 
