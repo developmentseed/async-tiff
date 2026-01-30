@@ -5,9 +5,13 @@
 [pypi_badge]: https://badge.fury.io/py/async-tiff.svg
 [pypi_link]: https://pypi.org/project/async-tiff/
 
-Fast, low-level async TIFF and GeoTIFF reader for Python.
+Fast, low-level async TIFF reader for Python.
 
 This documentation is for the Python bindings. [Refer here for the Rust crate documentation](https://docs.rs/async-tiff).
+
+For a higher-level API to read GeoTIFF files, visit [`async-geotiff`][async-geotiff].
+
+[async-geotiff]: https://developmentseed.org/async-geotiff
 
 ## Examples
 
