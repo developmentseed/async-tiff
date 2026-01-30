@@ -83,6 +83,8 @@ impl Tile {
             self.compressed_bytes.clone(),
             self.photometric_interpretation,
             self.jpeg_tables.as_deref(),
+            self.samples_per_pixel,
+            self.predictor_info.bits_per_sample(),
         )?;
 
         let decoded = match self.predictor {

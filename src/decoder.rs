@@ -56,6 +56,7 @@ impl Default for DecoderRegistry {
         registry.insert(CompressionMethod::ModernJPEG, Box::new(JPEGDecoder) as _);
         #[cfg(feature = "jpeg2k")]
         registry.insert(CompressionMethod::JPEG2k, Box::new(JPEG2kDecoder) as _);
+        #[cfg(feature = "webp")]
         registry.insert(CompressionMethod::WebP, Box::new(WebPDecoder) as _);
         registry.insert(CompressionMethod::ZSTD, Box::new(ZstdDecoder) as _);
         Self(registry)
@@ -70,6 +71,8 @@ pub trait Decoder: Debug + Send + Sync {
         buffer: Bytes,
         photometric_interpretation: PhotometricInterpretation,
         jpeg_tables: Option<&[u8]>,
+        samples_per_pixel: u16,
+        bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>>;
 }
 
@@ -83,6 +86,8 @@ impl Decoder for DeflateDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         let mut decoder = ZlibDecoder::new(Cursor::new(buffer));
         let mut buf = Vec::new();
@@ -101,6 +106,8 @@ impl Decoder for JPEGDecoder {
         buffer: Bytes,
         photometric_interpretation: PhotometricInterpretation,
         jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         decode_modern_jpeg(buffer, photometric_interpretation, jpeg_tables)
     }
@@ -116,6 +123,8 @@ impl Decoder for LZWDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         // https://github.com/image-rs/image-tiff/blob/90ae5b8e54356a35e266fb24e969aafbcb26e990/src/decoder/stream.rs#L147
         let mut decoder = weezl::decode::Decoder::with_tiff_size_switch(weezl::BitOrder::Msb, 8);
@@ -136,6 +145,8 @@ impl Decoder for JPEG2kDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         let decoder = jpeg2k::DecodeParameters::new();
 
@@ -167,11 +178,28 @@ impl Decoder for WebPDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        samples_per_pixel: u16,
+        bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         let decoded = webp::Decoder::new(&buffer)
             .decode()
             .ok_or(AsyncTiffError::General("WebP decoding failed".to_string()))?;
-        Ok(decoded.to_vec())
+
+        let data = decoded.to_vec();
+
+        // WebP lossy compression may discard fully-opaque alpha channels.
+        // If the TIFF expects 4 samples but WebP decoded to 3, expand RGB to RGBA.
+        // Only do this for 8-bit data since WebP only supports 8-bit.
+        if samples_per_pixel == 4 && bits_per_sample == 8 && !decoded.is_alpha() {
+            let mut rgba = Vec::with_capacity(data.len() / 3 * 4);
+            for chunk in data.chunks_exact(3) {
+                rgba.extend_from_slice(chunk);
+                rgba.push(255); // opaque alpha
+            }
+            Ok(rgba)
+        } else {
+            Ok(data)
+        }
     }
 }
 
@@ -185,6 +213,8 @@ impl Decoder for UncompressedDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         Ok(buffer.to_vec())
     }
@@ -200,6 +230,8 @@ impl Decoder for ZstdDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         let mut decoder = zstd::Decoder::new(Cursor::new(buffer))?;
         let mut buf = Vec::new();
