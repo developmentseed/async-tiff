@@ -28,6 +28,7 @@ nav:
       - api/tile.md
       - api/array.md
       - api/geo.md
+      - api/enums.md
       - api/decoder.md
       - api/thread-pool.md
       - async-tiff.store:

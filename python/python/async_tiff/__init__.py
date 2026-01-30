@@ -1,5 +1,4 @@
-from typing import TYPE_CHECKING
-
+from . import enums, store
 from ._async_tiff import (
     TIFF,
     Array,
@@ -13,12 +12,10 @@ from ._async_tiff import (
 from ._decoder_runtime import Decoder
 from ._input import ObspecInput
 
-if TYPE_CHECKING:
-    from . import store
-
 __version__: str = ___version()
 
 __all__ = [
+    "enums",
     "store",
     "Array",
     "Decoder",
