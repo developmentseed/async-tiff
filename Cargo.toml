@@ -54,7 +54,7 @@ webp = ["dep:webp"]
 # `always_include_features`. This is useful for reducing the number of
 # combinations run for a crate with a large amount of features, since in most
 # cases a bug just needs a small set of 2-3 features to reproduce.
-max_combination_size = 2
+max_combination_size = 1
 
 [[bench]]
 name = "read_tiff"
