@@ -57,13 +57,8 @@ impl PyImageFileDirectory {
     }
 
     #[getter]
-<<<<<<< Updated upstream
-    pub fn compression(&self) -> PyCompressionMethod {
-        self.ifd.compression().into()
-=======
     pub fn compression(&self) -> PyCompression {
-        self.0.compression().into()
->>>>>>> Stashed changes
+        self.ifd.compression().into()
     }
 
     #[getter]
