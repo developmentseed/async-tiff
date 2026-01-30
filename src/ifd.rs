@@ -674,28 +674,14 @@ impl ImageFileDirectory {
 
     /// Construct colormap from colormap tag
     pub fn colormap(&self) -> Option<HashMap<usize, [u8; 3]>> {
-        fn cmap_transform(val: u16) -> u8 {
-            let val = ((val as f64 / 65535.0) * 255.0).floor();
-            if val >= 255.0 {
-                255
-            } else if val < 0.0 {
-                0
-            } else {
-                val as u8
-            }
-        }
-
         if let Some(cmap_data) = &self.color_map {
             let bits_per_sample = self.bits_per_sample[0];
             let count = 2_usize.pow(bits_per_sample as u32);
             let mut result = HashMap::new();
 
-            // TODO: support nodata
             for idx in 0..count {
                 let color: [u8; 3] =
-                    std::array::from_fn(|i| cmap_transform(cmap_data[idx + i * count]));
-                // TODO: Handle nodata value
-
+                    std::array::from_fn(|i| (cmap_data[idx + i * count] >> 8) as u8);
                 result.insert(idx, color);
             }
 

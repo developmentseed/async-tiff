@@ -266,6 +266,11 @@ impl PyImageFileDirectory {
         HashMap::from_iter(iter)
     }
 
+    #[getter]
+    pub fn colormap(&self) -> Option<HashMap<usize, [u8; 3]>> {
+        self.ifd.colormap()
+    }
+
     /// This exists to implement the Mapping protocol, so we support `dict(ifd)`.`
     fn keys(&self) -> Vec<&'static str> {
         // Always present keys
