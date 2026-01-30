@@ -203,17 +203,16 @@ impl PyArray {
         ))?;
 
         let itemsize = data_type.size();
-        let shape_isize: Box<[isize; 3]> =
-            Box::new([shape[0] as isize, shape[1] as isize, shape[2] as isize]);
+        let shape = [shape[0] as isize, shape[1] as isize, shape[2] as isize];
         // Row-major (C-contiguous) strides: [dim1 * dim2 * itemsize, dim2 * itemsize, itemsize]
-        let strides: Box<[isize; 3]> = Box::new([
-            (shape[1] * shape[2] * itemsize) as isize,
-            (shape[2] * itemsize) as isize,
+        let strides = [
+            (shape[1] as usize * shape[2] as usize * itemsize) as isize,
+            (shape[2] as usize * itemsize) as isize,
             itemsize as isize,
-        ]);
+        ];
         Ok(Self {
             data: typed_data,
-            shape: shape_isize,
+            shape,
             strides,
             data_type,
         })
@@ -227,17 +226,16 @@ impl PyArray {
         let data_type = parse_buffer_format_string(format)?;
         let itemsize = data_type.size();
         let typed_data = TypedArray::try_new(array.into_inner().to_vec(), Some(data_type)).unwrap();
-        let shape_isize: Box<[isize; 3]> =
-            Box::new([shape[0] as isize, shape[1] as isize, shape[2] as isize]);
+        let shape = [shape[0] as isize, shape[1] as isize, shape[2] as isize];
         // Row-major (C-contiguous) strides: [dim1 * dim2 * itemsize, dim2 * itemsize, itemsize]
-        let strides: Box<[isize; 3]> = Box::new([
-            (shape[1] * shape[2] * itemsize) as isize,
-            (shape[2] * itemsize) as isize,
+        let strides = [
+            (shape[1] as usize * shape[2] as usize * itemsize) as isize,
+            (shape[2] as usize * itemsize) as isize,
             itemsize as isize,
-        ]);
+        ];
         Ok(Self {
             data: typed_data,
-            shape: shape_isize,
+            shape,
             strides,
             data_type,
         })
