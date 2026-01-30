@@ -23,6 +23,7 @@ object_store = { version = "0.13", optional = true }
 reqwest = { version = "0.13", default-features = false, optional = true }
 thiserror = "2"
 tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
+webp = { version = "0.3", optional = true }
 weezl = "0.1.0"
 zstd = "0.13"
 
@@ -46,6 +47,7 @@ ndarray = ["dep:ndarray"]
 object_store = ["dep:object_store"]
 reqwest = ["dep:reqwest"]
 tokio = ["tokio/io-util"]
+webp = ["dep:webp"]
 
 [package.metadata.cargo-all-features]
 
