@@ -6,8 +6,8 @@ from async_tiff.store import LocalStore, S3Store
 
 async def test_cog_s3():
     """
-    Ensure that TIFF.open can open a Sentinel-2 Cloud-Optimized GeoTIFF file from an
-    s3 bucket, read IFDs and GeoKeyDirectory metadata.
+    Ensure that TIFF.open can open a Sentinel-2 Cloud-Optimized GeoTIFF file from
+    an s3 bucket, read IFDs and GeoKeyDirectory metadata.
     """
     path = "sentinel-s2-l2a-cogs/12/S/UF/2022/6/S2B_12SUF_20220609_0_L2A/B04.tif"
     store = S3Store("sentinel-cogs", region="us-west-2", skip_signature=True)

@@ -7,7 +7,7 @@ use async_tiff::ImageFileDirectory;
 use pyo3::exceptions::{PyIndexError, PyTypeError};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
-use pyo3_async_runtimes::tokio::future_into_py;
+use pyo3_async_runtimes::tokio::{future_into_py, get_runtime};
 
 use crate::enums::PyEndianness;
 use crate::error::PyAsyncTiffResult;
@@ -41,6 +41,22 @@ async fn open(
 
 #[pymethods]
 impl PyTIFF {
+    #[classmethod]
+    #[pyo3(signature = (path, *, store, prefetch=32768, multiplier=2.0))]
+    fn open_sync<'py>(
+        _cls: &'py Bound<PyType>,
+        py: Python<'py>,
+        path: String,
+        store: StoreInput,
+        prefetch: u64,
+        multiplier: f64,
+    ) -> PyAsyncTiffResult<Self> {
+        let reader = store.into_async_file_reader(path);
+        let runtime = get_runtime();
+
+        py.detach(|| runtime.block_on(open(reader, prefetch, multiplier)))
+    }
+
     #[classmethod]
     #[pyo3(signature = (path, *, store, prefetch=32768, multiplier=2.0))]
     fn open<'py>(
