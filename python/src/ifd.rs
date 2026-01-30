@@ -1,72 +1,89 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
+use async_tiff::reader::AsyncFileReader;
 use async_tiff::ImageFileDirectory;
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::IntoPyObjectExt;
+use pyo3_async_runtimes::tokio::future_into_py;
 
 use crate::enums::{
     PyCompressionMethod, PyPhotometricInterpretation, PyPlanarConfiguration, PyPredictor,
     PyResolutionUnit, PySampleFormat,
 };
 use crate::geo::PyGeoKeyDirectory;
+use crate::tile::PyTile;
 use crate::value::PyValue;
 
 #[pyclass(name = "ImageFileDirectory", frozen, eq)]
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct PyImageFileDirectory(ImageFileDirectory);
+#[derive(Debug, Clone)]
+pub(crate) struct PyImageFileDirectory {
+    ifd: Arc<ImageFileDirectory>,
+    reader: Arc<dyn AsyncFileReader>,
+}
+
+impl PyImageFileDirectory {
+    pub(crate) fn new(
+        ifd: Arc<ImageFileDirectory>,
+        reader: Arc<dyn AsyncFileReader>,
+    ) -> PyImageFileDirectory {
+        PyImageFileDirectory { ifd, reader }
+    }
+}
 
 #[pymethods]
 impl PyImageFileDirectory {
     #[getter]
     pub fn new_subfile_type(&self) -> Option<u32> {
-        self.0.new_subfile_type()
+        self.ifd.new_subfile_type()
     }
 
     /// The number of columns in the image, i.e., the number of pixels per row.
     #[getter]
     pub fn image_width(&self) -> u32 {
-        self.0.image_width()
+        self.ifd.image_width()
     }
 
     /// The number of rows of pixels in the image.
     #[getter]
     pub fn image_height(&self) -> u32 {
-        self.0.image_height()
+        self.ifd.image_height()
     }
 
     #[getter]
     pub fn bits_per_sample(&self) -> &[u16] {
-        self.0.bits_per_sample()
+        self.ifd.bits_per_sample()
     }
 
     #[getter]
     pub fn compression(&self) -> PyCompressionMethod {
-        self.0.compression().into()
+        self.ifd.compression().into()
     }
 
     #[getter]
     pub fn photometric_interpretation(&self) -> PyPhotometricInterpretation {
-        self.0.photometric_interpretation().into()
+        self.ifd.photometric_interpretation().into()
     }
 
     #[getter]
     pub fn document_name(&self) -> Option<&str> {
-        self.0.document_name()
+        self.ifd.document_name()
     }
 
     #[getter]
     pub fn image_description(&self) -> Option<&str> {
-        self.0.image_description()
+        self.ifd.image_description()
     }
 
     #[getter]
     pub fn strip_offsets(&self) -> Option<&[u64]> {
-        self.0.strip_offsets()
+        self.ifd.strip_offsets()
     }
 
     #[getter]
     pub fn orientation(&self) -> Option<u16> {
-        self.0.orientation()
+        self.ifd.orientation()
     }
 
     /// The number of components per pixel.
@@ -76,39 +93,39 @@ impl PyImageFileDirectory {
     /// give an indication of the meaning of the additional channels.
     #[getter]
     pub fn samples_per_pixel(&self) -> u16 {
-        self.0.samples_per_pixel()
+        self.ifd.samples_per_pixel()
     }
 
     #[getter]
     pub fn rows_per_strip(&self) -> Option<u32> {
-        self.0.rows_per_strip()
+        self.ifd.rows_per_strip()
     }
 
     #[getter]
     pub fn strip_byte_counts(&self) -> Option<&[u64]> {
-        self.0.strip_byte_counts()
+        self.ifd.strip_byte_counts()
     }
 
     #[getter]
     pub fn min_sample_value(&self) -> Option<&[u16]> {
-        self.0.min_sample_value()
+        self.ifd.min_sample_value()
     }
 
     #[getter]
     pub fn max_sample_value(&self) -> Option<&[u16]> {
-        self.0.max_sample_value()
+        self.ifd.max_sample_value()
     }
 
     /// The number of pixels per ResolutionUnit in the ImageWidth direction.
     #[getter]
     pub fn x_resolution(&self) -> Option<f64> {
-        self.0.x_resolution()
+        self.ifd.x_resolution()
     }
 
     /// The number of pixels per ResolutionUnit in the ImageLength direction.
     #[getter]
     pub fn y_resolution(&self) -> Option<f64> {
-        self.0.y_resolution()
+        self.ifd.y_resolution()
     }
 
     /// How the components of each pixel are stored.
@@ -127,18 +144,18 @@ impl PyImageFileDirectory {
     /// If SamplesPerPixel is 1, PlanarConfiguration is irrelevant, and need not be included.
     #[getter]
     pub fn planar_configuration(&self) -> PyPlanarConfiguration {
-        self.0.planar_configuration().into()
+        self.ifd.planar_configuration().into()
     }
 
     #[getter]
     pub fn resolution_unit(&self) -> Option<PyResolutionUnit> {
-        self.0.resolution_unit().map(|x| x.into())
+        self.ifd.resolution_unit().map(|x| x.into())
     }
 
     /// Name and version number of the software package(s) used to create the image.
     #[getter]
     pub fn software(&self) -> Option<&str> {
-        self.0.software()
+        self.ifd.software()
     }
 
     /// Date and time of image creation.
@@ -148,97 +165,101 @@ impl PyImageFileDirectory {
     /// terminating NUL, is 20 bytes.
     #[getter]
     pub fn date_time(&self) -> Option<&str> {
-        self.0.date_time()
+        self.ifd.date_time()
     }
 
     #[getter]
     pub fn artist(&self) -> Option<&str> {
-        self.0.artist()
+        self.ifd.artist()
     }
 
     #[getter]
     pub fn host_computer(&self) -> Option<&str> {
-        self.0.host_computer()
+        self.ifd.host_computer()
     }
 
     #[getter]
     pub fn predictor(&self) -> Option<PyPredictor> {
-        self.0.predictor().map(|x| x.into())
+        self.ifd.predictor().map(|x| x.into())
     }
 
     #[getter]
     pub fn tile_width(&self) -> Option<u32> {
-        self.0.tile_width()
+        self.ifd.tile_width()
     }
     #[getter]
     pub fn tile_height(&self) -> Option<u32> {
-        self.0.tile_height()
+        self.ifd.tile_height()
     }
 
     #[getter]
     pub fn tile_offsets(&self) -> Option<&[u64]> {
-        self.0.tile_offsets()
+        self.ifd.tile_offsets()
     }
     #[getter]
     pub fn tile_byte_counts(&self) -> Option<&[u64]> {
-        self.0.tile_byte_counts()
+        self.ifd.tile_byte_counts()
     }
 
     #[getter]
     pub fn extra_samples(&self) -> Option<&[u16]> {
-        self.0.extra_samples()
+        self.ifd.extra_samples()
     }
 
     #[getter]
     pub fn sample_format(&self) -> Vec<PySampleFormat> {
-        self.0.sample_format().iter().map(|x| (*x).into()).collect()
+        self.ifd
+            .sample_format()
+            .iter()
+            .map(|x| (*x).into())
+            .collect()
     }
 
     #[getter]
     pub fn jpeg_tables(&self) -> Option<&[u8]> {
-        self.0.jpeg_tables()
+        self.ifd.jpeg_tables()
     }
 
     #[getter]
     pub fn copyright(&self) -> Option<&str> {
-        self.0.copyright()
+        self.ifd.copyright()
     }
 
     // Geospatial tags
     #[getter]
     pub fn geo_key_directory(&self) -> Option<PyGeoKeyDirectory> {
-        self.0.geo_key_directory().cloned().map(|x| x.into())
+        self.ifd.geo_key_directory().cloned().map(|x| x.into())
     }
 
     #[getter]
     pub fn model_pixel_scale(&self) -> Option<&[f64]> {
-        self.0.model_pixel_scale()
+        self.ifd.model_pixel_scale()
     }
 
     #[getter]
     pub fn model_tiepoint(&self) -> Option<&[f64]> {
-        self.0.model_tiepoint()
+        self.ifd.model_tiepoint()
     }
 
     #[getter]
     pub fn model_transformation(&self) -> Option<&[f64]> {
-        self.0.model_transformation()
+        self.ifd.model_transformation()
     }
 
     #[getter]
     pub fn gdal_nodata(&self) -> Option<&str> {
-        self.0.gdal_nodata()
+        self.ifd.gdal_nodata()
     }
 
     #[getter]
     pub fn gdal_metadata(&self) -> Option<&str> {
-        self.0.gdal_metadata()
+        self.ifd.gdal_metadata()
     }
 
     #[getter]
     pub fn other_tags(&self) -> HashMap<u16, PyValue> {
         let iter = self
-            .0
+            .ifd
             .other_tags()
             .iter()
             .map(|(key, val)| (key.to_u16(), val.clone().into()));
@@ -409,10 +430,46 @@ impl PyImageFileDirectory {
             ))),
         }
     }
+
+    fn fetch_tile<'py>(
+        &'py self,
+        py: Python<'py>,
+        x: usize,
+        y: usize,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let reader = self.reader.clone();
+        let ifd = self.ifd.clone();
+        future_into_py(py, async move {
+            let tile = ifd
+                .fetch_tile(x, y, reader.as_ref())
+                .await
+                .map_err(|err| PyTypeError::new_err(err.to_string()))?;
+
+            Ok(PyTile::new(tile))
+        })
+    }
+
+    pub(crate) fn fetch_tiles<'py>(
+        &'py self,
+        py: Python<'py>,
+        x: Vec<usize>,
+        y: Vec<usize>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let reader = self.reader.clone();
+        let ifd = self.ifd.clone();
+        future_into_py(py, async move {
+            let tiles = ifd
+                .fetch_tiles(&x, &y, reader.as_ref())
+                .await
+                .map_err(|err| PyTypeError::new_err(err.to_string()))?;
+            let py_tiles = tiles.into_iter().map(PyTile::new).collect::<Vec<_>>();
+            Ok(py_tiles)
+        })
+    }
 }
 
-impl From<ImageFileDirectory> for PyImageFileDirectory {
-    fn from(value: ImageFileDirectory) -> Self {
-        Self(value)
+impl PartialEq for PyImageFileDirectory {
+    fn eq(&self, other: &Self) -> bool {
+        self.ifd == other.ifd
     }
 }
