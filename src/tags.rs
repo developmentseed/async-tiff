@@ -195,6 +195,7 @@ pub enum Compression(u16) unknown("A custom compression method") {
     Deflate = 8,
     OldDeflate = 0x80B2,
     PackBits = 0x8005,
+    LZMA = 34925,
     // https://github.com/OSGeo/gdal/blob/4769b527b275fdb286cba95c8b35bbd131168e54/frmts/gtiff/gtiff.h#L136C26-L136C31
     WebP = 50001,
     JPEG2k = 34712,

@@ -52,6 +52,8 @@ impl Default for DecoderRegistry {
         registry.insert(Compression::None, Box::new(UncompressedDecoder) as _);
         registry.insert(Compression::Deflate, Box::new(DeflateDecoder) as _);
         registry.insert(Compression::OldDeflate, Box::new(DeflateDecoder) as _);
+        #[cfg(feature = "lzma")]
+        registry.insert(Compression::LZMA, Box::new(LZMADecoder) as _);
         registry.insert(Compression::LZW, Box::new(LZWDecoder) as _);
         registry.insert(Compression::ModernJPEG, Box::new(JPEGDecoder) as _);
         #[cfg(feature = "jpeg2k")]
@@ -110,6 +112,31 @@ impl Decoder for JPEGDecoder {
         _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         decode_modern_jpeg(buffer, photometric_interpretation, jpeg_tables)
+    }
+}
+
+/// A decoder for the LZMA compression method.
+#[derive(Debug, Clone)]
+#[cfg(feature = "lzma")]
+pub struct LZMADecoder;
+
+#[cfg(feature = "lzma")]
+impl Decoder for LZMADecoder {
+    fn decode_tile(
+        &self,
+        buffer: Bytes,
+        _photometric_interpretation: PhotometricInterpretation,
+        _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
+    ) -> AsyncTiffResult<Vec<u8>> {
+        use bytes::Buf;
+        use lzma_rust2::Lzma2Reader;
+
+        let mut reader = Lzma2Reader::new(buffer.reader(), u32::MAX, None);
+        let mut out = Vec::new();
+        reader.read_to_end(&mut out)?;
+        Ok(out)
     }
 }
 
