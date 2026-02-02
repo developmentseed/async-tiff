@@ -738,19 +738,15 @@ impl ImageFileDirectory {
     /// Fetch the tiles located at `x` column and `y` row using the provided reader.
     pub async fn fetch_tiles(
         &self,
-        x: &[usize],
-        y: &[usize],
+        xy: &[(usize, usize)],
         reader: &dyn AsyncFileReader,
     ) -> AsyncTiffResult<Vec<Tile>> {
-        assert_eq!(x.len(), y.len(), "x and y should have same len");
-
         let predictor_info = PredictorInfo::from_ifd(self);
         let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
 
         // 1: Get all the byte ranges for all tiles
-        let byte_ranges = x
+        let byte_ranges = xy
             .iter()
-            .zip(y)
             .map(|(x, y)| {
                 self.get_tile_byte_range(*x, *y)
                     .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))
@@ -762,7 +758,7 @@ impl ImageFileDirectory {
 
         // 3: Create tile objects
         let mut tiles = vec![];
-        for ((compressed_bytes, &x), &y) in buffers.into_iter().zip(x).zip(y) {
+        for (compressed_bytes, &(x, y)) in buffers.into_iter().zip(xy) {
             let tile = Tile {
                 x,
                 y,
