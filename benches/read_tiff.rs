@@ -44,12 +44,11 @@ async fn read_tiles<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Ve
     ))?;
 
     // Get cartesian product of x and y tile ids
-    let x_ids: Vec<usize> = (0..x_count)
-        .flat_map(|i| (0..y_count).map(move |_j| i))
+    let xy_ids: Vec<(usize, usize)> = (0..x_count)
+        .flat_map(|i| (0..y_count).map(move |j| (i, j)))
         .collect();
-    let y_ids: Vec<usize> = (0..x_count).flat_map(|_i| 0..y_count).collect();
 
-    let tiles: Vec<Tile> = ifd.fetch_tiles(&x_ids, &y_ids, &reader).await?;
+    let tiles: Vec<Tile> = ifd.fetch_tiles(&xy_ids, &reader).await?;
     Ok(tiles)
 }
 

@@ -138,12 +138,11 @@ class ImageFileDirectory:
         Returns:
             Tile response.
         """
-    async def fetch_tiles(self, x: Sequence[int], y: Sequence[int]) -> list[Tile]:
+    async def fetch_tiles(self, xy: Sequence[tuple[int, int]]) -> list[Tile]:
         """Fetch multiple tiles concurrently.
 
         Args:
-            x: The column indexes within the ifd to read from.
-            y: The row indexes within the ifd to read from.
+            xy: The (column, row) indexes within the ifd to read from.
 
         Returns:
             Tile responses.
