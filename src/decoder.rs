@@ -131,9 +131,9 @@ impl Decoder for LZMADecoder {
         _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         use bytes::Buf;
-        use lzma_rust2::Lzma2Reader;
+        use lzma_rust2::XzReader;
 
-        let mut reader = Lzma2Reader::new(buffer.reader(), u32::MAX, None);
+        let mut reader = XzReader::new(buffer.reader(), false);
         let mut out = Vec::new();
         reader.read_to_end(&mut out)?;
         Ok(out)

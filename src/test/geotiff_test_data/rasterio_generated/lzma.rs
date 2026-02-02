@@ -21,6 +21,6 @@ async fn test_uint8() {
     let array = tile.decode(&Default::default()).unwrap();
 
     assert_eq!(array.shape, [64, 64, 1]);
-    assert_eq!(array.data_type, Some(DataType::UInt16));
-    assert!(matches!(array.data, TypedArray::UInt16(_)));
+    assert_eq!(array.data_type, Some(DataType::UInt8));
+    assert!(matches!(array.data, TypedArray::UInt8(_)));
 }
