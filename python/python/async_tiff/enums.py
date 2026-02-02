@@ -20,6 +20,7 @@ class Compression(IntEnum):
     OldDeflate = 0x80B2
     PackBits = 0x8005
     WebP = 50001
+    LZMA = 34925
     JPEG2k = 34712
     ZSTD = 0xC350
 
