@@ -2,26 +2,32 @@
 
 ## [0.5.0] - 2026-02-03
 
-### What's Changed
+### Breaking
 
-* chore: Add additional license copyright from image-tiff by @kylebarron in https://github.com/developmentseed/async-tiff/pull/200
 * feat!: Handle transparency/nodata bit masks by @kylebarron in https://github.com/developmentseed/async-tiff/pull/205
+* feat!: Expose colormap as unaltered `[u16]`; implement buffer protocol exchange by @kylebarron in https://github.com/developmentseed/async-tiff/pull/219
+* ci(python)!: Remove unsupported linux platforms from wheel build by @kylebarron in https://github.com/developmentseed/async-tiff/pull/222
+* feat!: Rename `CompressionMethod` to `Compression` by @kylebarron in https://github.com/developmentseed/async-tiff/pull/213
+
+### New Features
+
 * feat: Add webp decompression support by @kylebarron in https://github.com/developmentseed/async-tiff/pull/171
 * feat(python): Add `IFD.fetch_tile` and `IFD.fetch_tiles` by @kylebarron in https://github.com/developmentseed/async-tiff/pull/211
+* feat: Change `fetch_tiles` to take tuples of `(x, y)` instead of two separate vecs by @kylebarron in https://github.com/developmentseed/async-tiff/pull/229
+* feat: LZMA decoder by @kylebarron in https://github.com/developmentseed/async-tiff/pull/230
+
+### Other
+
+* chore: Add additional license copyright from image-tiff by @kylebarron in https://github.com/developmentseed/async-tiff/pull/200
 * fix(python): Fix linked inventories in mkdocs by @kylebarron in https://github.com/developmentseed/async-tiff/pull/212
-* feat!: Rename `CompressionMethod` to `Compression` by @kylebarron in https://github.com/developmentseed/async-tiff/pull/213
 * docs(python): Add Changelog to docs website by @kylebarron in https://github.com/developmentseed/async-tiff/pull/215
 * fix(python): Fix obspec input by @kylebarron in https://github.com/developmentseed/async-tiff/pull/214
 * fix(python): Re-export `.enums` at top level Python package by @kylebarron in https://github.com/developmentseed/async-tiff/pull/216
 * fix(python): Include README in pypi distribution by @kylebarron in https://github.com/developmentseed/async-tiff/pull/217
 * docs(python): Add link to async-geotiff by @kylebarron in https://github.com/developmentseed/async-tiff/pull/218
-* feat!: Expose colormap as unaltered `[u16]`; implement buffer protocol exchange by @kylebarron in https://github.com/developmentseed/async-tiff/pull/219
-* ci(python)!: Remove unsupported linux platforms from wheel build by @kylebarron in https://github.com/developmentseed/async-tiff/pull/222
 * docs: Add note to async-geotiff in top-level README by @kylebarron in https://github.com/developmentseed/async-tiff/pull/223
 * fix(python): Fix incorrect store import from `__init__.py` by @kylebarron in https://github.com/developmentseed/async-tiff/pull/224
 * fix(python): Fix obspec imports by @kylebarron in https://github.com/developmentseed/async-tiff/pull/228
-* feat: Change `fetch_tiles` to take tuples of `(x, y)` instead of two separate vecs by @kylebarron in https://github.com/developmentseed/async-tiff/pull/229
-* feat: LZMA decoder by @kylebarron in https://github.com/developmentseed/async-tiff/pull/230
 
 **Full Changelog**: https://github.com/developmentseed/async-tiff/compare/py-v0.4.0...py-v0.5.0
 
