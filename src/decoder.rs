@@ -52,6 +52,8 @@ impl Default for DecoderRegistry {
         registry.insert(Compression::None, Box::new(UncompressedDecoder) as _);
         registry.insert(Compression::Deflate, Box::new(DeflateDecoder) as _);
         registry.insert(Compression::OldDeflate, Box::new(DeflateDecoder) as _);
+        #[cfg(feature = "lerc")]
+        registry.insert(Compression::LERC, Box::new(LercDecoder) as _);
         #[cfg(feature = "lzma")]
         registry.insert(Compression::LZMA, Box::new(LZMADecoder) as _);
         registry.insert(Compression::LZW, Box::new(LZWDecoder) as _);
