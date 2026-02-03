@@ -6,6 +6,7 @@ async fn test_lerc() {
     let filename = "geotiff-test-data/rasterio_generated/fixtures/float32_1band_lerc_block32.tif";
     let (reader, tiff) = open_tiff(filename).await;
     let ifd = &tiff.ifds()[0];
+
     assert_eq!(ifd.image_height(), 128);
     assert_eq!(ifd.image_width(), 128);
     assert_eq!(ifd.tile_width(), Some(64));

@@ -122,6 +122,27 @@ impl Decoder for JPEGDecoder {
 #[derive(Debug, Clone)]
 pub struct LercDecoder;
 
+/// Helper to decode and convert to bytes
+#[cfg(feature = "lerc")]
+fn decode_lerc<T: lerc::LercDataType + bytemuck::Pod>(
+    buffer: &[u8],
+    info: &lerc::BlobInfo,
+) -> AsyncTiffResult<Vec<u8>> {
+    let (data, _mask) = lerc::decode::<T>(
+        buffer,
+        info.width as usize,
+        info.height as usize,
+        info.depth as usize,
+        info.bands as usize,
+        info.masks as usize,
+    )
+    .map_err(|e| AsyncTiffError::General(format!("LERC decode failed: {e}")))?;
+
+    // TODO: in the future we could avoid this copy by allowing the return type of the decoder to
+    // be a typed array, not just Vec<u8>
+    Ok(bytemuck::cast_slice(&data).to_vec())
+}
+
 #[cfg(feature = "lerc")]
 impl Decoder for LercDecoder {
     fn decode_tile(
@@ -132,11 +153,25 @@ impl Decoder for LercDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
-        use lerc as _;
-        todo!();
-        // let lerc = lerc::Lerc::new();
-        // let decoded = lerc.decode(&buffer)?;
-        // Ok(decoded.pixel_data)
+        let info = lerc::get_blob_info(&buffer)
+            .map_err(|e| AsyncTiffError::General(format!("LERC get_blob_info failed: {e}")))?;
+
+        // LERC data_type mapping (from LERC C API):
+        // 0=i8, 1=u8, 2=i16, 3=u16, 4=i32, 5=u32, 6=f32, 7=f64
+        match info.data_type {
+            0 => decode_lerc::<i8>(&buffer, &info),
+            1 => decode_lerc::<u8>(&buffer, &info),
+            2 => decode_lerc::<i16>(&buffer, &info),
+            3 => decode_lerc::<u16>(&buffer, &info),
+            4 => decode_lerc::<i32>(&buffer, &info),
+            5 => decode_lerc::<u32>(&buffer, &info),
+            6 => decode_lerc::<f32>(&buffer, &info),
+            7 => decode_lerc::<f64>(&buffer, &info),
+            _ => Err(AsyncTiffError::General(format!(
+                "Unsupported LERC data type: {}",
+                info.data_type
+            ))),
+        }
     }
 }
 
