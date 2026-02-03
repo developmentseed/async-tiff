@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::ops::Range;
+use std::sync::Arc;
 
 use bytes::Bytes;
 use num_enum::TryFromPrimitive;
@@ -10,7 +11,7 @@ use crate::predictor::PredictorInfo;
 use crate::reader::{AsyncFileReader, Endianness};
 use crate::tag_value::TagValue;
 use crate::tags::{
-    CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
+    Compression, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat, Tag,
 };
 use crate::{DataType, Tile};
@@ -34,7 +35,7 @@ pub struct ImageFileDirectory {
 
     pub(crate) bits_per_sample: Vec<u16>,
 
-    pub(crate) compression: CompressionMethod,
+    pub(crate) compression: Compression,
 
     pub(crate) photometric_interpretation: PhotometricInterpretation,
 
@@ -117,7 +118,9 @@ pub struct ImageFileDirectory {
     /// In Specification Supplement 1, support was added for ColorMaps containing other then RGB
     /// values. This scheme includes the Indexed tag, with value 1, and a PhotometricInterpretation
     /// different from PaletteColor then next denotes the colorspace of the ColorMap entries.
-    pub(crate) color_map: Option<Vec<u16>>,
+    ///
+    /// <https://web.archive.org/web/20240329145324/https://www.awaresystems.be/imaging/tiff/tifftags/colormap.html>
+    pub(crate) color_map: Option<Arc<[u16]>>,
 
     pub(crate) tile_width: Option<u32>,
     pub(crate) tile_height: Option<u32>,
@@ -202,7 +205,7 @@ impl ImageFileDirectory {
                 Tag::ImageLength => image_height = Some(value.into_u32()?),
                 Tag::BitsPerSample => bits_per_sample = Some(value.into_u16_vec()?),
                 Tag::Compression => {
-                    compression = Some(CompressionMethod::from_u16_exhaustive(value.into_u16()?))
+                    compression = Some(Compression::from_u16_exhaustive(value.into_u16()?))
                 }
                 Tag::PhotometricInterpretation => {
                     photometric_interpretation =
@@ -235,7 +238,7 @@ impl ImageFileDirectory {
                 Tag::Artist => artist = Some(value.into_string()?),
                 Tag::HostComputer => host_computer = Some(value.into_string()?),
                 Tag::Predictor => predictor = Predictor::from_u16(value.into_u16()?),
-                Tag::ColorMap => color_map = Some(value.into_u16_vec()?),
+                Tag::ColorMap => color_map = Some(Arc::from(value.into_u16_vec()?)),
                 Tag::TileWidth => tile_width = Some(value.into_u32()?),
                 Tag::TileLength => tile_height = Some(value.into_u32()?),
                 Tag::TileOffsets => tile_offsets = Some(value.into_u64_vec()?),
@@ -372,7 +375,7 @@ impl ImageFileDirectory {
             bits_per_sample: bits_per_sample.expect("bits per sample not found"),
             // Defaults to no compression
             // https://web.archive.org/web/20240329145331/https://www.awaresystems.be/imaging/tiff/tifftags/compression.html
-            compression: compression.unwrap_or(CompressionMethod::None),
+            compression: compression.unwrap_or(Compression::None),
             photometric_interpretation: photometric_interpretation
                 .expect("photometric interpretation not found"),
             document_name,
@@ -441,7 +444,7 @@ impl ImageFileDirectory {
 
     /// Compression scheme used on the image data.
     /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/compression.html>
-    pub fn compression(&self) -> CompressionMethod {
+    pub fn compression(&self) -> Compression {
         self.compression
     }
 
@@ -672,37 +675,25 @@ impl ImageFileDirectory {
         &self.other_tags
     }
 
-    /// Construct colormap from colormap tag
-    pub fn colormap(&self) -> Option<HashMap<usize, [u8; 3]>> {
-        fn cmap_transform(val: u16) -> u8 {
-            let val = ((val as f64 / 65535.0) * 255.0).floor();
-            if val >= 255.0 {
-                255
-            } else if val < 0.0 {
-                0
-            } else {
-                val as u8
-            }
-        }
-
-        if let Some(cmap_data) = &self.color_map {
-            let bits_per_sample = self.bits_per_sample[0];
-            let count = 2_usize.pow(bits_per_sample as u32);
-            let mut result = HashMap::new();
-
-            // TODO: support nodata
-            for idx in 0..count {
-                let color: [u8; 3] =
-                    std::array::from_fn(|i| cmap_transform(cmap_data[idx + i * count]));
-                // TODO: Handle nodata value
-
-                result.insert(idx, color);
-            }
-
-            Some(result)
-        } else {
-            None
-        }
+    /// A color map for palette color images.
+    ///
+    /// This field defines a Red-Green-Blue color map (often called a lookup table) for
+    /// palette-color images. In a palette-color image, a pixel value is used to index into an RGB
+    /// lookup table. For example, a palette-color pixel having a value of 0 would be displayed
+    /// according to the 0th Red, Green, Blue triplet.
+    ///
+    /// In a TIFF ColorMap, all the Red values come first, followed by the Green values, then the
+    /// Blue values. The number of values for each color is `2**BitsPerSample`. Therefore, the
+    /// ColorMap field for an 8-bit palette-color image would have `3 * 256` values. The width of
+    /// each value is 16 bits, as implied by the type of SHORT. 0 represents the minimum intensity,
+    /// and 65535 represents the maximum intensity. Black is represented by 0,0,0, and white by
+    /// 65535, 65535, 65535.
+    ///
+    /// ColorMap must be included in all palette-color images.
+    ///
+    /// <https://web.archive.org/web/20240329145324/https://www.awaresystems.be/imaging/tiff/tifftags/colormap.html>
+    pub fn colormap(&self) -> Option<&Arc<[u16]>> {
+        self.color_map.as_ref()
     }
 
     fn get_tile_byte_range(&self, x: usize, y: usize) -> Option<Range<u64>> {
@@ -747,19 +738,15 @@ impl ImageFileDirectory {
     /// Fetch the tiles located at `x` column and `y` row using the provided reader.
     pub async fn fetch_tiles(
         &self,
-        x: &[usize],
-        y: &[usize],
+        xy: &[(usize, usize)],
         reader: &dyn AsyncFileReader,
     ) -> AsyncTiffResult<Vec<Tile>> {
-        assert_eq!(x.len(), y.len(), "x and y should have same len");
-
         let predictor_info = PredictorInfo::from_ifd(self);
         let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
 
         // 1: Get all the byte ranges for all tiles
-        let byte_ranges = x
+        let byte_ranges = xy
             .iter()
-            .zip(y)
             .map(|(x, y)| {
                 self.get_tile_byte_range(*x, *y)
                     .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))
@@ -771,7 +758,7 @@ impl ImageFileDirectory {
 
         // 3: Create tile objects
         let mut tiles = vec![];
-        for ((compressed_bytes, &x), &y) in buffers.into_iter().zip(x).zip(y) {
+        for (compressed_bytes, &(x, y)) in buffers.into_iter().zip(xy) {
             let tile = Tile {
                 x,
                 y,

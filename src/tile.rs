@@ -4,7 +4,7 @@ use crate::array::Array;
 use crate::decoder::DecoderRegistry;
 use crate::error::{AsyncTiffResult, TiffError, TiffUnsupportedError};
 use crate::predictor::{fix_endianness, unpredict_float, unpredict_hdiff, PredictorInfo};
-use crate::tags::{CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor};
+use crate::tags::{Compression, PhotometricInterpretation, PlanarConfiguration, Predictor};
 use crate::DataType;
 
 /// A TIFF Tile response.
@@ -27,7 +27,7 @@ pub struct Tile {
     pub(crate) predictor: Predictor,
     pub(crate) predictor_info: PredictorInfo,
     pub(crate) compressed_bytes: Bytes,
-    pub(crate) compression_method: CompressionMethod,
+    pub(crate) compression_method: Compression,
     pub(crate) photometric_interpretation: PhotometricInterpretation,
     pub(crate) jpeg_tables: Option<Bytes>,
 }
@@ -51,7 +51,7 @@ impl Tile {
     }
 
     /// Access the compression tag representing this tile.
-    pub fn compression_method(&self) -> CompressionMethod {
+    pub fn compression_method(&self) -> Compression {
         self.compression_method
     }
 
@@ -76,13 +76,15 @@ impl Tile {
             .as_ref()
             .get(&self.compression_method)
             .ok_or(TiffError::UnsupportedError(
-                TiffUnsupportedError::UnsupportedCompressionMethod(self.compression_method),
+                TiffUnsupportedError::UnsupportedCompression(self.compression_method),
             ))?;
 
         let mut decoded_tile = decoder.decode_tile(
             self.compressed_bytes.clone(),
             self.photometric_interpretation,
             self.jpeg_tables.as_deref(),
+            self.samples_per_pixel,
+            self.predictor_info.bits_per_sample(),
         )?;
 
         let decoded = match self.predictor {

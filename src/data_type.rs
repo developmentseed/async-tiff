@@ -3,6 +3,8 @@ use crate::tags::SampleFormat;
 /// Supported numeric data types for array elements.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DataType {
+    /// Boolean mask data.
+    Bool,
     /// Unsigned 8-bit integer.
     UInt8,
     /// Unsigned 16-bit integer.
@@ -31,6 +33,7 @@ impl DataType {
     /// ```
     /// use async_tiff::DataType;
     ///
+    /// assert_eq!(DataType::Bool.size(), 1);
     /// assert_eq!(DataType::UInt8.size(), 1);
     /// assert_eq!(DataType::Int16.size(), 2);
     /// assert_eq!(DataType::Float32.size(), 4);
@@ -38,7 +41,7 @@ impl DataType {
     /// ```
     pub fn size(&self) -> usize {
         match self {
-            DataType::UInt8 | DataType::Int8 => 1,
+            DataType::Bool | DataType::UInt8 | DataType::Int8 => 1,
             DataType::UInt16 | DataType::Int16 => 2,
             DataType::UInt32 | DataType::Int32 | DataType::Float32 => 4,
             DataType::UInt64 | DataType::Int64 | DataType::Float64 => 8,
@@ -70,6 +73,7 @@ impl DataType {
         }
 
         match (first_format, first_bits) {
+            (SampleFormat::Uint, 1) => Some(DataType::Bool),
             (SampleFormat::Uint, 8) => Some(DataType::UInt8),
             (SampleFormat::Uint, 16) => Some(DataType::UInt16),
             (SampleFormat::Uint, 32) => Some(DataType::UInt32),
@@ -92,6 +96,11 @@ mod tests {
 
     #[test]
     fn test_from_tags_uint_types() {
+        assert_eq!(
+            DataType::from_tags(&[SampleFormat::Uint], &[1]),
+            Some(DataType::Bool),
+            "Uint 1-bit should be Bool"
+        );
         assert_eq!(
             DataType::from_tags(&[SampleFormat::Uint], &[8]),
             Some(DataType::UInt8),

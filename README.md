@@ -2,8 +2,11 @@
 
 An async, low-level [TIFF](https://en.wikipedia.org/wiki/TIFF) reader for Rust and Python.
 
-[**Rust documentation**](https://docs.rs/async-tiff/) <br/>
-[**Python documentation**](https://developmentseed.org/async-tiff/latest/)
+- [**Rust documentation**](https://docs.rs/async-tiff/)
+- [**Python documentation**](https://developmentseed.org/async-tiff/latest/)
+    - For a higher-level Python API to read GeoTIFF files, see [`async-geotiff`][async-geotiff].
+
+[async-geotiff]: https://developmentseed.org/async-geotiff/latest/
 
 ## Features
 
@@ -46,3 +49,5 @@ println!("shape: {:?}, dtype: {:?}", array.shape(), array.data_type());
 ## Background
 
 The existing [`tiff` crate](https://crates.io/crates/tiff) is great, but only supports synchronous reading of TIFF files. Furthermore, due to low maintenance bandwidth it is not designed for extensibility (see [#250](https://github.com/image-rs/image-tiff/issues/250)).
+
+This crate was initially forked from the `tiff` crate, and still maintains some of its TIFF tag parsing code.

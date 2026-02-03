@@ -1,9 +1,9 @@
 [package]
 name = "py-async-tiff"
-version = "0.4.0"
+version = "0.5.0-beta.4"
 authors = ["Kyle Barron <kyle@developmentseed.org>"]
 edition = "2021"
-# description = "Fast, memory-efficient 2D spatial indexes for Python."
+description = "Fast, Async TIFF reader for Python with a Rust core."
 readme = "README.md"
 repository = "https://github.com/developmentseed/async-tiff"
 license = "MIT OR Apache-2.0"
@@ -21,7 +21,7 @@ abi3-py311 = ["pyo3/abi3-py311"]
 extension-module = ["pyo3/extension-module"]
 
 [dependencies]
-async-tiff = { path = "../", features = ["jpeg2k"] }
+async-tiff = { path = "../", features = ["jpeg2k", "webp", "lzma"] }
 async-trait = "0.1.89"
 bytes = "1.10.1"
 futures = "0.3.31"

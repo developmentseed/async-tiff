@@ -10,20 +10,22 @@ readme = "README.md"
 
 [dependencies]
 async-trait = "0.1.89"
-byteorder = "1"
 bytemuck = { version = "1.24", features = ["extern_crate_alloc"] }
+byteorder = "1"
 bytes = "1.7.0"
 flate2 = "1.0.20"
 futures = "0.3.31"
 jpeg = { package = "jpeg-decoder", version = "0.3.0", default-features = false }
 jpeg2k = { version = "0.10.1", optional = true }
 lerc = { version = "0.2.1", optional = true }
+lzma-rust2 = { version = "0.15.7", optional = true, features = ["xz"] }
 ndarray = { version = "0.17", optional = true }
 num_enum = "0.7.3"
 object_store = { version = "0.13", optional = true }
 reqwest = { version = "0.13", default-features = false, optional = true }
 thiserror = "2"
 tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
+webp = { version = "0.3", optional = true }
 weezl = "0.1.0"
 zstd = "0.13"
 
@@ -44,12 +46,19 @@ tokio-test = "0.4.4"
 default = ["object_store", "reqwest"]
 jpeg2k = ["dep:jpeg2k"]
 lerc = ["dep:lerc"]
+lzma = ["dep:lzma-rust2"]
 ndarray = ["dep:ndarray"]
 object_store = ["dep:object_store"]
 reqwest = ["dep:reqwest"]
 tokio = ["tokio/io-util"]
+webp = ["dep:webp"]
 
 [package.metadata.cargo-all-features]
+# The maximum number of features to try at once. Does not count features from
+# `always_include_features`. This is useful for reducing the number of
+# combinations run for a crate with a large amount of features, since in most
+# cases a bug just needs a small set of 2-3 features to reproduce.
+max_combination_size = 1
 
 [[bench]]
 name = "read_tiff"

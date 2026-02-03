@@ -1,9 +1,11 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any
 
+from ._colormap import Colormap
 from ._geo import GeoKeyDirectory
+from ._tile import Tile
 from .enums import (
-    CompressionMethod,
+    Compression,
     PhotometricInterpretation,
     PlanarConfiguration,
     Predictor,
@@ -35,11 +37,11 @@ class ImageFileDirectory:
     @property
     def bits_per_sample(self) -> list[int]: ...
     @property
-    def compression(self) -> CompressionMethod | int:
+    def compression(self) -> Compression | int:
         """Access the compression tag.
 
         An `int` will be returned if the compression is not one of the values in
-        `CompressionMethod`.
+        `Compression`.
         """
     @property
     def photometric_interpretation(self) -> PhotometricInterpretation: ...
@@ -122,3 +124,26 @@ class ImageFileDirectory:
     def gdal_metadata(self) -> str | None: ...
     @property
     def other_tags(self) -> dict[int, Value]: ...
+    @property
+    def colormap(self) -> Colormap | None:
+        """The colormap for palette-color images."""
+        ...
+    async def fetch_tile(self, x: int, y: int) -> Tile:
+        """Fetch a single tile.
+
+        Args:
+            x: The column index within the ifd to read from.
+            y: The row index within the ifd to read from.
+
+        Returns:
+            Tile response.
+        """
+    async def fetch_tiles(self, xy: Sequence[tuple[int, int]]) -> list[Tile]:
+        """Fetch multiple tiles concurrently.
+
+        Args:
+            xy: The (column, row) indexes within the ifd to read from.
+
+        Returns:
+            Tile responses.
+        """

@@ -19,7 +19,7 @@ async def test_cog_s3():
     assert len(ifds) == 5
 
     ifd = ifds[0]
-    assert ifd.compression == enums.CompressionMethod.Deflate
+    assert ifd.compression == enums.Compression.Deflate
     assert ifd.tile_height == 1024
     assert ifd.tile_width == 1024
     assert ifd.photometric_interpretation == enums.PhotometricInterpretation.BlackIsZero

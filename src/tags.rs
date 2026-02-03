@@ -183,7 +183,7 @@ tags! {
 ///
 /// See [TIFF compression tags](https://www.awaresystems.be/imaging/tiff/tifftags/compression.html)
 /// for reference.
-pub enum CompressionMethod(u16) unknown("A custom compression method") {
+pub enum Compression(u16) unknown("A custom compression method") {
     None = 1,
     Huffman = 2,
     Fax3 = 3,
@@ -195,6 +195,9 @@ pub enum CompressionMethod(u16) unknown("A custom compression method") {
     Deflate = 8,
     OldDeflate = 0x80B2,
     PackBits = 0x8005,
+    LZMA = 34925,
+    // https://github.com/OSGeo/gdal/blob/4769b527b275fdb286cba95c8b35bbd131168e54/frmts/gtiff/gtiff.h#L136C26-L136C31
+    WebP = 50001,
     JPEG2k = 34712,
 
     // Self-assigned by libtiff

@@ -53,6 +53,8 @@ use crate::error::PyAsyncTiffResult;
 #[expect(unused)]
 fn data_type_to_numpy_char(dtype: &DataType) -> char {
     match dtype {
+        // Represented as uint8 in numpy
+        DataType::Bool => 'u',
         DataType::UInt8 => 'u',
         DataType::UInt16 => 'u',
         DataType::UInt32 => 'u',
@@ -82,7 +84,7 @@ fn data_type_to_numpy_char(dtype: &DataType) -> char {
 fn data_type_to_buffer_format(data_type: &DataType) -> &'static CStr {
     use DataType::*;
     match data_type {
-        UInt8 => c"B",
+        Bool | UInt8 => c"B",
         UInt16 => c"H",
         UInt32 => c"I",
         UInt64 => c"Q",
@@ -175,12 +177,11 @@ pub struct PyArray {
     /// The shape of the array as `[dim0, dim1, dim2]`.
     ///
     /// Stored as `isize` because the buffer protocol requires `Py_ssize_t` (= `isize`).
-    /// Using `Box` ensures a stable memory address that we can expose to Python.
     ///
     /// The interpretation depends on the PlanarConfiguration:
     /// - PlanarConfiguration=1 (chunky): (height, width, bands)
     /// - PlanarConfiguration=2 (planar): (bands, height, width)
-    shape: Box<[isize; 3]>,
+    shape: [isize; 3],
 
     /// Row-major (C-contiguous) strides in bytes.
     ///
@@ -188,9 +189,7 @@ pub struct PyArray {
     /// - strides[0] = d1 * d2 * itemsize (bytes to skip for next row)
     /// - strides[1] = d2 * itemsize (bytes to skip for next column)
     /// - strides[2] = itemsize (bytes to skip for next element)
-    ///
-    /// Stored as `Box` for the same reason as `shape`.
-    strides: Box<[isize; 3]>,
+    strides: [isize; 3],
 
     /// The data type of array elements.
     data_type: DataType,
@@ -198,23 +197,22 @@ pub struct PyArray {
 
 impl PyArray {
     pub(crate) fn try_new(array: Array) -> PyAsyncTiffResult<Self> {
-        let (array, shape, data_type) = array.into_inner();
+        let (typed_data, shape, data_type) = array.into_inner();
         let data_type = data_type.ok_or(PyValueError::new_err(
             "Unknown data types are not currently supported.",
         ))?;
 
         let itemsize = data_type.size();
-        let shape_isize: Box<[isize; 3]> =
-            Box::new([shape[0] as isize, shape[1] as isize, shape[2] as isize]);
+        let shape = [shape[0] as isize, shape[1] as isize, shape[2] as isize];
         // Row-major (C-contiguous) strides: [dim1 * dim2 * itemsize, dim2 * itemsize, itemsize]
-        let strides: Box<[isize; 3]> = Box::new([
-            (shape[1] * shape[2] * itemsize) as isize,
-            (shape[2] * itemsize) as isize,
+        let strides = [
+            (shape[1] as usize * shape[2] as usize * itemsize) as isize,
+            (shape[2] as usize * itemsize) as isize,
             itemsize as isize,
-        ]);
+        ];
         Ok(Self {
-            data: array,
-            shape: shape_isize,
+            data: typed_data,
+            shape,
             strides,
             data_type,
         })
@@ -228,25 +226,24 @@ impl PyArray {
         let data_type = parse_buffer_format_string(format)?;
         let itemsize = data_type.size();
         let typed_data = TypedArray::try_new(array.into_inner().to_vec(), Some(data_type)).unwrap();
-        let shape_isize: Box<[isize; 3]> =
-            Box::new([shape[0] as isize, shape[1] as isize, shape[2] as isize]);
+        let shape = [shape[0] as isize, shape[1] as isize, shape[2] as isize];
         // Row-major (C-contiguous) strides: [dim1 * dim2 * itemsize, dim2 * itemsize, itemsize]
-        let strides: Box<[isize; 3]> = Box::new([
-            (shape[1] * shape[2] * itemsize) as isize,
-            (shape[2] * itemsize) as isize,
+        let strides = [
+            (shape[1] as usize * shape[2] as usize * itemsize) as isize,
+            (shape[2] as usize * itemsize) as isize,
             itemsize as isize,
-        ]);
+        ];
         Ok(Self {
             data: typed_data,
-            shape: shape_isize,
+            shape,
             strides,
             data_type,
         })
     }
 
     #[getter]
-    fn shape(&self) -> [isize; 3] {
-        *self.shape
+    fn shape(&self) -> (isize, isize, isize) {
+        (self.shape[0], self.shape[1], self.shape[2])
     }
 
     /// Implements the buffer protocol's `__getbuffer__` method (PEP 3118).
@@ -345,6 +342,8 @@ impl PyArray {
 
 fn data_as_ptr(data: &TypedArray) -> *mut std::ffi::c_void {
     match data {
+        // Bool is 1 byte per element with 0/1 values, same memory layout as u8
+        TypedArray::Bool(data) => data.as_ptr() as _,
         TypedArray::UInt8(data) => data.as_ptr() as _,
         TypedArray::UInt16(data) => data.as_ptr() as _,
         TypedArray::UInt32(data) => data.as_ptr() as _,

@@ -3,7 +3,7 @@ from collections.abc import Buffer
 from ._array import Array
 from ._decoder import DecoderRegistry
 from ._thread_pool import ThreadPool
-from .enums import CompressionMethod
+from .enums import Compression
 
 class Tile:
     """A representation of a TIFF image tile."""
@@ -17,7 +17,7 @@ class Tile:
     def compressed_bytes(self) -> Buffer:
         """The compressed bytes underlying this tile."""
     @property
-    def compression_method(self) -> CompressionMethod | int:
+    def compression_method(self) -> Compression | int:
         """The compression method used by this tile."""
     def decode_sync(
         self,

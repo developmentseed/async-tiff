@@ -28,6 +28,7 @@ nav:
       - api/tile.md
       - api/array.md
       - api/geo.md
+      - api/enums.md
       - api/decoder.md
       - api/thread-pool.md
       - async-tiff.store:
@@ -39,10 +40,7 @@ nav:
           - api/store/local.md
           - api/store/memory.md
           - api/store/config.md
-  # - API Reference:
-  #     - api/rtree.md
-  #     - api/kdtree.md
-  # - Changelog: CHANGELOG.md
+  - Changelog: CHANGELOG.md
 
 watch:
   - python
@@ -120,8 +118,9 @@ plugins:
             extensions:
               - griffe_inherited_docstrings
 
-          import:
+          inventories:
             - https://docs.python.org/3/objects.inv
+            - https://developmentseed.org/obspec/latest/objects.inv
             - https://developmentseed.org/obstore/latest/objects.inv
 
 # https://github.com/developmentseed/titiler/blob/50934c929cca2fa8d3c408d239015f8da429c6a8/docs/mkdocs.yml#L115-L140

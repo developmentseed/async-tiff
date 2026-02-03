@@ -1,6 +1,6 @@
 use async_tiff::reader::Endianness;
 use async_tiff::tags::{
-    CompressionMethod, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
+    Compression, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat,
 };
 use pyo3::prelude::*;
@@ -8,35 +8,35 @@ use pyo3::types::{PyString, PyTuple};
 use pyo3::{intern, IntoPyObjectExt};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct PyCompressionMethod(CompressionMethod);
+pub(crate) struct PyCompression(Compression);
 
-impl From<CompressionMethod> for PyCompressionMethod {
-    fn from(value: CompressionMethod) -> Self {
+impl From<Compression> for PyCompression {
+    fn from(value: Compression) -> Self {
         Self(value)
     }
 }
 
-impl From<PyCompressionMethod> for CompressionMethod {
-    fn from(value: PyCompressionMethod) -> Self {
+impl From<PyCompression> for Compression {
+    fn from(value: PyCompression) -> Self {
         value.0
     }
 }
 
-impl<'py> FromPyObject<'_, 'py> for PyCompressionMethod {
+impl<'py> FromPyObject<'_, 'py> for PyCompression {
     type Error = PyErr;
 
     fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
-        Ok(Self(CompressionMethod::from_u16_exhaustive(obj.extract()?)))
+        Ok(Self(Compression::from_u16_exhaustive(obj.extract()?)))
     }
 }
 
-impl<'py> IntoPyObject<'py> for PyCompressionMethod {
+impl<'py> IntoPyObject<'py> for PyCompression {
     type Target = PyAny;
     type Output = Bound<'py, PyAny>;
     type Error = PyErr;
 
     fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-        to_py_enum_variant(py, intern!(py, "CompressionMethod"), self.0.to_u16())
+        to_py_enum_variant(py, intern!(py, "Compression"), self.0.to_u16())
     }
 }
 

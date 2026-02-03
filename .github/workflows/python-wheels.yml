@@ -33,15 +33,6 @@ jobs:
           - runner: ubuntu-latest
             target: aarch64
             manylinux: "2_24"
-          - runner: ubuntu-latest
-            target: armv7
-            manylinux: auto
-          - runner: ubuntu-latest
-            target: s390x
-            manylinux: auto
-          - runner: ubuntu-latest
-            target: ppc64le
-            manylinux: auto
     steps:
       - uses: actions/checkout@v4
         with:
@@ -89,8 +80,6 @@ jobs:
             target: x86
           - runner: ubuntu-latest
             target: aarch64
-          - runner: ubuntu-latest
-            target: armv7
     steps:
       - uses: actions/checkout@v4
         with:

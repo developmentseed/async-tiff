@@ -7,8 +7,8 @@ use std::io::{Cursor, Read};
 use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
 
-use crate::error::{AsyncTiffResult, TiffError, TiffUnsupportedError};
-use crate::tags::{CompressionMethod, PhotometricInterpretation};
+use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffUnsupportedError};
+use crate::tags::{Compression, PhotometricInterpretation};
 
 /// A registry of decoders.
 ///
@@ -25,7 +25,7 @@ use crate::tags::{CompressionMethod, PhotometricInterpretation};
 /// let empty = DecoderRegistry::empty();
 /// ```
 #[derive(Debug)]
-pub struct DecoderRegistry(HashMap<CompressionMethod, Box<dyn Decoder>>);
+pub struct DecoderRegistry(HashMap<Compression, Box<dyn Decoder>>);
 
 impl DecoderRegistry {
     /// Create a new decoder registry with no decoders registered
@@ -34,14 +34,14 @@ impl DecoderRegistry {
     }
 }
 
-impl AsRef<HashMap<CompressionMethod, Box<dyn Decoder>>> for DecoderRegistry {
-    fn as_ref(&self) -> &HashMap<CompressionMethod, Box<dyn Decoder>> {
+impl AsRef<HashMap<Compression, Box<dyn Decoder>>> for DecoderRegistry {
+    fn as_ref(&self) -> &HashMap<Compression, Box<dyn Decoder>> {
         &self.0
     }
 }
 
-impl AsMut<HashMap<CompressionMethod, Box<dyn Decoder>>> for DecoderRegistry {
-    fn as_mut(&mut self) -> &mut HashMap<CompressionMethod, Box<dyn Decoder>> {
+impl AsMut<HashMap<Compression, Box<dyn Decoder>>> for DecoderRegistry {
+    fn as_mut(&mut self) -> &mut HashMap<Compression, Box<dyn Decoder>> {
         &mut self.0
     }
 }
@@ -49,14 +49,18 @@ impl AsMut<HashMap<CompressionMethod, Box<dyn Decoder>>> for DecoderRegistry {
 impl Default for DecoderRegistry {
     fn default() -> Self {
         let mut registry = HashMap::with_capacity(6);
-        registry.insert(CompressionMethod::None, Box::new(UncompressedDecoder) as _);
-        registry.insert(CompressionMethod::Deflate, Box::new(DeflateDecoder) as _);
-        registry.insert(CompressionMethod::OldDeflate, Box::new(DeflateDecoder) as _);
-        registry.insert(CompressionMethod::LZW, Box::new(LZWDecoder) as _);
-        registry.insert(CompressionMethod::ModernJPEG, Box::new(JPEGDecoder) as _);
-        registry.insert(CompressionMethod::ZSTD, Box::new(ZstdDecoder) as _);
+        registry.insert(Compression::None, Box::new(UncompressedDecoder) as _);
+        registry.insert(Compression::Deflate, Box::new(DeflateDecoder) as _);
+        registry.insert(Compression::OldDeflate, Box::new(DeflateDecoder) as _);
+        #[cfg(feature = "lzma")]
+        registry.insert(Compression::LZMA, Box::new(LZMADecoder) as _);
+        registry.insert(Compression::LZW, Box::new(LZWDecoder) as _);
+        registry.insert(Compression::ModernJPEG, Box::new(JPEGDecoder) as _);
         #[cfg(feature = "jpeg2k")]
-        registry.insert(CompressionMethod::JPEG2k, Box::new(JPEG2kDecoder) as _);
+        registry.insert(Compression::JPEG2k, Box::new(JPEG2kDecoder) as _);
+        #[cfg(feature = "webp")]
+        registry.insert(Compression::WebP, Box::new(WebPDecoder) as _);
+        registry.insert(Compression::ZSTD, Box::new(ZstdDecoder) as _);
         Self(registry)
     }
 }
@@ -69,6 +73,8 @@ pub trait Decoder: Debug + Send + Sync {
         buffer: Bytes,
         photometric_interpretation: PhotometricInterpretation,
         jpeg_tables: Option<&[u8]>,
+        samples_per_pixel: u16,
+        bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>>;
 }
 
@@ -82,6 +88,8 @@ impl Decoder for DeflateDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         let mut decoder = ZlibDecoder::new(Cursor::new(buffer));
         let mut buf = Vec::new();
@@ -100,6 +108,8 @@ impl Decoder for JPEGDecoder {
         buffer: Bytes,
         photometric_interpretation: PhotometricInterpretation,
         jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         decode_modern_jpeg(buffer, photometric_interpretation, jpeg_tables)
     }
@@ -117,9 +127,39 @@ impl Decoder for LercDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         use lerc as _;
-        todo!()
+        todo!();
+        // let lerc = lerc::Lerc::new();
+        // let decoded = lerc.decode(&buffer)?;
+        // Ok(decoded.pixel_data)
+    }
+}
+
+/// A decoder for the LZMA compression method.
+#[derive(Debug, Clone)]
+#[cfg(feature = "lzma")]
+pub struct LZMADecoder;
+
+#[cfg(feature = "lzma")]
+impl Decoder for LZMADecoder {
+    fn decode_tile(
+        &self,
+        buffer: Bytes,
+        _photometric_interpretation: PhotometricInterpretation,
+        _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
+    ) -> AsyncTiffResult<Vec<u8>> {
+        use bytes::Buf;
+        use lzma_rust2::XzReader;
+
+        let mut reader = XzReader::new(buffer.reader(), false);
+        let mut out = Vec::new();
+        reader.read_to_end(&mut out)?;
+        Ok(out)
     }
 }
 
@@ -133,6 +173,8 @@ impl Decoder for LZWDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         // https://github.com/image-rs/image-tiff/blob/90ae5b8e54356a35e266fb24e969aafbcb26e990/src/decoder/stream.rs#L147
         let mut decoder = weezl::decode::Decoder::with_tiff_size_switch(weezl::BitOrder::Msb, 8);
@@ -153,6 +195,8 @@ impl Decoder for JPEG2kDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         let decoder = jpeg2k::DecodeParameters::new();
 
@@ -172,6 +216,43 @@ impl Decoder for JPEG2kDecoder {
     }
 }
 
+/// A decoder for the WebP compression method.
+#[cfg(feature = "webp")]
+#[derive(Debug, Clone)]
+pub struct WebPDecoder;
+
+#[cfg(feature = "webp")]
+impl Decoder for WebPDecoder {
+    fn decode_tile(
+        &self,
+        buffer: Bytes,
+        _photometric_interpretation: PhotometricInterpretation,
+        _jpeg_tables: Option<&[u8]>,
+        samples_per_pixel: u16,
+        bits_per_sample: u16,
+    ) -> AsyncTiffResult<Vec<u8>> {
+        let decoded = webp::Decoder::new(&buffer)
+            .decode()
+            .ok_or(AsyncTiffError::General("WebP decoding failed".to_string()))?;
+
+        let data = decoded.to_vec();
+
+        // WebP lossy compression may discard fully-opaque alpha channels.
+        // If the TIFF expects 4 samples but WebP decoded to 3, expand RGB to RGBA.
+        // Only do this for 8-bit data since WebP only supports 8-bit.
+        if samples_per_pixel == 4 && bits_per_sample == 8 && !decoded.is_alpha() {
+            let mut rgba = Vec::with_capacity(data.len() / 3 * 4);
+            for chunk in data.chunks_exact(3) {
+                rgba.extend_from_slice(chunk);
+                rgba.push(255); // opaque alpha
+            }
+            Ok(rgba)
+        } else {
+            Ok(data)
+        }
+    }
+}
+
 /// A decoder for uncompressed data.
 #[derive(Debug, Clone)]
 pub struct UncompressedDecoder;
@@ -182,6 +263,8 @@ impl Decoder for UncompressedDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         Ok(buffer.to_vec())
     }
@@ -197,6 +280,8 @@ impl Decoder for ZstdDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         let mut decoder = zstd::Decoder::new(Cursor::new(buffer))?;
         let mut buf = Vec::new();

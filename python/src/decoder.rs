@@ -12,7 +12,7 @@ use pyo3::sync::PyOnceLock;
 use pyo3::types::{PyDict, PyTuple};
 use pyo3_bytes::PyBytes;
 
-use crate::enums::PyCompressionMethod;
+use crate::enums::PyCompression;
 
 static DEFAULT_DECODER_REGISTRY: PyOnceLock<Arc<DecoderRegistry>> = PyOnceLock::new();
 
@@ -30,7 +30,7 @@ pub(crate) struct PyDecoderRegistry(Arc<DecoderRegistry>);
 impl PyDecoderRegistry {
     #[new]
     #[pyo3(signature = (custom_decoders = None))]
-    pub(crate) fn new(custom_decoders: Option<HashMap<PyCompressionMethod, PyDecoder>>) -> Self {
+    pub(crate) fn new(custom_decoders: Option<HashMap<PyCompression, PyDecoder>>) -> Self {
         let mut decoder_registry = DecoderRegistry::default();
         if let Some(custom_decoders) = custom_decoders {
             for (compression, decoder) in custom_decoders.into_iter() {
@@ -79,6 +79,8 @@ impl Decoder for PyDecoder {
         buffer: Bytes,
         _photometric_interpretation: PhotometricInterpretation,
         _jpeg_tables: Option<&[u8]>,
+        _samples_per_pixel: u16,
+        _bits_per_sample: u16,
     ) -> AsyncTiffResult<Vec<u8>> {
         Python::attach(|py| self.call(py, buffer))
             .map_err(|err| AsyncTiffError::General(err.to_string()))
