@@ -14,6 +14,7 @@ use crate::tags::{
     Compression, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
     SampleFormat, Tag,
 };
+use crate::tile::CompressedBytes;
 use crate::{DataType, Tile};
 
 const DOCUMENT_NAME: u16 = 269;
@@ -696,7 +697,8 @@ impl ImageFileDirectory {
         self.color_map.as_ref()
     }
 
-    fn get_tile_byte_range(&self, x: usize, y: usize) -> Option<Range<u64>> {
+    /// Get tile byte range for all bands in chunky configuration.
+    fn get_chunky_tile_byte_range(&self, x: usize, y: usize) -> Option<Range<u64>> {
         let tile_offsets = self.tile_offsets.as_deref()?;
         let tile_byte_counts = self.tile_byte_counts.as_deref()?;
         let idx = (y * self.tile_count()?.0) + x;
@@ -706,22 +708,63 @@ impl ImageFileDirectory {
         Some(offset as _..(offset + byte_count) as _)
     }
 
+    /// Get tile byte range for a specific band in planar configuration.
+    /// For planar TIFFs, tiles are organized as: all tiles for band 0, then all tiles for band 1, etc.
+    fn get_planar_tile_byte_range_for_band(
+        &self,
+        x: usize,
+        y: usize,
+        band: usize,
+    ) -> Option<Range<u64>> {
+        let tile_offsets = self.tile_offsets.as_deref()?;
+        let tile_byte_counts = self.tile_byte_counts.as_deref()?;
+        let (tiles_per_row, tiles_per_col) = self.tile_count()?;
+        let tiles_per_band = tiles_per_row * tiles_per_col;
+        let idx = (band * tiles_per_band) + (y * tiles_per_row) + x;
+        let offset = tile_offsets[idx] as usize;
+        let byte_count = tile_byte_counts[idx] as usize;
+        Some(offset as _..(offset + byte_count) as _)
+    }
+
     /// Fetch the tile located at `x` column and `y` row using the provided reader.
+    ///
+    /// For planar configuration TIFFs, this automatically fetches all bands for the tile
+    /// at position (x, y) and combines them into a single Tile.
     pub async fn fetch_tile(
         &self,
         x: usize,
         y: usize,
         reader: &dyn AsyncFileReader,
     ) -> AsyncTiffResult<Tile> {
-        let range = self
-            .get_tile_byte_range(x, y)
-            .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
-        let compressed_bytes = reader.get_bytes(range).await?;
         let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
         let lerc_parameters = self
             .other_tags
             .get(&Tag::LercParameters)
             .and_then(|v| v.clone().into_u32_vec().ok());
+
+        let compressed_bytes = match self.planar_configuration {
+            PlanarConfiguration::Chunky => {
+                // For chunky format, fetch single tile
+                let range = self
+                    .get_chunky_tile_byte_range(x, y)
+                    .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
+                let bytes = reader.get_bytes(range).await?;
+                CompressedBytes::Chunky(bytes)
+            }
+            PlanarConfiguration::Planar => {
+                // For planar format, fetch all bands separately
+                let num_bands = self.samples_per_pixel as usize;
+                let ranges = (0..num_bands)
+                    .map(|band| {
+                        self.get_planar_tile_byte_range_for_band(x, y, band)
+                            .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))
+                    })
+                    .collect::<AsyncTiffResult<Vec<_>>>()?;
+                let band_bytes = reader.get_byte_ranges(ranges).await?;
+                CompressedBytes::Planar(band_bytes)
+            }
+        };
+
         Ok(Tile {
             x,
             y,
@@ -753,40 +796,86 @@ impl ImageFileDirectory {
             .get(&Tag::LercParameters)
             .and_then(|v| v.clone().into_u32_vec().ok());
 
-        // 1: Get all the byte ranges for all tiles
-        let byte_ranges = xy
-            .iter()
-            .map(|(x, y)| {
-                self.get_tile_byte_range(*x, *y)
-                    .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))
-            })
-            .collect::<AsyncTiffResult<Vec<_>>>()?;
+        match self.planar_configuration {
+            PlanarConfiguration::Chunky => {
+                // For chunky format, fetch one tile per position
+                let byte_ranges = xy
+                    .iter()
+                    .map(|(x, y)| {
+                        self.get_chunky_tile_byte_range(*x, *y)
+                            .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))
+                    })
+                    .collect::<AsyncTiffResult<Vec<_>>>()?;
 
-        // 2: Fetch using `get_byte_ranges`
-        let buffers = reader.get_byte_ranges(byte_ranges).await?;
+                let buffers = reader.get_byte_ranges(byte_ranges).await?;
 
-        // 3: Create tile objects
-        let mut tiles = vec![];
-        for (compressed_bytes, &(x, y)) in buffers.into_iter().zip(xy) {
-            let tile = Tile {
-                x,
-                y,
-                data_type,
-                width: self.tile_width.unwrap_or(self.image_width),
-                height: self.tile_height.unwrap_or(self.image_height),
-                planar_configuration: self.planar_configuration,
-                samples_per_pixel: self.samples_per_pixel,
-                predictor: self.predictor.unwrap_or(Predictor::None),
-                predictor_info,
-                compressed_bytes,
-                compression_method: self.compression,
-                photometric_interpretation: self.photometric_interpretation,
-                jpeg_tables: self.jpeg_tables.clone(),
-                lerc_parameters: lerc_parameters.clone(),
-            };
-            tiles.push(tile);
+                let mut tiles = vec![];
+                for (compressed_bytes, &(x, y)) in buffers.into_iter().zip(xy) {
+                    let tile = Tile {
+                        x,
+                        y,
+                        data_type,
+                        width: self.tile_width.unwrap_or(self.image_width),
+                        height: self.tile_height.unwrap_or(self.image_height),
+                        planar_configuration: self.planar_configuration,
+                        samples_per_pixel: self.samples_per_pixel,
+                        predictor: self.predictor.unwrap_or(Predictor::None),
+                        predictor_info,
+                        compressed_bytes: CompressedBytes::Chunky(compressed_bytes),
+                        compression_method: self.compression,
+                        photometric_interpretation: self.photometric_interpretation,
+                        jpeg_tables: self.jpeg_tables.clone(),
+                        lerc_parameters: lerc_parameters.clone(),
+                    };
+                    tiles.push(tile);
+                }
+                Ok(tiles)
+            }
+            PlanarConfiguration::Planar => {
+                // For planar format, fetch all bands for each tile position
+                let num_bands = self.samples_per_pixel as usize;
+                let mut all_ranges = Vec::with_capacity(xy.len() * num_bands);
+
+                for &(x, y) in xy {
+                    for band in 0..num_bands {
+                        let range = self
+                            .get_planar_tile_byte_range_for_band(x, y, band)
+                            .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
+                        all_ranges.push(range);
+                    }
+                }
+
+                let all_buffers = reader.get_byte_ranges(all_ranges).await?;
+
+                let mut tiles = vec![];
+                for (i, &(x, y)) in xy.iter().enumerate() {
+                    let start = i * num_bands;
+                    let end = start + num_bands;
+                    // Note: this isn't doing a full copy of the buffers; it's just collecting the
+                    // existing Bytes references into a Vec
+                    let band_bytes = all_buffers[start..end].to_vec();
+
+                    let tile = Tile {
+                        x,
+                        y,
+                        data_type,
+                        width: self.tile_width.unwrap_or(self.image_width),
+                        height: self.tile_height.unwrap_or(self.image_height),
+                        planar_configuration: self.planar_configuration,
+                        samples_per_pixel: self.samples_per_pixel,
+                        predictor: self.predictor.unwrap_or(Predictor::None),
+                        predictor_info,
+                        compressed_bytes: CompressedBytes::Planar(band_bytes),
+                        compression_method: self.compression,
+                        photometric_interpretation: self.photometric_interpretation,
+                        jpeg_tables: self.jpeg_tables.clone(),
+                        lerc_parameters: lerc_parameters.clone(),
+                    };
+                    tiles.push(tile);
+                }
+                Ok(tiles)
+            }
         }
-        Ok(tiles)
     }
 
     /// Return the number of x/y tiles in the IFD
