@@ -1,4 +1,4 @@
-use async_tiff::Tile;
+use async_tiff::{CompressedBytes, Tile};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3_async_runtimes::tokio::future_into_py;
@@ -40,7 +40,7 @@ impl PyTile {
     }
 
     #[getter]
-    fn compressed_bytes(&self) -> PyResult<PyBytes> {
+    fn compressed_bytes(&self) -> PyResult<PyCompressedBytes> {
         let tile = self
             .0
             .as_ref()
@@ -97,5 +97,22 @@ impl PyTile {
                 .map_err(|e| PyValueError::new_err(e.to_string()))?;
             PyArray::try_new(array).map_err(|err| err.into())
         })
+    }
+}
+
+#[derive(IntoPyObject)]
+enum PyCompressedBytes {
+    Chunky(PyBytes),
+    Planar(Vec<PyBytes>),
+}
+
+impl From<CompressedBytes> for PyCompressedBytes {
+    fn from(value: CompressedBytes) -> Self {
+        match value {
+            CompressedBytes::Chunky(bytes) => PyCompressedBytes::Chunky(bytes.into()),
+            CompressedBytes::Planar(band_bytes) => {
+                PyCompressedBytes::Planar(band_bytes.into_iter().map(|b| b.into()).collect())
+            }
+        }
     }
 }

@@ -14,8 +14,12 @@ class Tile:
     def y(self) -> int:
         """The row index this tile represents."""
     @property
-    def compressed_bytes(self) -> Buffer:
-        """The compressed bytes underlying this tile."""
+    def compressed_bytes(self) -> Buffer | list[Buffer]:
+        """The compressed bytes underlying this tile.
+
+        This will be a single buffer for pixel-interleaved (chunky) data, or a list of
+        buffers for band-interleaved (planar) data.
+        """
     @property
     def compression_method(self) -> Compression | int:
         """The compression method used by this tile."""
