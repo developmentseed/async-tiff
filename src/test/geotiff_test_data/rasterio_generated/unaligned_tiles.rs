@@ -16,7 +16,7 @@ async fn test_unaligned() {
     assert_eq!(ifd.tile_width(), Some(128));
     assert_eq!(ifd.tile_height(), Some(128));
 
-    let tile: crate::Tile = ifd.fetch_tile(2, 0, &reader).await.unwrap();
+    let tile = ifd.fetch_tile(2, 0, &reader).await.unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 
