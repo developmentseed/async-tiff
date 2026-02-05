@@ -32,10 +32,10 @@ dev-dependencies = [
     "mkdocs>=1.6.1",
     "mkdocstrings-python>=1.13.0",
     "mkdocstrings>=0.27.0",
-    "numpy>=1",
+    "numpy>=2",
     "obstore>=0.5.1",
-    "pytest-asyncio>=0.26.0",
-    "pytest>=8.3.3",
+    "pytest-asyncio>=1.3",
+    "pytest>=9.0",
     "rasterio>=1.4",
     "ruff>=0.15",
 ]

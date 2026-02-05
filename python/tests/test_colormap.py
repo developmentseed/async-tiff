@@ -3,7 +3,7 @@ import numpy as np
 from .utils import load_tiff
 
 
-async def test_ifd_dict():
+async def test_colormap():
     name = "geotiff-test-data/real_data/nlcd/nlcd_landcover.tif"
     tiff = await load_tiff(name)
     first_ifd = tiff.ifds[0]
