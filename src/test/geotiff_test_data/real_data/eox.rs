@@ -1,6 +1,5 @@
-use crate::tags::PhotometricInterpretation;
+use crate::tags::{PhotometricInterpretation, PlanarConfiguration};
 use crate::test::util::open_tiff;
-use crate::{DataType, TypedArray};
 
 #[tokio::test]
 async fn test_band_interleaved() {
@@ -14,12 +13,18 @@ async fn test_band_interleaved() {
         ifd.photometric_interpretation(),
         PhotometricInterpretation::RGB
     );
+    assert_eq!(ifd.planar_configuration(), PlanarConfiguration::Planar);
     assert_eq!(ifd.tile_width(), Some(256));
     assert_eq!(ifd.tile_height(), Some(256));
 
+    // Fetch tile at position (0, 0) - this fetches all 3 bands automatically
     let tile = ifd.fetch_tile(0, 0, &reader).await.unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 
-    assert_eq!(array.shape, [64, 64, 3])
+    // For planar configuration, shape is [bands, height, width]
+    assert_eq!(array.shape(), [3, 256, 256]);
+
+    // Verify we have the correct amount of data
+    assert_eq!(array.data().len(), 3 * 256 * 256);
 }
