@@ -77,6 +77,7 @@ pub trait Decoder: Debug + Send + Sync {
         jpeg_tables: Option<&[u8]>,
         samples_per_pixel: u16,
         bits_per_sample: u16,
+        lerc_parameters: Option<&[u32]>,
     ) -> AsyncTiffResult<Vec<u8>>;
 }
 
@@ -92,6 +93,7 @@ impl Decoder for DeflateDecoder {
         _jpeg_tables: Option<&[u8]>,
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
+        _lerc_parameters: Option<&[u32]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         let mut decoder = ZlibDecoder::new(Cursor::new(buffer));
         let mut buf = Vec::new();
@@ -112,6 +114,7 @@ impl Decoder for JPEGDecoder {
         jpeg_tables: Option<&[u8]>,
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
+        _lerc_parameters: Option<&[u32]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         decode_modern_jpeg(buffer, photometric_interpretation, jpeg_tables)
     }
@@ -152,21 +155,41 @@ impl Decoder for LercDecoder {
         _jpeg_tables: Option<&[u8]>,
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
+        lerc_parameters: Option<&[u32]>,
     ) -> AsyncTiffResult<Vec<u8>> {
-        let info = lerc::get_blob_info(&buffer)
+        // LercParameters[1] is the inner compression type:
+        //   0 = none, 1 = deflate, 2 = zstd
+        // Decompress the outer wrapper before passing to the LERC decoder.
+        let lerc_blob: Vec<u8> = match lerc_parameters.and_then(|p| p.get(1).copied()) {
+            Some(1) => {
+                let mut decoder = ZlibDecoder::new(Cursor::new(buffer));
+                let mut buf = Vec::new();
+                decoder.read_to_end(&mut buf)?;
+                buf
+            }
+            Some(2) => {
+                let mut decoder = zstd::Decoder::new(Cursor::new(buffer))?;
+                let mut buf = Vec::new();
+                decoder.read_to_end(&mut buf)?;
+                buf
+            }
+            _ => buffer.to_vec(),
+        };
+
+        let info = lerc::get_blob_info(&lerc_blob)
             .map_err(|e| AsyncTiffError::General(format!("LERC get_blob_info failed: {e}")))?;
 
         // LERC data_type mapping (from LERC C API):
         // 0=i8, 1=u8, 2=i16, 3=u16, 4=i32, 5=u32, 6=f32, 7=f64
         match info.data_type {
-            0 => decode_lerc::<i8>(&buffer, &info),
-            1 => decode_lerc::<u8>(&buffer, &info),
-            2 => decode_lerc::<i16>(&buffer, &info),
-            3 => decode_lerc::<u16>(&buffer, &info),
-            4 => decode_lerc::<i32>(&buffer, &info),
-            5 => decode_lerc::<u32>(&buffer, &info),
-            6 => decode_lerc::<f32>(&buffer, &info),
-            7 => decode_lerc::<f64>(&buffer, &info),
+            0 => decode_lerc::<i8>(&lerc_blob, &info),
+            1 => decode_lerc::<u8>(&lerc_blob, &info),
+            2 => decode_lerc::<i16>(&lerc_blob, &info),
+            3 => decode_lerc::<u16>(&lerc_blob, &info),
+            4 => decode_lerc::<i32>(&lerc_blob, &info),
+            5 => decode_lerc::<u32>(&lerc_blob, &info),
+            6 => decode_lerc::<f32>(&lerc_blob, &info),
+            7 => decode_lerc::<f64>(&lerc_blob, &info),
             _ => Err(AsyncTiffError::General(format!(
                 "Unsupported LERC data type: {}",
                 info.data_type
@@ -189,6 +212,7 @@ impl Decoder for LZMADecoder {
         _jpeg_tables: Option<&[u8]>,
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
+        _lerc_parameters: Option<&[u32]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         use bytes::Buf;
         use lzma_rust2::XzReader;
@@ -212,6 +236,7 @@ impl Decoder for LZWDecoder {
         _jpeg_tables: Option<&[u8]>,
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
+        _lerc_parameters: Option<&[u32]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         // https://github.com/image-rs/image-tiff/blob/90ae5b8e54356a35e266fb24e969aafbcb26e990/src/decoder/stream.rs#L147
         let mut decoder = weezl::decode::Decoder::with_tiff_size_switch(weezl::BitOrder::Msb, 8);
@@ -234,6 +259,7 @@ impl Decoder for JPEG2kDecoder {
         _jpeg_tables: Option<&[u8]>,
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
+        _lerc_parameters: Option<&[u32]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         let decoder = jpeg2k::DecodeParameters::new();
 
@@ -267,6 +293,7 @@ impl Decoder for WebPDecoder {
         _jpeg_tables: Option<&[u8]>,
         samples_per_pixel: u16,
         bits_per_sample: u16,
+        _lerc_parameters: Option<&[u32]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         let decoded = webp::Decoder::new(&buffer)
             .decode()
@@ -302,6 +329,7 @@ impl Decoder for UncompressedDecoder {
         _jpeg_tables: Option<&[u8]>,
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
+        _lerc_parameters: Option<&[u32]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         Ok(buffer.to_vec())
     }
@@ -319,6 +347,7 @@ impl Decoder for ZstdDecoder {
         _jpeg_tables: Option<&[u8]>,
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
+        _lerc_parameters: Option<&[u32]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         let mut decoder = zstd::Decoder::new(Cursor::new(buffer))?;
         let mut buf = Vec::new();

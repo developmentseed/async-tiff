@@ -718,6 +718,10 @@ impl ImageFileDirectory {
             .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
         let compressed_bytes = reader.get_bytes(range).await?;
         let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
+        let lerc_parameters = self
+            .other_tags
+            .get(&Tag::LercParameters)
+            .and_then(|v| v.clone().into_u32_vec().ok());
         Ok(Tile {
             x,
             y,
@@ -732,6 +736,7 @@ impl ImageFileDirectory {
             compression_method: self.compression,
             photometric_interpretation: self.photometric_interpretation,
             jpeg_tables: self.jpeg_tables.clone(),
+            lerc_parameters,
         })
     }
 
@@ -743,6 +748,10 @@ impl ImageFileDirectory {
     ) -> AsyncTiffResult<Vec<Tile>> {
         let predictor_info = PredictorInfo::from_ifd(self);
         let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
+        let lerc_parameters = self
+            .other_tags
+            .get(&Tag::LercParameters)
+            .and_then(|v| v.clone().into_u32_vec().ok());
 
         // 1: Get all the byte ranges for all tiles
         let byte_ranges = xy
@@ -773,6 +782,7 @@ impl ImageFileDirectory {
                 compression_method: self.compression,
                 photometric_interpretation: self.photometric_interpretation,
                 jpeg_tables: self.jpeg_tables.clone(),
+                lerc_parameters: lerc_parameters.clone(),
             };
             tiles.push(tile);
         }

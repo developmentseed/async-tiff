@@ -50,12 +50,11 @@ async fn test_lerc_deflate() {
 
     let tile = ifd.fetch_tile(0, 0, &reader).await.unwrap();
 
-    // TODO: implement decoding
-    // let array = tile.decode(&Default::default()).unwrap();
+    let array = tile.decode(&Default::default()).unwrap();
 
-    // assert_eq!(array.shape, [64, 64, 1]);
-    // assert_eq!(array.data_type, Some(DataType::Float32));
-    // assert!(matches!(array.data, TypedArray::Float32(_)));
+    assert_eq!(array.shape, [64, 64, 1]);
+    assert_eq!(array.data_type, Some(DataType::Float32));
+    assert!(matches!(array.data, TypedArray::Float32(_)));
 }
 
 #[tokio::test]
@@ -86,10 +85,9 @@ async fn test_lerc_zstd() {
 
     let tile = ifd.fetch_tile(0, 0, &reader).await.unwrap();
 
-    // TODO: implement decoding
-    // let array = tile.decode(&Default::default()).unwrap();
+    let array = tile.decode(&Default::default()).unwrap();
 
-    // assert_eq!(array.shape, [64, 64, 1]);
-    // assert_eq!(array.data_type, Some(DataType::Float32));
-    // assert!(matches!(array.data, TypedArray::Float32(_)));
+    assert_eq!(array.shape, [64, 64, 1]);
+    assert_eq!(array.data_type, Some(DataType::Float32));
+    assert!(matches!(array.data, TypedArray::Float32(_)));
 }
