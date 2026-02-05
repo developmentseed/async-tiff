@@ -26,13 +26,13 @@ jobs:
         platform:
           - runner: ubuntu-latest
             target: x86_64
-            manylinux: auto
+            manylinux: "2_28"
           - runner: ubuntu-latest
             target: x86
-            manylinux: auto
+            manylinux: "2_28"
           - runner: ubuntu-latest
             target: aarch64
-            manylinux: "2_24"
+            manylinux: "2_28"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,6 +54,13 @@ jobs:
           args: --release --out dist -i 3.13 --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
           manylinux: ${{ matrix.platform.manylinux }}
+          before-script-linux: |
+            # Install libclang for bindgen (required by lerc-sys)
+            if command -v yum &> /dev/null; then
+              yum install -y clang-devel
+            elif command -v apt-get &> /dev/null; then
+              apt-get update && apt-get install -y libclang-dev
+            fi
 
       - name: Build version-specific wheels
         uses: PyO3/maturin-action@v1
@@ -62,6 +69,13 @@ jobs:
           args: --release --out dist -i 3.10 -i pypy3.11 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
           manylinux: ${{ matrix.platform.manylinux }}
+          before-script-linux: |
+            # Install libclang for bindgen (required by lerc-sys)
+            if command -v yum &> /dev/null; then
+              yum install -y clang-devel
+            elif command -v apt-get &> /dev/null; then
+              apt-get update && apt-get install -y libclang-dev
+            fi
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -101,6 +115,15 @@ jobs:
           args: --release --out dist -i 3.13 --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
           manylinux: musllinux_1_2
+          before-script-linux: |
+            # Install libclang for bindgen (required by lerc-sys)
+            if command -v apk &> /dev/null; then
+              apk add clang-dev
+            elif command -v yum &> /dev/null; then
+              yum install -y clang-devel
+            elif command -v apt-get &> /dev/null; then
+              apt-get update && apt-get install -y libclang-dev
+            fi
 
       - name: Build version-specific wheels
         uses: PyO3/maturin-action@v1
@@ -109,6 +132,15 @@ jobs:
           args: --release --out dist -i 3.10 -i pypy3.11 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
           manylinux: musllinux_1_2
+          before-script-linux: |
+            # Install libclang for bindgen (required by lerc-sys)
+            if command -v apk &> /dev/null; then
+              apk add clang-dev
+            elif command -v yum &> /dev/null; then
+              yum install -y clang-devel
+            elif command -v apt-get &> /dev/null; then
+              apt-get update && apt-get install -y libclang-dev
+            fi
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
