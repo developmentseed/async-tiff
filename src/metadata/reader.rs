@@ -262,7 +262,7 @@ impl ImageFileDirectoryReader {
     pub fn tag_count(&self) -> u64 {
         self.tag_count
     }
-    
+
     /// The number of bytes that each IFD entry takes up.
     /// This is 12 bytes for normal TIFF and 20 bytes for BigTIFF.
     pub fn ifd_entry_byte_size(&self) -> u64 {

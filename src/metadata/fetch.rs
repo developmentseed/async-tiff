@@ -28,6 +28,8 @@ impl<T: AsyncFileReader> MetadataFetch for T {
     }
 }
 
+/// An endian-aware cursor into the tiff
+#[derive(Debug)]
 pub struct MetadataCursor<'a, F: MetadataFetch> {
     fetch: &'a F,
     offset: u64,
@@ -35,6 +37,7 @@ pub struct MetadataCursor<'a, F: MetadataFetch> {
 }
 
 impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
+    /// Create a new MetadataCursor pointing at the start of the tiff
     pub fn new(fetch: &'a F, endianness: Endianness) -> Self {
         Self {
             fetch,
@@ -43,6 +46,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         }
     }
 
+    /// Create a new Metadata cursor at the specified offset
     pub fn new_with_offset(fetch: &'a F, endianness: Endianness, offset: u64) -> Self {
         Self {
             fetch,
@@ -51,11 +55,18 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         }
     }
 
+    /// set the offset on this cursor
+    ///
+    /// ```ignore
+    /// use async_tiff::metadata::MetadataCursor;
+    /// let cursor = MetadataCursor::new().with_offset(42);
+    /// ```
     pub fn with_offset(mut self, offset: u64) -> Self {
         self.offset = offset;
         self
     }
 
+    /// seek to a pre-determined offset in the tiff
     pub fn seek(&mut self, offset: u64) {
         self.offset = offset;
     }
