@@ -84,11 +84,13 @@ pub enum Tag(u16) unknown("A private or extension tag") {
     BitsPerSample = 258,
     CellLength = 265,
     CellWidth = 264,
-    // palette-color images (PhotometricInterpretation 3)
+    /// Color map for palette-color images (PhotometricInterpretation 3)
     ColorMap = 320,
+    /// Compression scheme used on the image data
     Compression = 259,
     Copyright = 33_432,
     DateTime = 306,
+    /// The meaning of each extra sample beyond that defined by PhotometricInterpretation
     ExtraSamples = 338,
     FillOrder = 266,
     FreeByteCounts = 289,
@@ -135,8 +137,12 @@ pub enum Tag(u16) unknown("A private or extension tag") {
     GeoKeyDirectory = 34735, // (SPOT)
     GeoDoubleParams = 34736, // (SPOT)
     GeoAsciiParams = 34737, // (SPOT)
-    GdalNodata = 42113, // Contains areas with missing data
+    /// GDAL-specific NoData value
+    GdalNodata = 42113,
     GdalMetadata = 42112, // XML metadata string
+    /// Extra parameters for LERC decompression
+    /// Defines a `Vec<u32>` of `[Version (u32), CompressionType (u32), ...]`
+    LercParameters = 0xC5F2, // (LERC)
 }
 }
 
@@ -195,6 +201,7 @@ pub enum Compression(u16) unknown("A custom compression method") {
     Deflate = 8,
     OldDeflate = 0x80B2,
     PackBits = 0x8005,
+    LERC = 34887,
     LZMA = 34925,
     // https://github.com/OSGeo/gdal/blob/4769b527b275fdb286cba95c8b35bbd131168e54/frmts/gtiff/gtiff.h#L136C26-L136C31
     WebP = 50001,

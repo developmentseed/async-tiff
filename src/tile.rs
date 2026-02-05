@@ -30,6 +30,9 @@ pub struct Tile {
     pub(crate) compression_method: Compression,
     pub(crate) photometric_interpretation: PhotometricInterpretation,
     pub(crate) jpeg_tables: Option<Bytes>,
+    /// LERC parameters from the LercParameters tag: [version, compression_type, ...]
+    /// compression_type: 0 = none, 1 = deflate, 2 = zstd
+    pub(crate) lerc_parameters: Option<Vec<u32>>,
 }
 
 impl Tile {
@@ -85,6 +88,7 @@ impl Tile {
             self.jpeg_tables.as_deref(),
             self.samples_per_pixel,
             self.predictor_info.bits_per_sample(),
+            self.lerc_parameters.as_deref(),
         )?;
 
         let decoded = match self.predictor {

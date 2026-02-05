@@ -17,6 +17,9 @@ An async, low-level [TIFF](https://en.wikipedia.org/wiki/TIFF) reader for Rust a
 - Tile request merging and concurrency.
 - Integration with the [`ndarray`](https://crates.io/crates/ndarray) crate for easy manipulation of decoded image data.
 - Support for GeoTIFF tag metadata.
+- Supported compressions:
+    - Deflate, LERC, LERC+Deflate, LERC+ZSTD, LZMA, LZW, JPEG, JPEG2000, WebP, ZSTD
+    - Support for user-defined decompression algorithms.
 
 ## Example
 
