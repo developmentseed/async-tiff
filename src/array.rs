@@ -1,4 +1,4 @@
-use bytemuck::{cast_slice, cast_vec, try_cast_vec};
+use bytemuck::{cast_slice, cast_vec, try_cast_slice};
 
 use crate::data_type::DataType;
 use crate::error::{AsyncTiffError, AsyncTiffResult};
@@ -157,14 +157,16 @@ impl TypedArray {
                         data.len()
                     )));
                 }
-                Ok(TypedArray::UInt16(try_cast_vec(data).unwrap_or_else(
-                    |(_, data)| {
-                        // Fallback to manual conversion when not aligned
-                        data.chunks_exact(2)
-                            .map(|b| u16::from_ne_bytes([b[0], b[1]]))
-                            .collect()
-                    },
-                )))
+                Ok(TypedArray::UInt16(
+                    try_cast_slice(&data)
+                        .map(|s| s.to_vec())
+                        .unwrap_or_else(|_| {
+                            // Fallback to manual conversion when not aligned
+                            data.chunks_exact(2)
+                                .map(|b| u16::from_ne_bytes([b[0], b[1]]))
+                                .collect()
+                        }),
+                ))
             }
             Some(DataType::UInt32) => {
                 if !data.len().is_multiple_of(4) {
@@ -173,14 +175,16 @@ impl TypedArray {
                         data.len()
                     )));
                 }
-                Ok(TypedArray::UInt32(try_cast_vec(data).unwrap_or_else(
-                    |(_, data)| {
-                        // Fallback to manual conversion when not aligned
-                        data.chunks_exact(4)
-                            .map(|b| u32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
-                            .collect()
-                    },
-                )))
+                Ok(TypedArray::UInt32(
+                    try_cast_slice(&data)
+                        .map(|s| s.to_vec())
+                        .unwrap_or_else(|_| {
+                            // Fallback to manual conversion when not aligned
+                            data.chunks_exact(4)
+                                .map(|b| u32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+                                .collect()
+                        }),
+                ))
             }
             Some(DataType::UInt64) => {
                 if !data.len().is_multiple_of(8) {
@@ -189,16 +193,20 @@ impl TypedArray {
                         data.len()
                     )));
                 }
-                Ok(TypedArray::UInt64(try_cast_vec(data).unwrap_or_else(
-                    |(_, data)| {
-                        // Fallback to manual conversion when not aligned
-                        data.chunks_exact(8)
-                            .map(|b| {
-                                u64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
-                            })
-                            .collect()
-                    },
-                )))
+                Ok(TypedArray::UInt64(
+                    try_cast_slice(&data)
+                        .map(|s| s.to_vec())
+                        .unwrap_or_else(|_| {
+                            // Fallback to manual conversion when not aligned
+                            data.chunks_exact(8)
+                                .map(|b| {
+                                    u64::from_ne_bytes([
+                                        b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7],
+                                    ])
+                                })
+                                .collect()
+                        }),
+                ))
             }
             // Casting u8 to i8 is safe as they have the same memory representation
             Some(DataType::Int8) => Ok(TypedArray::Int8(cast_vec(data))),
@@ -209,14 +217,16 @@ impl TypedArray {
                         data.len()
                     )));
                 }
-                Ok(TypedArray::Int16(try_cast_vec(data).unwrap_or_else(
-                    |(_, data)| {
-                        // Fallback to manual conversion when not aligned
-                        data.chunks_exact(2)
-                            .map(|b| i16::from_ne_bytes([b[0], b[1]]))
-                            .collect()
-                    },
-                )))
+                Ok(TypedArray::Int16(
+                    try_cast_slice(&data)
+                        .map(|s| s.to_vec())
+                        .unwrap_or_else(|_| {
+                            // Fallback to manual conversion when not aligned
+                            data.chunks_exact(2)
+                                .map(|b| i16::from_ne_bytes([b[0], b[1]]))
+                                .collect()
+                        }),
+                ))
             }
             Some(DataType::Int32) => {
                 if !data.len().is_multiple_of(4) {
@@ -225,14 +235,16 @@ impl TypedArray {
                         data.len()
                     )));
                 }
-                Ok(TypedArray::Int32(try_cast_vec(data).unwrap_or_else(
-                    |(_, data)| {
-                        // Fallback to manual conversion when not aligned
-                        data.chunks_exact(4)
-                            .map(|b| i32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
-                            .collect()
-                    },
-                )))
+                Ok(TypedArray::Int32(
+                    try_cast_slice(&data)
+                        .map(|s| s.to_vec())
+                        .unwrap_or_else(|_| {
+                            // Fallback to manual conversion when not aligned
+                            data.chunks_exact(4)
+                                .map(|b| i32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+                                .collect()
+                        }),
+                ))
             }
             Some(DataType::Int64) => {
                 if !data.len().is_multiple_of(8) {
@@ -241,16 +253,20 @@ impl TypedArray {
                         data.len()
                     )));
                 }
-                Ok(TypedArray::Int64(try_cast_vec(data).unwrap_or_else(
-                    |(_, data)| {
-                        // Fallback to manual conversion when not aligned
-                        data.chunks_exact(8)
-                            .map(|b| {
-                                i64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
-                            })
-                            .collect()
-                    },
-                )))
+                Ok(TypedArray::Int64(
+                    try_cast_slice(&data)
+                        .map(|s| s.to_vec())
+                        .unwrap_or_else(|_| {
+                            // Fallback to manual conversion when not aligned
+                            data.chunks_exact(8)
+                                .map(|b| {
+                                    i64::from_ne_bytes([
+                                        b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7],
+                                    ])
+                                })
+                                .collect()
+                        }),
+                ))
             }
             Some(DataType::Float32) => {
                 if !data.len().is_multiple_of(4) {
@@ -259,14 +275,16 @@ impl TypedArray {
                         data.len()
                     )));
                 }
-                Ok(TypedArray::Float32(try_cast_vec(data).unwrap_or_else(
-                    |(_, data)| {
-                        // Fallback to manual conversion when not aligned
-                        data.chunks_exact(4)
-                            .map(|b| f32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
-                            .collect()
-                    },
-                )))
+                Ok(TypedArray::Float32(
+                    try_cast_slice(&data)
+                        .map(|s| s.to_vec())
+                        .unwrap_or_else(|_| {
+                            // Fallback to manual conversion when not aligned
+                            data.chunks_exact(4)
+                                .map(|b| f32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+                                .collect()
+                        }),
+                ))
             }
             Some(DataType::Float64) => {
                 if !data.len().is_multiple_of(8) {
@@ -275,16 +293,20 @@ impl TypedArray {
                         data.len()
                     )));
                 }
-                Ok(TypedArray::Float64(try_cast_vec(data).unwrap_or_else(
-                    |(_, data)| {
-                        // Fallback to manual conversion when not aligned
-                        data.chunks_exact(8)
-                            .map(|b| {
-                                f64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
-                            })
-                            .collect()
-                    },
-                )))
+                Ok(TypedArray::Float64(
+                    try_cast_slice(&data)
+                        .map(|s| s.to_vec())
+                        .unwrap_or_else(|_| {
+                            // Fallback to manual conversion when not aligned
+                            data.chunks_exact(8)
+                                .map(|b| {
+                                    f64::from_ne_bytes([
+                                        b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7],
+                                    ])
+                                })
+                                .collect()
+                        }),
+                ))
             }
         }
     }
