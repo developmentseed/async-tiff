@@ -61,5 +61,5 @@ pub mod cache;
 mod fetch;
 mod reader;
 
-pub use fetch::MetadataFetch;
+pub use fetch::{MetadataFetch, MetadataCursor};
 pub use reader::{ImageFileDirectoryReader, TiffMetadataReader};
