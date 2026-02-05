@@ -7,6 +7,16 @@ use crate::predictor::{fix_endianness, unpredict_float, unpredict_hdiff, Predict
 use crate::tags::{Compression, PhotometricInterpretation, PlanarConfiguration, Predictor};
 use crate::DataType;
 
+/// Compressed tile data, either as a single chunk (chunky) or multiple chunks (planar).
+#[derive(Debug, Clone)]
+pub enum CompressedBytes {
+    /// Single compressed chunk for chunky (pixel-interleaved) format.
+    Chunky(Bytes),
+
+    /// Multiple compressed chunks, one per band, for planar (band-interleaved) format.
+    Planar(Vec<Bytes>),
+}
+
 /// A TIFF Tile response.
 ///
 /// This contains the required information to decode the tile. Decoding is separated from fetching
@@ -26,7 +36,7 @@ pub struct Tile {
     pub(crate) planar_configuration: PlanarConfiguration,
     pub(crate) predictor: Predictor,
     pub(crate) predictor_info: PredictorInfo,
-    pub(crate) compressed_bytes: Bytes,
+    pub(crate) compressed_bytes: CompressedBytes,
     pub(crate) compression_method: Compression,
     pub(crate) photometric_interpretation: PhotometricInterpretation,
     pub(crate) jpeg_tables: Option<Bytes>,
@@ -49,7 +59,7 @@ impl Tile {
     /// Access the compressed bytes underlying this tile.
     ///
     /// Note that [`Bytes`] is reference-counted, so it is very cheap to clone if needed.
-    pub fn compressed_bytes(&self) -> &Bytes {
+    pub fn compressed_bytes(&self) -> &CompressedBytes {
         &self.compressed_bytes
     }
 
@@ -82,14 +92,49 @@ impl Tile {
                 TiffUnsupportedError::UnsupportedCompression(self.compression_method),
             ))?;
 
-        let mut decoded_tile = decoder.decode_tile(
-            self.compressed_bytes.clone(),
-            self.photometric_interpretation,
-            self.jpeg_tables.as_deref(),
-            self.samples_per_pixel,
-            self.predictor_info.bits_per_sample(),
-            self.lerc_parameters.as_deref(),
-        )?;
+        let mut decoded_tile = match &self.compressed_bytes {
+            CompressedBytes::Chunky(bytes) => {
+                // Decode single compressed chunk
+                decoder.decode_tile(
+                    bytes.clone(),
+                    self.photometric_interpretation,
+                    self.jpeg_tables.as_deref(),
+                    self.samples_per_pixel,
+                    self.predictor_info.bits_per_sample(),
+                    self.lerc_parameters.as_deref(),
+                )?
+            }
+            CompressedBytes::Planar(band_bytes) => {
+                // Decode each band separately and concatenate
+                // Pre-allocate buffer: bands × width × height × bytes_per_sample
+                let bytes_per_sample = (self.predictor_info.bits_per_sample() / 8) as usize;
+                let total_size = band_bytes.len()
+                    * (self.width as usize)
+                    * (self.height as usize)
+                    * bytes_per_sample;
+                let mut result = Vec::with_capacity(total_size);
+
+                for band_data in band_bytes {
+                    let decoded_band = decoder.decode_tile(
+                        band_data.clone(),
+                        self.photometric_interpretation,
+                        self.jpeg_tables.as_deref(),
+                        1, // Each band is decoded as a single sample
+                        self.predictor_info.bits_per_sample(),
+                        self.lerc_parameters.as_deref(),
+                    )?;
+                    result.extend_from_slice(&decoded_band);
+                }
+
+                debug_assert_eq!(
+                    result.len(),
+                    total_size,
+                    "Pre-allocated size should match actual decoded size"
+                );
+
+                result
+            }
+        };
 
         let decoded = match self.predictor {
             Predictor::None => {

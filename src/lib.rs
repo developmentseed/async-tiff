@@ -30,4 +30,4 @@ pub use data_type::DataType;
 pub use ifd::ImageFileDirectory;
 pub use tag_value::TagValue;
 pub use tiff::TIFF;
-pub use tile::Tile;
+pub use tile::{CompressedBytes, Tile};
