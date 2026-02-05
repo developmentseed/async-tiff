@@ -56,7 +56,11 @@ jobs:
           manylinux: ${{ matrix.platform.manylinux }}
           before-script-linux: |
             # Install libclang for bindgen (required by lerc-sys)
-            yum install -y clang-devel || apt-get update && apt-get install -y libclang-dev
+            if command -v yum &> /dev/null; then
+              yum install -y clang-devel
+            elif command -v apt-get &> /dev/null; then
+              apt-get update && apt-get install -y libclang-dev
+            fi
 
       - name: Build version-specific wheels
         uses: PyO3/maturin-action@v1
@@ -67,7 +71,11 @@ jobs:
           manylinux: ${{ matrix.platform.manylinux }}
           before-script-linux: |
             # Install libclang for bindgen (required by lerc-sys)
-            yum install -y clang-devel || apt-get update && apt-get install -y libclang-dev
+            if command -v yum &> /dev/null; then
+              yum install -y clang-devel
+            elif command -v apt-get &> /dev/null; then
+              apt-get update && apt-get install -y libclang-dev
+            fi
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -109,7 +117,13 @@ jobs:
           manylinux: musllinux_1_2
           before-script-linux: |
             # Install libclang for bindgen (required by lerc-sys)
-            apk add clang-dev
+            if command -v apk &> /dev/null; then
+              apk add clang-dev
+            elif command -v yum &> /dev/null; then
+              yum install -y clang-devel
+            elif command -v apt-get &> /dev/null; then
+              apt-get update && apt-get install -y libclang-dev
+            fi
 
       - name: Build version-specific wheels
         uses: PyO3/maturin-action@v1
@@ -120,7 +134,13 @@ jobs:
           manylinux: musllinux_1_2
           before-script-linux: |
             # Install libclang for bindgen (required by lerc-sys)
-            apk add clang-dev
+            if command -v apk &> /dev/null; then
+              apk add clang-dev
+            elif command -v yum &> /dev/null; then
+              yum install -y clang-devel
+            elif command -v apt-get &> /dev/null; then
+              apt-get update && apt-get install -y libclang-dev
+            fi
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
