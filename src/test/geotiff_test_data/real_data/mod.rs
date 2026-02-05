@@ -1,1 +1,2 @@
+mod eox;
 mod vantor;
