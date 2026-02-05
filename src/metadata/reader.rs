@@ -257,6 +257,22 @@ impl ImageFileDirectoryReader {
             Ok(Some(next_ifd_offset))
         }
     }
+
+    /// The number of tags in this IFD
+    pub fn tag_count(&self) -> u64 {
+        self.tag_count
+    }
+    
+    /// The number of bytes that each IFD entry takes up.
+    /// This is 12 bytes for normal TIFF and 20 bytes for BigTIFF.
+    pub fn ifd_entry_byte_size(&self) -> u64 {
+        self.ifd_entry_byte_size
+    }
+
+    /// The number of bytes that the value for the number of tags takes up.
+    pub fn tag_count_byte_size(&self) -> u64 {
+        self.tag_count_byte_size
+    }
 }
 
 /// Read a single tag from the cursor
