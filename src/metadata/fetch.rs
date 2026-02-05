@@ -28,7 +28,7 @@ impl<T: AsyncFileReader> MetadataFetch for T {
     }
 }
 
-pub(crate) struct MetadataCursor<'a, F: MetadataFetch> {
+pub struct MetadataCursor<'a, F: MetadataFetch> {
     fetch: &'a F,
     offset: u64,
     endianness: Endianness,
@@ -84,7 +84,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
     }
 
     /// Read a u16 from the cursor, advancing the internal state by 2 bytes.
-    pub(crate) async fn read_u16(&mut self) -> AsyncTiffResult<u16> {
+    pub async fn read_u16(&mut self) -> AsyncTiffResult<u16> {
         self.read(2).await?.read_u16()
     }
 
@@ -94,7 +94,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
     }
 
     /// Read a u32 from the cursor, advancing the internal state by 4 bytes.
-    pub(crate) async fn read_u32(&mut self) -> AsyncTiffResult<u32> {
+    pub async fn read_u32(&mut self) -> AsyncTiffResult<u32> {
         self.read(4).await?.read_u32()
     }
 
@@ -104,7 +104,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
     }
 
     /// Read a u64 from the cursor, advancing the internal state by 8 bytes.
-    pub(crate) async fn read_u64(&mut self) -> AsyncTiffResult<u64> {
+    pub async fn read_u64(&mut self) -> AsyncTiffResult<u64> {
         self.read(8).await?.read_u64()
     }
 
