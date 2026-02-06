@@ -215,8 +215,7 @@ impl ImageFileDirectoryReader {
         tag_idx: u64,
     ) -> AsyncTiffResult<(Tag, TagValue)> {
         assert!(tag_idx < self.tag_count);
-        let tag_offset =
-            self.ifd_start_offset + self.tag_count_byte_size + (self.ifd_entry_byte_size * tag_idx);
+        let tag_offset = self.tag_offset(tag_idx);
         let (tag_name, tag_value) =
             read_tag(fetch, tag_offset, self.endianness, self.bigtiff).await?;
         Ok((tag_name, tag_value))
@@ -263,15 +262,9 @@ impl ImageFileDirectoryReader {
         self.tag_count
     }
 
-    /// The number of bytes that each IFD entry takes up.
-    /// This is 12 bytes for normal TIFF and 20 bytes for BigTIFF.
-    pub fn ifd_entry_byte_size(&self) -> u64 {
-        self.ifd_entry_byte_size
-    }
-
-    /// The number of bytes that the value for the number of tags takes up.
-    pub fn tag_count_byte_size(&self) -> u64 {
-        self.tag_count_byte_size
+    /// The offset of the nth IFD tag in the tiff
+    pub fn tag_offset(&self, tag_idx: u64) -> u64 {
+        self.ifd_start_offset + self.tag_count_byte_size + (self.ifd_entry_byte_size * tag_idx)
     }
 }
 
