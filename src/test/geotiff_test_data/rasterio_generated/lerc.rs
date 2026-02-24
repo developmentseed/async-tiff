@@ -13,7 +13,7 @@ async fn test_lerc() {
     assert_eq!(ifd.tile_width(), Some(64));
     assert_eq!(ifd.tile_height(), Some(64));
 
-    let tile = ifd.fetch_tile(0, 0, &reader).await.unwrap();
+    let tile = ifd.fetch_tile(0, 0, None, &reader).await.unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 
@@ -48,7 +48,7 @@ async fn test_lerc_deflate() {
     assert_eq!(ifd.tile_width(), Some(64));
     assert_eq!(ifd.tile_height(), Some(64));
 
-    let tile = ifd.fetch_tile(0, 0, &reader).await.unwrap();
+    let tile = ifd.fetch_tile(0, 0, None, &reader).await.unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 
@@ -83,7 +83,7 @@ async fn test_lerc_zstd() {
     assert_eq!(ifd.tile_width(), Some(64));
     assert_eq!(ifd.tile_height(), Some(64));
 
-    let tile = ifd.fetch_tile(0, 0, &reader).await.unwrap();
+    let tile = ifd.fetch_tile(0, 0, None, &reader).await.unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 

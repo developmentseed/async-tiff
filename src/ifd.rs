@@ -734,6 +734,7 @@ impl ImageFileDirectory {
         &self,
         x: usize,
         y: usize,
+        bands: Option<Range<usize>>,
         reader: &dyn AsyncFileReader,
     ) -> AsyncTiffResult<Tile> {
         let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
@@ -742,8 +743,17 @@ impl ImageFileDirectory {
             .get(&Tag::LercParameters)
             .and_then(|v| v.clone().into_u32_vec().ok());
 
+        let num_bands = if let Some(range) = bands.clone() {
+            range.len() as u16
+        } else {
+            self.samples_per_pixel()
+        };
+
         let compressed_bytes = match self.planar_configuration {
             PlanarConfiguration::Chunky => {
+                if bands.is_some() {
+                    unimplemented!()
+                };
                 // For chunky format, fetch single tile
                 let range = self
                     .get_chunky_tile_byte_range(x, y)
@@ -753,8 +763,8 @@ impl ImageFileDirectory {
             }
             PlanarConfiguration::Planar => {
                 // For planar format, fetch all bands separately
-                let num_bands = self.samples_per_pixel as usize;
-                let ranges = (0..num_bands)
+                let select_bands = bands.unwrap_or(0..self.samples_per_pixel() as usize);
+                let ranges = select_bands
                     .map(|band| {
                         self.get_planar_tile_byte_range_for_band(x, y, band)
                             .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))
@@ -772,7 +782,7 @@ impl ImageFileDirectory {
             width: self.tile_width.unwrap_or(self.image_width),
             height: self.tile_height.unwrap_or(self.image_height),
             planar_configuration: self.planar_configuration,
-            samples_per_pixel: self.samples_per_pixel,
+            samples_per_pixel: num_bands,
             predictor: self.predictor.unwrap_or(Predictor::None),
             predictor_info: PredictorInfo::from_ifd(self),
             compressed_bytes,

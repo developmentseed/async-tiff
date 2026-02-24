@@ -18,7 +18,7 @@ async fn test_band_interleaved() {
     assert_eq!(ifd.tile_height(), Some(256));
 
     // Fetch tile at position (0, 0) - this fetches all 3 bands automatically
-    let tile = ifd.fetch_tile(0, 0, &reader).await.unwrap();
+    let tile = ifd.fetch_tile(0, 0, None, &reader).await.unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 
@@ -27,4 +27,22 @@ async fn test_band_interleaved() {
 
     // Verify we have the correct amount of data
     assert_eq!(array.data().len(), 3 * 256 * 256);
+}
+
+#[tokio::test]
+async fn test_band_interleaved_specific_bands() {
+    let filename = "geotiff-test-data/real_data/eox/eox_cloudless.tif";
+
+    let (reader, tiff) = open_tiff(filename).await;
+    let ifd = &tiff.ifds()[0];
+
+    // Fetch tile at position (0, 0) - only first two bands
+    let tile = ifd.fetch_tile(0, 0, Some(1..3), &reader).await.unwrap();
+    let array = tile.decode(&Default::default()).unwrap();
+
+    // For planar configuration, shape is [bands, height, width]
+    assert_eq!(array.shape(), [2, 256, 256]);
+
+    // Verify we have the correct amount of data
+    assert_eq!(array.data().len(), 2 * 256 * 256);
 }
