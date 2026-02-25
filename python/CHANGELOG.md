@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.0] - 2026-02-18
+
+### What's Changed
+
+* feat: support LERC, LERC_DEFLATE, LERC_ZSTD decompression by @kylebarron in https://github.com/developmentseed/async-tiff/pull/204
+* ci(python): Fix python wheel build with LERC dependency by @kylebarron in https://github.com/developmentseed/async-tiff/pull/238
+* feat!: Add support for band-interleaved data by @kylebarron in https://github.com/developmentseed/async-tiff/pull/240
+* test(python): Add band-interleaved python test against rasterio by @kylebarron in https://github.com/developmentseed/async-tiff/pull/243
+
+**Full Changelog**: https://github.com/developmentseed/async-tiff/compare/py-v0.5.0...py-v0.6.0
+
 ## [0.5.0] - 2026-02-03
 
 ### Breaking
