@@ -734,7 +734,7 @@ impl ImageFileDirectory {
         &self,
         x: usize,
         y: usize,
-        bands: Option<Range<usize>>,
+        bands: Option<Vec<usize>>,
         reader: &dyn AsyncFileReader,
     ) -> AsyncTiffResult<Tile> {
         let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
@@ -763,10 +763,12 @@ impl ImageFileDirectory {
             }
             PlanarConfiguration::Planar => {
                 // For planar format, fetch all bands separately
-                let select_bands = bands.unwrap_or(0..self.samples_per_pixel() as usize);
+                let select_bands: Vec<usize> =
+                    bands.unwrap_or((0..self.samples_per_pixel() as usize).collect());
                 let ranges = select_bands
+                    .iter()
                     .map(|band| {
-                        self.get_planar_tile_byte_range_for_band(x, y, band)
+                        self.get_planar_tile_byte_range_for_band(x, y, *band)
                             .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))
                     })
                     .collect::<AsyncTiffResult<Vec<_>>>()?;

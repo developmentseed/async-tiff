@@ -3,7 +3,7 @@ use crate::test::util::open_tiff;
 use crate::{DataType, TypedArray};
 
 #[tokio::test]
-async fn test_fetch_band_range() {
+async fn test_fetch_some_bands() {
     let filename = "geotiff-test-data/rasterio_generated/fixtures/int8_3band_zstd_block64.tif";
     let (reader, tiff) = open_tiff(filename).await;
     let ifd = &tiff.ifds()[0];
@@ -17,7 +17,10 @@ async fn test_fetch_band_range() {
     assert_eq!(ifd.tile_width(), Some(64));
     assert_eq!(ifd.tile_height(), Some(64));
 
-    let tile = ifd.fetch_tile(0, 0, Some(0..2), &reader).await.unwrap();
+    let tile = ifd
+        .fetch_tile(0, 0, Some(vec![0, 2]), &reader)
+        .await
+        .unwrap();
     let array = tile.decode(&Default::default()).unwrap();
 
     assert_eq!(array.shape, [2, 64, 64]); // channel, height, width

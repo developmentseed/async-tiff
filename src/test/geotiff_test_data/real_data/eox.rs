@@ -37,7 +37,10 @@ async fn test_band_interleaved_specific_bands() {
     let ifd = &tiff.ifds()[0];
 
     // Fetch tile at position (0, 0) - only first two bands
-    let tile = ifd.fetch_tile(0, 0, Some(1..3), &reader).await.unwrap();
+    let tile = ifd
+        .fetch_tile(0, 0, Some(vec![0, 1]), &reader)
+        .await
+        .unwrap();
     let array = tile.decode(&Default::default()).unwrap();
 
     // For planar configuration, shape is [bands, height, width]
