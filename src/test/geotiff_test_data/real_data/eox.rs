@@ -1,3 +1,4 @@
+use crate::ifd;
 use crate::tags::{PhotometricInterpretation, PlanarConfiguration};
 use crate::test::util::open_tiff;
 
@@ -38,7 +39,7 @@ async fn test_band_interleaved_specific_bands() {
 
     // Fetch tile at position (0, 0) - only first two bands
     let tile = ifd
-        .fetch_tile(0, 0, Some(vec![0, 1]), &reader)
+        .fetch_tile(0, 0, Some(ifd::FetchOptions::new(vec![0, 1])), &reader)
         .await
         .unwrap();
     let array = tile.decode(&Default::default()).unwrap();

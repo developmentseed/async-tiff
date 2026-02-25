@@ -734,7 +734,7 @@ impl ImageFileDirectory {
         &self,
         x: usize,
         y: usize,
-        bands: Option<Vec<usize>>,
+        fetch_options: Option<FetchOptions>,
         reader: &dyn AsyncFileReader,
     ) -> AsyncTiffResult<Tile> {
         let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
@@ -743,15 +743,15 @@ impl ImageFileDirectory {
             .get(&Tag::LercParameters)
             .and_then(|v| v.clone().into_u32_vec().ok());
 
-        let num_bands = if let Some(range) = bands.clone() {
-            range.len() as u16
+        let num_bands = if let Some(fetch_opts) = fetch_options.clone() {
+            fetch_opts.bands.len() as u16
         } else {
             self.samples_per_pixel()
         };
 
         let compressed_bytes = match self.planar_configuration {
             PlanarConfiguration::Chunky => {
-                if bands.is_some() {
+                if fetch_options.is_some() {
                     unimplemented!()
                 };
                 // For chunky format, fetch single tile
@@ -763,8 +763,11 @@ impl ImageFileDirectory {
             }
             PlanarConfiguration::Planar => {
                 // For planar format, fetch all bands separately
-                let select_bands: Vec<usize> =
-                    bands.unwrap_or((0..self.samples_per_pixel() as usize).collect());
+                let select_bands: Vec<usize> = if let Some(fetch_opts) = fetch_options {
+                    fetch_opts.bands
+                } else {
+                    (0..self.samples_per_pixel() as usize).collect()
+                };
                 let ranges = select_bands
                     .iter()
                     .map(|band| {
@@ -896,6 +899,19 @@ impl ImageFileDirectory {
         let x_count = (self.image_width as f64 / self.tile_width? as f64).ceil();
         let y_count = (self.image_height as f64 / self.tile_height? as f64).ceil();
         Some((x_count as usize, y_count as usize))
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct FetchOptions {
+    /// Band indices to return from a tile fetch
+    bands: Vec<usize>,
+}
+
+impl FetchOptions {
+    /// Create a new instance of extra parameters to pass into `ifd.fetch_tiles()`
+    pub fn new(bands: Vec<usize>) -> Self {
+        Self { bands }
     }
 }
 

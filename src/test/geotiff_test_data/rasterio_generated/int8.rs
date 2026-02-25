@@ -1,6 +1,6 @@
 use crate::tags::PhotometricInterpretation;
 use crate::test::util::open_tiff;
-use crate::{DataType, TypedArray};
+use crate::{ifd, DataType, TypedArray};
 
 #[tokio::test]
 async fn test_fetch_some_bands() {
@@ -18,7 +18,7 @@ async fn test_fetch_some_bands() {
     assert_eq!(ifd.tile_height(), Some(64));
 
     let tile = ifd
-        .fetch_tile(0, 0, Some(vec![0, 2]), &reader)
+        .fetch_tile(0, 0, Some(ifd::FetchOptions::new(vec![0, 2])), &reader)
         .await
         .unwrap();
     let array = tile.decode(&Default::default()).unwrap();
