@@ -98,7 +98,7 @@ impl PyTIFF {
             .clone();
         future_into_py(py, async move {
             let tile = ifd
-                .fetch_tile(x, y, reader.as_ref())
+                .fetch_tile(x, y, None, reader.as_ref())
                 .await
                 .map_err(|err| PyTypeError::new_err(err.to_string()))?;
 
