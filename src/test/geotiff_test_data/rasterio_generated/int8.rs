@@ -27,3 +27,18 @@ async fn test_fetch_some_bands() {
     assert_eq!(array.data_type, Some(DataType::Int8));
     assert!(matches!(array.data, TypedArray::Int8(_)));
 }
+
+#[tokio::test]
+async fn test_fetch_invalid_band() {
+    let filename = "geotiff-test-data/rasterio_generated/fixtures/int8_3band_zstd_block64.tif";
+    let (reader, tiff) = open_tiff(filename).await;
+    let ifd = &tiff.ifds()[0];
+
+    let result = ifd
+        .fetch_tile(0, 0, Some(ifd::FetchOptions::new(vec![3])), &reader) // max is 3 bands, start indexing from 0
+        .await;
+    assert_eq!(
+        result.err().unwrap().to_string(),
+        "General error: band 3 is greater than 2 (0-based indexing)"
+    );
+}

@@ -716,6 +716,9 @@ impl ImageFileDirectory {
         y: usize,
         band: usize,
     ) -> Option<Range<u64>> {
+        if band > self.samples_per_pixel() as usize - 1 {
+            return None;
+        };
         let tile_offsets = self.tile_offsets.as_deref()?;
         let tile_byte_counts = self.tile_byte_counts.as_deref()?;
         let (tiles_per_row, tiles_per_col) = self.tile_count()?;
@@ -772,7 +775,20 @@ impl ImageFileDirectory {
                     .iter()
                     .map(|band| {
                         self.get_planar_tile_byte_range_for_band(x, y, *band)
-                            .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))
+                            .ok_or({
+                                if *band > self.samples_per_pixel() as usize - 1 {
+                                    AsyncTiffError::General(
+                                        format!(
+                                            "band {} is greater than {} (0-based indexing)",
+                                            band,
+                                            self.samples_per_pixel() - 1,
+                                        )
+                                        .to_string(),
+                                    )
+                                } else {
+                                    AsyncTiffError::General("Not a tiled TIFF".to_string())
+                                }
+                            })
                     })
                     .collect::<AsyncTiffResult<Vec<_>>>()?;
                 let band_bytes = reader.get_byte_ranges(ranges).await?;
