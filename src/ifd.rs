@@ -740,51 +740,15 @@ impl ImageFileDirectory {
         xy: &[(usize, usize)],
         reader: &dyn AsyncFileReader,
     ) -> AsyncTiffResult<Vec<Tile>> {
-        let predictor_info = PredictorInfo::from_ifd(self);
-        let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
-        let lerc_parameters = self
-            .other_tags
-            .get(&Tag::LercParameters)
-            .and_then(|v| v.clone().into_u32_vec().ok());
-
         let byte_ranges = self
             .tiles_byte_ranges(xy)
             .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
         let compressed_bytes = byte_ranges.into_fetch(reader).await?;
-        let tiles = compressed_bytes
+        Ok(compressed_bytes
             .into_iter()
             .zip(xy)
             .map(|(buffer, (x, y))| buffer.into_tile(*x, *y, self))
-            .collect();
-
-        match self.planar_configuration {
-            PlanarConfiguration::Planar => {
-                // For planar format, fetch all bands for each tile position
-                let num_bands = self.samples_per_pixel as usize;
-                let mut all_ranges = Vec::with_capacity(xy.len() * num_bands);
-
-                for &(x, y) in xy {
-                    for band in 0..num_bands {
-                        let range = self
-                            .get_planar_tile_byte_range_for_band(x, y, band)
-                            .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
-                        all_ranges.push(range);
-                    }
-                }
-
-                let all_buffers = reader.get_byte_ranges(all_ranges).await?;
-
-                let mut tiles = vec![];
-                for (i, &(x, y)) in xy.iter().enumerate() {
-                    let start = i * num_bands;
-                    let end = start + num_bands;
-                    // Note: this isn't doing a full copy of the buffers; it's just collecting the
-                    // existing Bytes references into a Vec
-                    let band_bytes = all_buffers[start..end].to_vec();
-                }
-                Ok(tiles)
-            }
-        }
+            .collect())
     }
 
     /// Return the number of x/y tiles in the IFD
@@ -866,8 +830,19 @@ impl TileByteRanges {
                     .collect())
             }
             Self::Planar(ranges) => {
-                // Fetch all ranges concurrently, then regroup them into tiles
-                todo!()
+                // Record how many bands each tile has, then flatten into a single fetch
+                let band_counts: Vec<usize> = ranges.iter().map(|r| r.len()).collect();
+                let flat_ranges: Vec<Range<u64>> = ranges.into_iter().flatten().collect();
+                let flat_buffers = reader.get_byte_ranges(flat_ranges).await?;
+                // Re-chunk the flat results back into per-tile band vecs
+                let mut flat_iter = flat_buffers.into_iter();
+                band_counts
+                    .into_iter()
+                    .map(|n| {
+                        let band_bytes: Vec<Bytes> = flat_iter.by_ref().take(n).collect();
+                        Ok(CompressedBytes::Planar(band_bytes))
+                    })
+                    .collect()
             }
         }
     }
