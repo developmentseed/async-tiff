@@ -31,7 +31,7 @@ async fn test_band_interleaved() {
 }
 
 #[tokio::test]
-async fn test_band_interleaved_specific_bands() {
+async fn test_band_interleaved_single_tile_with_specific_bands() {
     let filename = "geotiff-test-data/real_data/eox/eox_cloudless.tif";
 
     let (reader, tiff) = open_tiff(filename).await;
@@ -49,4 +49,32 @@ async fn test_band_interleaved_specific_bands() {
 
     // Verify we have the correct amount of data
     assert_eq!(array.data().len(), 2 * 256 * 256);
+}
+
+#[tokio::test]
+async fn test_band_interleaved_multi_tiles_with_specific_bands() {
+    let filename = "geotiff-test-data/real_data/eox/eox_cloudless.tif";
+
+    let (reader, tiff) = open_tiff(filename).await;
+    let ifd = &tiff.ifds()[0];
+
+    // Fetch tiles at position (0, 0) and (1, 0) - only last two bands
+    let tiles = ifd
+        .fetch_tiles(
+            &[(0, 0), (1, 0)],
+            Some(ifd::FetchOptions::new(vec![1, 2])),
+            &reader,
+        )
+        .await
+        .unwrap();
+
+    for tile in tiles {
+        let array = tile.decode(&Default::default()).unwrap();
+
+        // For planar configuration, shape is [bands, height, width]
+        assert_eq!(array.shape(), [2, 256, 256]);
+
+        // Verify we have the correct amount of data
+        assert_eq!(array.data().len(), 2 * 256 * 256);
+    }
 }

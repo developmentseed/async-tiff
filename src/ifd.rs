@@ -818,6 +818,7 @@ impl ImageFileDirectory {
     pub async fn fetch_tiles(
         &self,
         xy: &[(usize, usize)],
+        fetch_options: Option<FetchOptions>,
         reader: &dyn AsyncFileReader,
     ) -> AsyncTiffResult<Vec<Tile>> {
         let predictor_info = PredictorInfo::from_ifd(self);
@@ -826,6 +827,12 @@ impl ImageFileDirectory {
             .other_tags
             .get(&Tag::LercParameters)
             .and_then(|v| v.clone().into_u32_vec().ok());
+
+        let num_bands = if let Some(fetch_opts) = fetch_options.clone() {
+            fetch_opts.bands.len() as u16
+        } else {
+            self.samples_per_pixel()
+        };
 
         match self.planar_configuration {
             PlanarConfiguration::Chunky => {
@@ -863,15 +870,32 @@ impl ImageFileDirectory {
                 Ok(tiles)
             }
             PlanarConfiguration::Planar => {
-                // For planar format, fetch all bands for each tile position
-                let num_bands = self.samples_per_pixel as usize;
-                let mut all_ranges = Vec::with_capacity(xy.len() * num_bands);
+                // For planar format, fetch all bands separately
+                let select_bands: Vec<usize> = if let Some(fetch_opts) = fetch_options {
+                    fetch_opts.bands
+                } else {
+                    (0..self.samples_per_pixel() as usize).collect()
+                };
+                let mut all_ranges = Vec::with_capacity(xy.len() * num_bands as usize);
 
                 for &(x, y) in xy {
-                    for band in 0..num_bands {
+                    for band in &select_bands {
                         let range = self
-                            .get_planar_tile_byte_range_for_band(x, y, band)
-                            .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
+                            .get_planar_tile_byte_range_for_band(x, y, *band)
+                            .ok_or({
+                                if *band > self.samples_per_pixel() as usize - 1 {
+                                    AsyncTiffError::General(
+                                        format!(
+                                            "band {} is greater than {} (0-based indexing)",
+                                            band,
+                                            self.samples_per_pixel(),
+                                        )
+                                        .to_string(),
+                                    )
+                                } else {
+                                    AsyncTiffError::General("Not a tiled TIFF".to_string())
+                                }
+                            })?;
                         all_ranges.push(range);
                     }
                 }
@@ -880,8 +904,8 @@ impl ImageFileDirectory {
 
                 let mut tiles = vec![];
                 for (i, &(x, y)) in xy.iter().enumerate() {
-                    let start = i * num_bands;
-                    let end = start + num_bands;
+                    let start = i * num_bands as usize;
+                    let end = start + num_bands as usize;
                     // Note: this isn't doing a full copy of the buffers; it's just collecting the
                     // existing Bytes references into a Vec
                     let band_bytes = all_buffers[start..end].to_vec();
@@ -893,7 +917,7 @@ impl ImageFileDirectory {
                         width: self.tile_width.unwrap_or(self.image_width),
                         height: self.tile_height.unwrap_or(self.image_height),
                         planar_configuration: self.planar_configuration,
-                        samples_per_pixel: self.samples_per_pixel,
+                        samples_per_pixel: num_bands,
                         predictor: self.predictor.unwrap_or(Predictor::None),
                         predictor_info,
                         compressed_bytes: CompressedBytes::Planar(band_bytes),
