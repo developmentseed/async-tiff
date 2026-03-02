@@ -713,8 +713,8 @@ impl ImageFileDirectory {
     }
 
     /// Find the byte ranges for the tiles located at `x` column and `y` row.
-    pub fn tiles_byte_ranges(&self, xy: &[(usize, usize)]) -> Option<TileByteRanges> {
-        TileByteRanges::from_ifd_tiles(self, xy)
+    pub fn tiles_byte_ranges(&self, xy: &[(usize, usize)]) -> Option<TilesByteRanges> {
+        TilesByteRanges::from_ifd_tiles(self, xy)
     }
 
     /// Fetch the tile located at `x` column and `y` row using the provided reader.
@@ -808,7 +808,8 @@ impl TileByteRange {
     }
 }
 
-pub enum TileByteRanges {
+/// A description of the byte ranges for multiple tiles
+pub enum TilesByteRanges {
     /// For chunky TIFFs, a byte range for each tile.
     Chunky(Vec<Range<u64>>),
 
@@ -816,7 +817,7 @@ pub enum TileByteRanges {
     Planar(Vec<Vec<Range<u64>>>),
 }
 
-impl TileByteRanges {
+impl TilesByteRanges {
     async fn into_fetch(
         self,
         reader: &dyn AsyncFileReader,
@@ -824,10 +825,7 @@ impl TileByteRanges {
         match self {
             Self::Chunky(ranges) => {
                 let buffers = reader.get_byte_ranges(ranges).await?;
-                Ok(buffers
-                    .into_iter()
-                    .map(|buf| CompressedBytes::Chunky(buf))
-                    .collect())
+                Ok(buffers.into_iter().map(CompressedBytes::Chunky).collect())
             }
             Self::Planar(ranges) => {
                 // Record how many bands each tile has, then flatten into a single fetch
@@ -850,8 +848,8 @@ impl TileByteRanges {
     fn from_ifd_tiles(ifd: &ImageFileDirectory, xy: &[(usize, usize)]) -> Option<Self> {
         if xy.is_empty() {
             return match ifd.planar_configuration {
-                PlanarConfiguration::Chunky => Some(TileByteRanges::Chunky(vec![])),
-                PlanarConfiguration::Planar => Some(TileByteRanges::Planar(vec![])),
+                PlanarConfiguration::Chunky => Some(TilesByteRanges::Chunky(vec![])),
+                PlanarConfiguration::Planar => Some(TilesByteRanges::Planar(vec![])),
             };
         }
 
@@ -869,7 +867,7 @@ impl TileByteRanges {
                         _ => unreachable!(),
                     })
                     .collect();
-                Some(TileByteRanges::Chunky(chunky_ranges))
+                Some(TilesByteRanges::Chunky(chunky_ranges))
             }
             PlanarConfiguration::Planar => {
                 let planar_ranges = ranges
@@ -879,7 +877,7 @@ impl TileByteRanges {
                         _ => unreachable!(),
                     })
                     .collect();
-                Some(TileByteRanges::Planar(planar_ranges))
+                Some(TilesByteRanges::Planar(planar_ranges))
             }
         }
     }
