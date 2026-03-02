@@ -5,14 +5,14 @@ use std::sync::Arc;
 use bytes::Bytes;
 use num_enum::TryFromPrimitive;
 
-use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError};
+use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffFormatError};
 use crate::geo::{GeoKeyDirectory, GeoKeyTag};
 use crate::predictor::PredictorInfo;
 use crate::reader::{AsyncFileReader, Endianness};
 use crate::tag_value::TagValue;
 use crate::tags::{
-    Compression, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
-    SampleFormat, Tag,
+    Compression, ExtraSamples, PhotometricInterpretation, PlanarConfiguration, Predictor,
+    ResolutionUnit, SampleFormat, Tag,
 };
 use crate::tile::CompressedBytes;
 use crate::{DataType, Tile};
@@ -129,7 +129,7 @@ pub struct ImageFileDirectory {
     pub(crate) tile_offsets: Option<Vec<u64>>,
     pub(crate) tile_byte_counts: Option<Vec<u64>>,
 
-    pub(crate) extra_samples: Option<Vec<u16>>,
+    pub(crate) extra_samples: Option<Vec<ExtraSamples>>,
 
     pub(crate) sample_format: Vec<SampleFormat>,
 
@@ -244,7 +244,18 @@ impl ImageFileDirectory {
                 Tag::TileLength => tile_height = Some(value.into_u32()?),
                 Tag::TileOffsets => tile_offsets = Some(value.into_u64_vec()?),
                 Tag::TileByteCounts => tile_byte_counts = Some(value.into_u64_vec()?),
-                Tag::ExtraSamples => extra_samples = Some(value.into_u16_vec()?),
+                Tag::ExtraSamples => {
+                    let values = value.into_u16_vec()?;
+                    extra_samples = Some(
+                        values
+                            .into_iter()
+                            .map(|val| {
+                                ExtraSamples::from_u16(val)
+                                    .ok_or(TiffError::FormatError(TiffFormatError::InvalidTag))
+                            })
+                            .collect::<Result<Vec<_>, _>>()?,
+                    );
+                }
                 Tag::SampleFormat => {
                     let values = value.into_u16_vec()?;
                     sample_format = Some(
@@ -611,7 +622,7 @@ impl ImageFileDirectory {
 
     /// Description of extra components.
     /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/extrasamples.html>
-    pub fn extra_samples(&self) -> Option<&[u16]> {
+    pub fn extra_samples(&self) -> Option<&[ExtraSamples]> {
         self.extra_samples.as_deref()
     }
 
