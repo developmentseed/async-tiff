@@ -17,7 +17,7 @@ jobs:
   rust-bench:
     runs-on: ubuntu-24.04
     container:
-      image: ghcr.io/osgeo/gdal:ubuntu-small-3.11.5
+      image: ghcr.io/osgeo/gdal:ubuntu-small-3.12.2
       options: --privileged
     permissions:
       contents: read # required for actions/checkout
