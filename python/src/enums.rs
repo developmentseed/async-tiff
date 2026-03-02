@@ -1,7 +1,7 @@
 use async_tiff::reader::Endianness;
 use async_tiff::tags::{
-    Compression, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
-    SampleFormat,
+    Compression, ExtraSamples, PhotometricInterpretation, PlanarConfiguration, Predictor,
+    ResolutionUnit, SampleFormat,
 };
 use pyo3::prelude::*;
 use pyo3::types::{PyString, PyTuple};
