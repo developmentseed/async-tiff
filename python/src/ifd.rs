@@ -473,6 +473,11 @@ impl PyImageFileDirectory {
             Ok(py_tiles)
         })
     }
+
+    #[getter]
+    fn tile_count(&self) -> Option<(usize, usize)> {
+        self.ifd.tile_count()
+    }
 }
 
 impl PartialEq for PyImageFileDirectory {
