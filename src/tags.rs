@@ -213,6 +213,15 @@ pub enum Compression(u16) unknown("A custom compression method") {
 }
 
 tags! {
+/// Description of extra components.
+pub enum ExtraSamples(u16) {
+    Unspecified = 0,
+    AssociatedAlpha = 1,
+    UnassociatedAlpha = 2,
+}
+}
+
+tags! {
 /// The color space of the image data.
 pub enum PhotometricInterpretation(u16) {
     WhiteIsZero = 0,

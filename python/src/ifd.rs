@@ -10,7 +10,7 @@ use pyo3_async_runtimes::tokio::future_into_py;
 
 use crate::colormap::PyColormap;
 use crate::enums::{
-    PyCompression, PyPhotometricInterpretation, PyPlanarConfiguration, PyPredictor,
+    PyCompression, PyExtraSamples, PyPhotometricInterpretation, PyPlanarConfiguration, PyPredictor,
     PyResolutionUnit, PySampleFormat,
 };
 use crate::geo::PyGeoKeyDirectory;
@@ -203,8 +203,10 @@ impl PyImageFileDirectory {
     }
 
     #[getter]
-    pub fn extra_samples(&self) -> Option<&[u16]> {
-        self.ifd.extra_samples()
+    pub fn extra_samples(&self) -> Option<Vec<PyExtraSamples>> {
+        self.ifd
+            .extra_samples()
+            .map(|samples| samples.iter().map(|x| (*x).into()).collect())
     }
 
     #[getter]

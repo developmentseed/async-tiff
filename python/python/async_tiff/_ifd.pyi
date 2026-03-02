@@ -6,6 +6,7 @@ from ._geo import GeoKeyDirectory
 from ._tile import Tile
 from .enums import (
     Compression,
+    ExtraSamples,
     PhotometricInterpretation,
     PlanarConfiguration,
     Predictor,
@@ -103,7 +104,7 @@ class ImageFileDirectory:
     @property
     def tile_byte_counts(self) -> list[int] | None: ...
     @property
-    def extra_samples(self) -> list[int] | None: ...
+    def extra_samples(self) -> list[ExtraSamples] | None: ...
     @property
     def sample_format(self) -> list[SampleFormat]: ...
     @property

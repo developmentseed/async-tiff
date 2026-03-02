@@ -1,7 +1,7 @@
 use async_tiff::reader::Endianness;
 use async_tiff::tags::{
-    Compression, PhotometricInterpretation, PlanarConfiguration, Predictor, ResolutionUnit,
-    SampleFormat,
+    Compression, ExtraSamples, PhotometricInterpretation, PlanarConfiguration, Predictor,
+    ResolutionUnit, SampleFormat,
 };
 use pyo3::prelude::*;
 use pyo3::types::{PyString, PyTuple};
@@ -61,6 +61,24 @@ impl<'py> IntoPyObject<'py> for PyEndianness {
             Endianness::LittleEndian => endianness_enum.getattr("LittleEndian"),
             Endianness::BigEndian => endianness_enum.getattr("BigEndian"),
         }
+    }
+}
+
+pub(crate) struct PyExtraSamples(ExtraSamples);
+
+impl From<ExtraSamples> for PyExtraSamples {
+    fn from(value: ExtraSamples) -> Self {
+        Self(value)
+    }
+}
+
+impl<'py> IntoPyObject<'py> for PyExtraSamples {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        to_py_enum_variant(py, intern!(py, "ExtraSamples"), self.0.to_u16())
     }
 }
 
