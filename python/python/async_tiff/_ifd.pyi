@@ -148,3 +148,10 @@ class ImageFileDirectory:
         Returns:
             Tile responses.
         """
+    @property
+    def tile_count(self) -> tuple[int, int] | None:
+        """The number of tiles in the x and y directions, respectively.
+
+        This will be `None` if the IFD is not tiled.
+        """
+        ...
