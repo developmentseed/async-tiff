@@ -708,33 +708,14 @@ impl ImageFileDirectory {
         self.color_map.as_ref()
     }
 
-    /// Get tile byte range for all bands in chunky configuration.
-    fn get_chunky_tile_byte_range(&self, x: usize, y: usize) -> Option<Range<u64>> {
-        let tile_offsets = self.tile_offsets.as_deref()?;
-        let tile_byte_counts = self.tile_byte_counts.as_deref()?;
-        let idx = (y * self.tile_count()?.0) + x;
-        let offset = tile_offsets[idx] as usize;
-        // TODO: aiocogeo has a -1 here, but I think that was in error
-        let byte_count = tile_byte_counts[idx] as usize;
-        Some(offset as _..(offset + byte_count) as _)
+    /// Find the byte range(s) for the tile located at `x` column and `y` row.
+    pub fn tile_byte_range(&self, x: usize, y: usize) -> Option<TileByteRange> {
+        TileByteRange::from_ifd_tile(self, x, y)
     }
 
-    /// Get tile byte range for a specific band in planar configuration.
-    /// For planar TIFFs, tiles are organized as: all tiles for band 0, then all tiles for band 1, etc.
-    fn get_planar_tile_byte_range_for_band(
-        &self,
-        x: usize,
-        y: usize,
-        band: usize,
-    ) -> Option<Range<u64>> {
-        let tile_offsets = self.tile_offsets.as_deref()?;
-        let tile_byte_counts = self.tile_byte_counts.as_deref()?;
-        let (tiles_per_row, tiles_per_col) = self.tile_count()?;
-        let tiles_per_band = tiles_per_row * tiles_per_col;
-        let idx = (band * tiles_per_band) + (y * tiles_per_row) + x;
-        let offset = tile_offsets[idx] as usize;
-        let byte_count = tile_byte_counts[idx] as usize;
-        Some(offset as _..(offset + byte_count) as _)
+    /// Find the byte ranges for the tiles located at `x` column and `y` row.
+    pub fn tiles_byte_ranges(&self, xy: &[(usize, usize)]) -> Option<TileByteRanges> {
+        TileByteRanges::from_ifd_tiles(self, xy)
     }
 
     /// Fetch the tile located at `x` column and `y` row using the provided reader.
@@ -898,161 +879,88 @@ impl ImageFileDirectory {
     }
 }
 
-/// Calculate the actual pixel dimensions of a tile at position (x, y).
-///
-/// Edge tiles may be smaller than the nominal tile dimensions when the image
-/// dimensions are not exact multiples of the tile dimensions.
-///
-/// # Arguments
-/// * `x` - Tile column index (0-based)
-/// * `y` - Tile row index (0-based)
-/// * `image_width` - Total image width in pixels
-/// * `image_height` - Total image height in pixels
-/// * `tile_width` - Nominal tile width (None for stripped images)
-/// * `tile_height` - Nominal tile height (None for stripped images)
-/// * `rows_per_strip` - Rows per strip for stripped images (None for tiled images)
-///
-/// # Returns
-/// A tuple of (actual_width, actual_height) in pixels
-#[allow(dead_code)]
-// Note: this was originally implemented with the idea that the last tile (if unaligned) would be
-// this size, but apparently the end tile is still the same size as the others, just with padding.
-// Leaving this here in case it's useful later.
-pub(crate) fn compute_tile_dimensions(
-    x: usize,
-    y: usize,
-    image_width: u32,
-    image_height: u32,
-    tile_width: Option<u32>,
-    tile_height: Option<u32>,
-    rows_per_strip: Option<u32>,
-) -> (u32, u32) {
-    // For tiled images (both tile_width and tile_height must be present)
-    if let (Some(tile_width), Some(tile_height)) = (tile_width, tile_height) {
-        let x_offset = (x as u32) * tile_width;
-        let y_offset = (y as u32) * tile_height;
+/// A description of the byte ranges for a tile, which may differ based on whether the TIFF is in
+/// chunky or planar format.
+pub enum TileByteRange {
+    /// For chunky TIFFs, a single byte range for the tile that includes all bands.
+    Chunky(Range<u64>),
 
-        let actual_width = std::cmp::min(tile_width, image_width.saturating_sub(x_offset));
-        let actual_height = std::cmp::min(tile_height, image_height.saturating_sub(y_offset));
+    /// For planar TIFFs, separate byte ranges for each band of the tile.
+    Planar(Vec<Range<u64>>),
+}
 
-        (actual_width, actual_height)
-    } else {
-        // For stripped images (or fallback)
-        let strip_height = rows_per_strip.unwrap_or(image_height);
-        let y_offset = (y as u32) * strip_height;
-        let actual_height = std::cmp::min(strip_height, image_height.saturating_sub(y_offset));
-
-        (image_width, actual_height)
+impl TileByteRange {
+    fn from_ifd_tile(ifd: &ImageFileDirectory, x: usize, y: usize) -> Option<Self> {
+        let tile_offsets = ifd.tile_offsets.as_deref()?;
+        let tile_byte_counts = ifd.tile_byte_counts.as_deref()?;
+        let (tiles_per_row, tiles_per_col) = ifd.tile_count()?;
+        match ifd.planar_configuration {
+            PlanarConfiguration::Chunky => {
+                let idx = (y * tiles_per_row) + x;
+                let offset = tile_offsets[idx];
+                let byte_count = tile_byte_counts[idx];
+                Some(TileByteRange::Chunky(offset..(offset + byte_count)))
+            }
+            PlanarConfiguration::Planar => {
+                let tiles_per_band = tiles_per_row * tiles_per_col;
+                let num_bands = ifd.samples_per_pixel as usize;
+                let band_ranges = (0..num_bands)
+                    .map(|band| {
+                        let band_idx = (band * tiles_per_band) + (y * tiles_per_row) + x;
+                        let offset = tile_offsets[band_idx];
+                        let byte_count = tile_byte_counts[band_idx];
+                        offset..(offset + byte_count)
+                    })
+                    .collect::<Vec<_>>();
+                Some(TileByteRange::Planar(band_ranges))
+            }
+        }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub enum TileByteRanges {
+    /// For chunky TIFFs, a byte range for each tile.
+    Chunky(Vec<Range<u64>>),
 
-    #[test]
-    fn test_tile_dimensions_full_tiles() {
-        // 512x512 image with 256x256 tiles - all tiles are full size
-        assert_eq!(
-            compute_tile_dimensions(0, 0, 512, 512, Some(256), Some(256), None),
-            (256, 256),
-            "Top-left tile should be full size"
-        );
-        assert_eq!(
-            compute_tile_dimensions(1, 0, 512, 512, Some(256), Some(256), None),
-            (256, 256),
-            "Top-right tile should be full size"
-        );
-        assert_eq!(
-            compute_tile_dimensions(0, 1, 512, 512, Some(256), Some(256), None),
-            (256, 256),
-            "Bottom-left tile should be full size"
-        );
-        assert_eq!(
-            compute_tile_dimensions(1, 1, 512, 512, Some(256), Some(256), None),
-            (256, 256),
-            "Bottom-right tile should be full size"
-        );
-    }
+    /// For planar TIFFs, separate byte ranges for each band of each tile.
+    Planar(Vec<Vec<Range<u64>>>),
+}
 
-    #[test]
-    fn test_tile_dimensions_edge_tiles() {
-        // 500x500 image with 256x256 tiles - edge tiles are partial
-        assert_eq!(
-            compute_tile_dimensions(0, 0, 500, 500, Some(256), Some(256), None),
-            (256, 256),
-            "Top-left tile should be full size"
-        );
-        assert_eq!(
-            compute_tile_dimensions(1, 0, 500, 500, Some(256), Some(256), None),
-            (244, 256),
-            "Top-right edge tile should be 244 pixels wide"
-        );
-        assert_eq!(
-            compute_tile_dimensions(0, 1, 500, 500, Some(256), Some(256), None),
-            (256, 244),
-            "Bottom-left edge tile should be 244 pixels tall"
-        );
-        assert_eq!(
-            compute_tile_dimensions(1, 1, 500, 500, Some(256), Some(256), None),
-            (244, 244),
-            "Bottom-right corner tile should be 244x244"
-        );
-    }
+impl TileByteRanges {
+    fn from_ifd_tiles(ifd: &ImageFileDirectory, xy: &[(usize, usize)]) -> Option<Self> {
+        if xy.is_empty() {
+            return match ifd.planar_configuration {
+                PlanarConfiguration::Chunky => Some(TileByteRanges::Chunky(vec![])),
+                PlanarConfiguration::Planar => Some(TileByteRanges::Planar(vec![])),
+            };
+        }
 
-    #[test]
-    fn test_strip_dimensions() {
-        // 1024x768 stripped image with 128 rows per strip
-        assert_eq!(
-            compute_tile_dimensions(0, 0, 1024, 768, None, None, Some(128)),
-            (1024, 128),
-            "First strip should be full width and height"
-        );
-        assert_eq!(
-            compute_tile_dimensions(0, 5, 1024, 768, None, None, Some(128)),
-            (1024, 128),
-            "Middle strip should be full size"
-        );
-        assert_eq!(
-            compute_tile_dimensions(0, 5, 1024, 768, None, None, Some(128)),
-            (1024, 128),
-            "Last strip (768 / 128 = 6 strips, index 5) should be full height"
-        );
-    }
+        let ranges = xy
+            .iter()
+            .map(|(x, y)| TileByteRange::from_ifd_tile(ifd, *x, *y))
+            .collect::<Option<Vec<_>>>()?;
 
-    #[test]
-    fn test_strip_dimensions_partial_last_strip() {
-        // 1024x700 stripped image with 128 rows per strip
-        // Last strip should be: 700 - (5 * 128) = 60 rows
-        assert_eq!(
-            compute_tile_dimensions(0, 0, 1024, 700, None, None, Some(128)),
-            (1024, 128),
-            "First strip should be full height"
-        );
-        assert_eq!(
-            compute_tile_dimensions(0, 5, 1024, 700, None, None, Some(128)),
-            (1024, 60),
-            "Last strip should be 60 pixels tall"
-        );
-    }
-
-    #[test]
-    fn test_single_tile_image() {
-        // Image smaller than tile size
-        assert_eq!(
-            compute_tile_dimensions(0, 0, 100, 100, Some(256), Some(256), None),
-            (100, 100),
-            "Single tile should match image dimensions"
-        );
-    }
-
-    #[test]
-    fn test_strip_default_height() {
-        // Stripped image with no rows_per_strip (defaults to full image height)
-        assert_eq!(
-            compute_tile_dimensions(0, 0, 1024, 768, None, None, None),
-            (1024, 768),
-            "Strip should default to full image height"
-        );
+        match ifd.planar_configuration {
+            PlanarConfiguration::Chunky => {
+                let chunky_ranges = ranges
+                    .into_iter()
+                    .map(|r| match r {
+                        TileByteRange::Chunky(range) => range,
+                        _ => unreachable!(),
+                    })
+                    .collect();
+                Some(TileByteRanges::Chunky(chunky_ranges))
+            }
+            PlanarConfiguration::Planar => {
+                let planar_ranges = ranges
+                    .into_iter()
+                    .map(|r| match r {
+                        TileByteRange::Planar(band_ranges) => band_ranges,
+                        _ => unreachable!(),
+                    })
+                    .collect();
+                Some(TileByteRanges::Planar(planar_ranges))
+            }
+        }
     }
 }
