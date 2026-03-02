@@ -27,7 +27,7 @@ jobs:
       - name: Install dev dependencies and setup git
         run: |
           apt update
-          apt install -y build-essential cmake git libclang-dev pkg-config
+          apt install -y build-essential cmake git jq libclang-dev pkg-config
           git config --global --add safe.directory $GITHUB_WORKSPACE
 
       - name: Checkout repository
