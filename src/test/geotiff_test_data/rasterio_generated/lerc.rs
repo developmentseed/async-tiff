@@ -1,4 +1,3 @@
-use crate::tags::Tag;
 use crate::test::util::open_tiff;
 use crate::{DataType, TypedArray};
 
@@ -29,13 +28,7 @@ async fn test_lerc_deflate() {
     let (reader, tiff) = open_tiff(filename).await;
     let ifd = &tiff.ifds()[0];
 
-    let lerc_params = ifd
-        .other_tags()
-        .get(&Tag::LercParameters)
-        .unwrap()
-        .clone()
-        .into_u32_vec()
-        .unwrap();
+    let lerc_params = ifd.lerc_parameters().unwrap();
 
     let lerc_version = lerc_params[0];
     assert_eq!(lerc_version, 4);
@@ -64,13 +57,7 @@ async fn test_lerc_zstd() {
     let (reader, tiff) = open_tiff(filename).await;
     let ifd = &tiff.ifds()[0];
 
-    let lerc_params = ifd
-        .other_tags()
-        .get(&Tag::LercParameters)
-        .unwrap()
-        .clone()
-        .into_u32_vec()
-        .unwrap();
+    let lerc_params = ifd.lerc_parameters().unwrap();
 
     let lerc_version = lerc_params[0];
     assert_eq!(lerc_version, 4);
