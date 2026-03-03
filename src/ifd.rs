@@ -761,10 +761,6 @@ impl ImageFileDirectory {
         reader: &dyn AsyncFileReader,
     ) -> AsyncTiffResult<Tile> {
         let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
-        let lerc_parameters = self
-            .other_tags
-            .get(&Tag::LercParameters)
-            .and_then(|v| v.clone().into_u32_vec().ok());
 
         let compressed_bytes = match self.planar_configuration {
             PlanarConfiguration::Chunky => {
@@ -803,7 +799,7 @@ impl ImageFileDirectory {
             compression_method: self.compression,
             photometric_interpretation: self.photometric_interpretation,
             jpeg_tables: self.jpeg_tables.clone(),
-            lerc_parameters,
+            lerc_parameters: self.lerc_parameters.clone(),
         })
     }
 
@@ -815,10 +811,6 @@ impl ImageFileDirectory {
     ) -> AsyncTiffResult<Vec<Tile>> {
         let predictor_info = PredictorInfo::from_ifd(self);
         let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
-        let lerc_parameters = self
-            .other_tags
-            .get(&Tag::LercParameters)
-            .and_then(|v| v.clone().into_u32_vec().ok());
 
         match self.planar_configuration {
             PlanarConfiguration::Chunky => {
@@ -849,7 +841,7 @@ impl ImageFileDirectory {
                         compression_method: self.compression,
                         photometric_interpretation: self.photometric_interpretation,
                         jpeg_tables: self.jpeg_tables.clone(),
-                        lerc_parameters: lerc_parameters.clone(),
+                        lerc_parameters: self.lerc_parameters.clone(),
                     };
                     tiles.push(tile);
                 }
@@ -893,7 +885,7 @@ impl ImageFileDirectory {
                         compression_method: self.compression,
                         photometric_interpretation: self.photometric_interpretation,
                         jpeg_tables: self.jpeg_tables.clone(),
-                        lerc_parameters: lerc_parameters.clone(),
+                        lerc_parameters: self.lerc_parameters.clone(),
                     };
                     tiles.push(tile);
                 }
