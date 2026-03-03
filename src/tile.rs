@@ -99,10 +99,9 @@ impl Tile {
                 // Decode each band separately and concatenate
                 // Pre-allocate buffer: bands × width × height × bytes_per_sample
                 let bytes_per_sample = (self.predictor_info.bits_per_sample() / 8) as usize;
-                let total_size = band_bytes.len()
-                    * (self.width as usize)
-                    * (self.height as usize)
-                    * bytes_per_sample;
+                let num_bands = band_bytes.len();
+                let total_size =
+                    num_bands * (self.width as usize) * (self.height as usize) * bytes_per_sample;
                 let mut result = Vec::with_capacity(total_size);
 
                 for band_data in band_bytes {
@@ -144,11 +143,15 @@ impl Tile {
             }
         }?;
 
+        let num_bands = match &self.compressed_bytes {
+            CompressedBytes::Chunky(_) => self.samples_per_pixel as usize,
+            CompressedBytes::Planar(band_bytes) => band_bytes.len(),
+        };
         let shape = infer_shape(
             self.planar_configuration,
             self.width as _,
             self.height as _,
-            self.samples_per_pixel as _,
+            num_bands,
         );
         Array::try_new(decoded, shape, self.data_type)
     }

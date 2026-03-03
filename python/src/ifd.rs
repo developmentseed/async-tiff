@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_tiff::reader::AsyncFileReader;
-use async_tiff::{ImageFileDirectory, TileByteRange};
+use async_tiff::{ImageFileDirectory, ReadOptions, TileByteRange};
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::IntoPyObjectExt;
@@ -453,17 +453,20 @@ impl PyImageFileDirectory {
         }
     }
 
+    #[pyo3(signature = (x, y, *, bands=None))]
     fn fetch_tile<'py>(
         &'py self,
         py: Python<'py>,
         x: usize,
         y: usize,
+        bands: Option<Vec<usize>>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let options = ReadOptions { bands };
         let reader = self.reader.clone();
         let ifd = self.ifd.clone();
         future_into_py(py, async move {
             let tile = ifd
-                .fetch_tile(x, y, reader.as_ref())
+                .fetch_tile(x, y, reader.as_ref(), options)
                 .await
                 .map_err(|err| PyTypeError::new_err(err.to_string()))?;
 
@@ -471,16 +474,19 @@ impl PyImageFileDirectory {
         })
     }
 
+    #[pyo3(signature = (xy, *, bands=None))]
     pub(crate) fn fetch_tiles<'py>(
         &'py self,
         py: Python<'py>,
         xy: Vec<(usize, usize)>,
+        bands: Option<Vec<usize>>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let options = ReadOptions { bands };
         let reader = self.reader.clone();
         let ifd = self.ifd.clone();
         future_into_py(py, async move {
             let tiles = ifd
-                .fetch_tiles(&xy, reader.as_ref())
+                .fetch_tiles(&xy, reader.as_ref(), options)
                 .await
                 .map_err(|err| PyTypeError::new_err(err.to_string()))?;
             let py_tiles = tiles.into_iter().map(PyTile::new).collect::<Vec<_>>();
@@ -488,10 +494,16 @@ impl PyImageFileDirectory {
         })
     }
 
-    fn tile_byte_range(&self, x: usize, y: usize) -> PyAsyncTiffResult<PyTileByteRange> {
+    #[pyo3(signature = (x, y, *, bands=None))]
+    fn tile_byte_range(
+        &self,
+        x: usize,
+        y: usize,
+        bands: Option<Vec<usize>>,
+    ) -> PyAsyncTiffResult<PyTileByteRange> {
         let byte_range = self
             .ifd
-            .tile_byte_range(x, y)
+            .tile_byte_range(x, y, bands.as_deref())?
             .ok_or(PyValueError::new_err("Not a tiled tiff"))?;
         Ok(PyTileByteRange(byte_range))
     }
