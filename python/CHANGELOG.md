@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0] - 2026-03-03
+
+### What's Changed
+
+* fix: Fix type hint for `strip_byte_counts` by @kylebarron in https://github.com/developmentseed/async-tiff/pull/253
+* feat: Define `ExtraSamples` enum by @kylebarron in https://github.com/developmentseed/async-tiff/pull/258
+* feat: Python `tile_count` accessor on ifd by @kylebarron in https://github.com/developmentseed/async-tiff/pull/259
+* feat: Expose lerc_parameters as ifd attribute by @kylebarron in https://github.com/developmentseed/async-tiff/pull/262
+* feat: Expose API to find byte range of an internal COG tile by @kylebarron in https://github.com/developmentseed/async-tiff/pull/261
+
+**Full Changelog**: https://github.com/developmentseed/async-tiff/compare/py-v0.6.0...py-v0.7.0
+
 ## [0.6.0] - 2026-02-18
 
 ### What's Changed
