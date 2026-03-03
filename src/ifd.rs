@@ -14,7 +14,6 @@ use crate::tags::{
     Compression, ExtraSamples, PhotometricInterpretation, PlanarConfiguration, Predictor,
     ResolutionUnit, SampleFormat, Tag,
 };
-use crate::tile::CompressedBytes;
 use crate::{DataType, Tile};
 
 const DOCUMENT_NAME: u16 = 269;
@@ -721,33 +720,14 @@ impl ImageFileDirectory {
         self.color_map.as_ref()
     }
 
-    /// Get tile byte range for all bands in chunky configuration.
-    fn get_chunky_tile_byte_range(&self, x: usize, y: usize) -> Option<Range<u64>> {
-        let tile_offsets = self.tile_offsets.as_deref()?;
-        let tile_byte_counts = self.tile_byte_counts.as_deref()?;
-        let idx = (y * self.tile_count()?.0) + x;
-        let offset = tile_offsets[idx] as usize;
-        // TODO: aiocogeo has a -1 here, but I think that was in error
-        let byte_count = tile_byte_counts[idx] as usize;
-        Some(offset as _..(offset + byte_count) as _)
+    /// Find the byte range(s) for the tile located at `x` column and `y` row.
+    pub fn tile_byte_range(&self, x: usize, y: usize) -> Option<TileByteRange> {
+        TileByteRange::from_ifd_tile(self, x, y)
     }
 
-    /// Get tile byte range for a specific band in planar configuration.
-    /// For planar TIFFs, tiles are organized as: all tiles for band 0, then all tiles for band 1, etc.
-    fn get_planar_tile_byte_range_for_band(
-        &self,
-        x: usize,
-        y: usize,
-        band: usize,
-    ) -> Option<Range<u64>> {
-        let tile_offsets = self.tile_offsets.as_deref()?;
-        let tile_byte_counts = self.tile_byte_counts.as_deref()?;
-        let (tiles_per_row, tiles_per_col) = self.tile_count()?;
-        let tiles_per_band = tiles_per_row * tiles_per_col;
-        let idx = (band * tiles_per_band) + (y * tiles_per_row) + x;
-        let offset = tile_offsets[idx] as usize;
-        let byte_count = tile_byte_counts[idx] as usize;
-        Some(offset as _..(offset + byte_count) as _)
+    /// Find the byte ranges for the tiles located at `x` column and `y` row.
+    pub fn tiles_byte_ranges(&self, xy: &[(usize, usize)]) -> Option<TilesByteRanges> {
+        TilesByteRanges::from_ifd_tiles(self, xy)
     }
 
     /// Fetch the tile located at `x` column and `y` row using the provided reader.
@@ -760,47 +740,11 @@ impl ImageFileDirectory {
         y: usize,
         reader: &dyn AsyncFileReader,
     ) -> AsyncTiffResult<Tile> {
-        let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
-
-        let compressed_bytes = match self.planar_configuration {
-            PlanarConfiguration::Chunky => {
-                // For chunky format, fetch single tile
-                let range = self
-                    .get_chunky_tile_byte_range(x, y)
-                    .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
-                let bytes = reader.get_bytes(range).await?;
-                CompressedBytes::Chunky(bytes)
-            }
-            PlanarConfiguration::Planar => {
-                // For planar format, fetch all bands separately
-                let num_bands = self.samples_per_pixel as usize;
-                let ranges = (0..num_bands)
-                    .map(|band| {
-                        self.get_planar_tile_byte_range_for_band(x, y, band)
-                            .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))
-                    })
-                    .collect::<AsyncTiffResult<Vec<_>>>()?;
-                let band_bytes = reader.get_byte_ranges(ranges).await?;
-                CompressedBytes::Planar(band_bytes)
-            }
-        };
-
-        Ok(Tile {
-            x,
-            y,
-            data_type,
-            width: self.tile_width.unwrap_or(self.image_width),
-            height: self.tile_height.unwrap_or(self.image_height),
-            planar_configuration: self.planar_configuration,
-            samples_per_pixel: self.samples_per_pixel,
-            predictor: self.predictor.unwrap_or(Predictor::None),
-            predictor_info: PredictorInfo::from_ifd(self),
-            compressed_bytes,
-            compression_method: self.compression,
-            photometric_interpretation: self.photometric_interpretation,
-            jpeg_tables: self.jpeg_tables.clone(),
-            lerc_parameters: self.lerc_parameters.clone(),
-        })
+        let byte_ranges = self
+            .tile_byte_range(x, y)
+            .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
+        let compressed_bytes = byte_ranges.into_fetch(reader).await?;
+        Ok(compressed_bytes.into_tile(x, y, self))
     }
 
     /// Fetch the tiles located at `x` column and `y` row using the provided reader.
@@ -809,89 +753,15 @@ impl ImageFileDirectory {
         xy: &[(usize, usize)],
         reader: &dyn AsyncFileReader,
     ) -> AsyncTiffResult<Vec<Tile>> {
-        let predictor_info = PredictorInfo::from_ifd(self);
-        let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
-
-        match self.planar_configuration {
-            PlanarConfiguration::Chunky => {
-                // For chunky format, fetch one tile per position
-                let byte_ranges = xy
-                    .iter()
-                    .map(|(x, y)| {
-                        self.get_chunky_tile_byte_range(*x, *y)
-                            .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))
-                    })
-                    .collect::<AsyncTiffResult<Vec<_>>>()?;
-
-                let buffers = reader.get_byte_ranges(byte_ranges).await?;
-
-                let mut tiles = vec![];
-                for (compressed_bytes, &(x, y)) in buffers.into_iter().zip(xy) {
-                    let tile = Tile {
-                        x,
-                        y,
-                        data_type,
-                        width: self.tile_width.unwrap_or(self.image_width),
-                        height: self.tile_height.unwrap_or(self.image_height),
-                        planar_configuration: self.planar_configuration,
-                        samples_per_pixel: self.samples_per_pixel,
-                        predictor: self.predictor.unwrap_or(Predictor::None),
-                        predictor_info,
-                        compressed_bytes: CompressedBytes::Chunky(compressed_bytes),
-                        compression_method: self.compression,
-                        photometric_interpretation: self.photometric_interpretation,
-                        jpeg_tables: self.jpeg_tables.clone(),
-                        lerc_parameters: self.lerc_parameters.clone(),
-                    };
-                    tiles.push(tile);
-                }
-                Ok(tiles)
-            }
-            PlanarConfiguration::Planar => {
-                // For planar format, fetch all bands for each tile position
-                let num_bands = self.samples_per_pixel as usize;
-                let mut all_ranges = Vec::with_capacity(xy.len() * num_bands);
-
-                for &(x, y) in xy {
-                    for band in 0..num_bands {
-                        let range = self
-                            .get_planar_tile_byte_range_for_band(x, y, band)
-                            .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
-                        all_ranges.push(range);
-                    }
-                }
-
-                let all_buffers = reader.get_byte_ranges(all_ranges).await?;
-
-                let mut tiles = vec![];
-                for (i, &(x, y)) in xy.iter().enumerate() {
-                    let start = i * num_bands;
-                    let end = start + num_bands;
-                    // Note: this isn't doing a full copy of the buffers; it's just collecting the
-                    // existing Bytes references into a Vec
-                    let band_bytes = all_buffers[start..end].to_vec();
-
-                    let tile = Tile {
-                        x,
-                        y,
-                        data_type,
-                        width: self.tile_width.unwrap_or(self.image_width),
-                        height: self.tile_height.unwrap_or(self.image_height),
-                        planar_configuration: self.planar_configuration,
-                        samples_per_pixel: self.samples_per_pixel,
-                        predictor: self.predictor.unwrap_or(Predictor::None),
-                        predictor_info,
-                        compressed_bytes: CompressedBytes::Planar(band_bytes),
-                        compression_method: self.compression,
-                        photometric_interpretation: self.photometric_interpretation,
-                        jpeg_tables: self.jpeg_tables.clone(),
-                        lerc_parameters: self.lerc_parameters.clone(),
-                    };
-                    tiles.push(tile);
-                }
-                Ok(tiles)
-            }
-        }
+        let byte_ranges = self
+            .tiles_byte_ranges(xy)
+            .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
+        let compressed_bytes = byte_ranges.into_fetch(reader).await?;
+        Ok(compressed_bytes
+            .into_iter()
+            .zip(xy)
+            .map(|(buffer, (x, y))| buffer.into_tile(*x, *y, self))
+            .collect())
     }
 
     /// Return the number of x/y tiles in the IFD
@@ -903,161 +773,157 @@ impl ImageFileDirectory {
     }
 }
 
-/// Calculate the actual pixel dimensions of a tile at position (x, y).
-///
-/// Edge tiles may be smaller than the nominal tile dimensions when the image
-/// dimensions are not exact multiples of the tile dimensions.
-///
-/// # Arguments
-/// * `x` - Tile column index (0-based)
-/// * `y` - Tile row index (0-based)
-/// * `image_width` - Total image width in pixels
-/// * `image_height` - Total image height in pixels
-/// * `tile_width` - Nominal tile width (None for stripped images)
-/// * `tile_height` - Nominal tile height (None for stripped images)
-/// * `rows_per_strip` - Rows per strip for stripped images (None for tiled images)
-///
-/// # Returns
-/// A tuple of (actual_width, actual_height) in pixels
-#[allow(dead_code)]
-// Note: this was originally implemented with the idea that the last tile (if unaligned) would be
-// this size, but apparently the end tile is still the same size as the others, just with padding.
-// Leaving this here in case it's useful later.
-pub(crate) fn compute_tile_dimensions(
-    x: usize,
-    y: usize,
-    image_width: u32,
-    image_height: u32,
-    tile_width: Option<u32>,
-    tile_height: Option<u32>,
-    rows_per_strip: Option<u32>,
-) -> (u32, u32) {
-    // For tiled images (both tile_width and tile_height must be present)
-    if let (Some(tile_width), Some(tile_height)) = (tile_width, tile_height) {
-        let x_offset = (x as u32) * tile_width;
-        let y_offset = (y as u32) * tile_height;
+/// A description of the byte ranges for a tile, which may differ based on whether the TIFF is in
+/// chunky or planar format.
+pub enum TileByteRange {
+    /// For chunky TIFFs, a single byte range for the tile that includes all bands.
+    Chunky(Range<u64>),
 
-        let actual_width = std::cmp::min(tile_width, image_width.saturating_sub(x_offset));
-        let actual_height = std::cmp::min(tile_height, image_height.saturating_sub(y_offset));
+    /// For planar TIFFs, separate byte ranges for each band of the tile.
+    Planar(Vec<Range<u64>>),
+}
 
-        (actual_width, actual_height)
-    } else {
-        // For stripped images (or fallback)
-        let strip_height = rows_per_strip.unwrap_or(image_height);
-        let y_offset = (y as u32) * strip_height;
-        let actual_height = std::cmp::min(strip_height, image_height.saturating_sub(y_offset));
+impl TileByteRange {
+    async fn into_fetch(self, reader: &dyn AsyncFileReader) -> AsyncTiffResult<CompressedBytes> {
+        match self {
+            Self::Chunky(range) => Ok(CompressedBytes::Chunky(reader.get_bytes(range).await?)),
+            Self::Planar(ranges) => Ok(CompressedBytes::Planar(
+                reader.get_byte_ranges(ranges).await?,
+            )),
+        }
+    }
 
-        (image_width, actual_height)
+    fn from_ifd_tile(ifd: &ImageFileDirectory, x: usize, y: usize) -> Option<Self> {
+        let tile_offsets = ifd.tile_offsets.as_deref()?;
+        let tile_byte_counts = ifd.tile_byte_counts.as_deref()?;
+        let (tiles_per_row, tiles_per_col) = ifd.tile_count()?;
+        match ifd.planar_configuration {
+            PlanarConfiguration::Chunky => {
+                let idx = (y * tiles_per_row) + x;
+                let offset = tile_offsets[idx];
+                let byte_count = tile_byte_counts[idx];
+                Some(TileByteRange::Chunky(offset..(offset + byte_count)))
+            }
+            PlanarConfiguration::Planar => {
+                let tiles_per_band = tiles_per_row * tiles_per_col;
+                let num_bands = ifd.samples_per_pixel as usize;
+                let band_ranges = (0..num_bands)
+                    .map(|band| {
+                        let band_idx = (band * tiles_per_band) + (y * tiles_per_row) + x;
+                        let offset = tile_offsets[band_idx];
+                        let byte_count = tile_byte_counts[band_idx];
+                        offset..(offset + byte_count)
+                    })
+                    .collect::<Vec<_>>();
+                Some(TileByteRange::Planar(band_ranges))
+            }
+        }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// A description of the byte ranges for multiple tiles
+pub enum TilesByteRanges {
+    /// For chunky TIFFs, a byte range for each tile that includes all bands.
+    Chunky(Vec<Range<u64>>),
 
-    #[test]
-    fn test_tile_dimensions_full_tiles() {
-        // 512x512 image with 256x256 tiles - all tiles are full size
-        assert_eq!(
-            compute_tile_dimensions(0, 0, 512, 512, Some(256), Some(256), None),
-            (256, 256),
-            "Top-left tile should be full size"
-        );
-        assert_eq!(
-            compute_tile_dimensions(1, 0, 512, 512, Some(256), Some(256), None),
-            (256, 256),
-            "Top-right tile should be full size"
-        );
-        assert_eq!(
-            compute_tile_dimensions(0, 1, 512, 512, Some(256), Some(256), None),
-            (256, 256),
-            "Bottom-left tile should be full size"
-        );
-        assert_eq!(
-            compute_tile_dimensions(1, 1, 512, 512, Some(256), Some(256), None),
-            (256, 256),
-            "Bottom-right tile should be full size"
-        );
+    /// For planar TIFFs, separate byte ranges for each band of each tile.
+    Planar(Vec<Vec<Range<u64>>>),
+}
+
+impl TilesByteRanges {
+    async fn into_fetch(
+        self,
+        reader: &dyn AsyncFileReader,
+    ) -> AsyncTiffResult<Vec<CompressedBytes>> {
+        match self {
+            Self::Chunky(ranges) => {
+                let buffers = reader.get_byte_ranges(ranges).await?;
+                Ok(buffers.into_iter().map(CompressedBytes::Chunky).collect())
+            }
+            Self::Planar(ranges) => {
+                // Record how many bands each tile has, then flatten into a single fetch
+                let band_counts: Vec<usize> = ranges.iter().map(|r| r.len()).collect();
+                let flat_ranges: Vec<Range<u64>> = ranges.into_iter().flatten().collect();
+                let flat_buffers = reader.get_byte_ranges(flat_ranges).await?;
+                // Re-chunk the flat results back into per-tile band vecs
+                let mut flat_iter = flat_buffers.into_iter();
+                band_counts
+                    .into_iter()
+                    .map(|n| {
+                        let band_bytes: Vec<Bytes> = flat_iter.by_ref().take(n).collect();
+                        Ok(CompressedBytes::Planar(band_bytes))
+                    })
+                    .collect()
+            }
+        }
     }
 
-    #[test]
-    fn test_tile_dimensions_edge_tiles() {
-        // 500x500 image with 256x256 tiles - edge tiles are partial
-        assert_eq!(
-            compute_tile_dimensions(0, 0, 500, 500, Some(256), Some(256), None),
-            (256, 256),
-            "Top-left tile should be full size"
-        );
-        assert_eq!(
-            compute_tile_dimensions(1, 0, 500, 500, Some(256), Some(256), None),
-            (244, 256),
-            "Top-right edge tile should be 244 pixels wide"
-        );
-        assert_eq!(
-            compute_tile_dimensions(0, 1, 500, 500, Some(256), Some(256), None),
-            (256, 244),
-            "Bottom-left edge tile should be 244 pixels tall"
-        );
-        assert_eq!(
-            compute_tile_dimensions(1, 1, 500, 500, Some(256), Some(256), None),
-            (244, 244),
-            "Bottom-right corner tile should be 244x244"
-        );
-    }
+    fn from_ifd_tiles(ifd: &ImageFileDirectory, xy: &[(usize, usize)]) -> Option<Self> {
+        if xy.is_empty() {
+            return match ifd.planar_configuration {
+                PlanarConfiguration::Chunky => Some(TilesByteRanges::Chunky(vec![])),
+                PlanarConfiguration::Planar => Some(TilesByteRanges::Planar(vec![])),
+            };
+        }
 
-    #[test]
-    fn test_strip_dimensions() {
-        // 1024x768 stripped image with 128 rows per strip
-        assert_eq!(
-            compute_tile_dimensions(0, 0, 1024, 768, None, None, Some(128)),
-            (1024, 128),
-            "First strip should be full width and height"
-        );
-        assert_eq!(
-            compute_tile_dimensions(0, 5, 1024, 768, None, None, Some(128)),
-            (1024, 128),
-            "Middle strip should be full size"
-        );
-        assert_eq!(
-            compute_tile_dimensions(0, 5, 1024, 768, None, None, Some(128)),
-            (1024, 128),
-            "Last strip (768 / 128 = 6 strips, index 5) should be full height"
-        );
-    }
+        let ranges = xy
+            .iter()
+            .map(|(x, y)| TileByteRange::from_ifd_tile(ifd, *x, *y))
+            .collect::<Option<Vec<_>>>()?;
 
-    #[test]
-    fn test_strip_dimensions_partial_last_strip() {
-        // 1024x700 stripped image with 128 rows per strip
-        // Last strip should be: 700 - (5 * 128) = 60 rows
-        assert_eq!(
-            compute_tile_dimensions(0, 0, 1024, 700, None, None, Some(128)),
-            (1024, 128),
-            "First strip should be full height"
-        );
-        assert_eq!(
-            compute_tile_dimensions(0, 5, 1024, 700, None, None, Some(128)),
-            (1024, 60),
-            "Last strip should be 60 pixels tall"
-        );
+        match ifd.planar_configuration {
+            PlanarConfiguration::Chunky => {
+                let chunky_ranges = ranges
+                    .into_iter()
+                    .map(|r| match r {
+                        TileByteRange::Chunky(range) => range,
+                        _ => unreachable!(),
+                    })
+                    .collect();
+                Some(TilesByteRanges::Chunky(chunky_ranges))
+            }
+            PlanarConfiguration::Planar => {
+                let planar_ranges = ranges
+                    .into_iter()
+                    .map(|r| match r {
+                        TileByteRange::Planar(band_ranges) => band_ranges,
+                        _ => unreachable!(),
+                    })
+                    .collect();
+                Some(TilesByteRanges::Planar(planar_ranges))
+            }
+        }
     }
+}
 
-    #[test]
-    fn test_single_tile_image() {
-        // Image smaller than tile size
-        assert_eq!(
-            compute_tile_dimensions(0, 0, 100, 100, Some(256), Some(256), None),
-            (100, 100),
-            "Single tile should match image dimensions"
-        );
-    }
+/// Compressed tile data, either as a single chunk (chunky) or multiple chunks (planar).
+#[derive(Debug, Clone)]
+pub enum CompressedBytes {
+    /// Single compressed chunk for chunky (pixel-interleaved) format.
+    Chunky(Bytes),
 
-    #[test]
-    fn test_strip_default_height() {
-        // Stripped image with no rows_per_strip (defaults to full image height)
-        assert_eq!(
-            compute_tile_dimensions(0, 0, 1024, 768, None, None, None),
-            (1024, 768),
-            "Strip should default to full image height"
-        );
+    /// Multiple compressed chunks, one per band, for planar (band-interleaved) format.
+    Planar(Vec<Bytes>),
+}
+
+impl CompressedBytes {
+    fn into_tile(self, x: usize, y: usize, ifd: &ImageFileDirectory) -> Tile {
+        let data_type = DataType::from_tags(&ifd.sample_format, &ifd.bits_per_sample);
+        Tile {
+            x,
+            y,
+            data_type,
+            width: ifd.tile_width.unwrap_or(ifd.image_width),
+            height: ifd.tile_height.unwrap_or(ifd.image_height),
+            planar_configuration: ifd.planar_configuration,
+            samples_per_pixel: ifd.samples_per_pixel,
+            predictor: ifd.predictor.unwrap_or(Predictor::None),
+            predictor_info: PredictorInfo::from_ifd(ifd),
+            compressed_bytes: self,
+            compression_method: ifd.compression,
+            photometric_interpretation: ifd.photometric_interpretation,
+            jpeg_tables: ifd.jpeg_tables.clone(),
+            lerc_parameters: ifd.lerc_parameters.clone(),
+        }
     }
 }

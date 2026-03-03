@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_tiff::reader::AsyncFileReader;
-use async_tiff::ImageFileDirectory;
-use pyo3::exceptions::PyTypeError;
+use async_tiff::{ImageFileDirectory, TileByteRange};
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::IntoPyObjectExt;
 use pyo3_async_runtimes::tokio::future_into_py;
@@ -13,6 +13,7 @@ use crate::enums::{
     PyCompression, PyExtraSamples, PyPhotometricInterpretation, PyPlanarConfiguration, PyPredictor,
     PyResolutionUnit, PySampleFormat,
 };
+use crate::error::PyAsyncTiffResult;
 use crate::geo::PyGeoKeyDirectory;
 use crate::tile::PyTile;
 use crate::value::PyValue;
@@ -487,6 +488,14 @@ impl PyImageFileDirectory {
         })
     }
 
+    fn tile_byte_range(&self, x: usize, y: usize) -> PyAsyncTiffResult<PyTileByteRange> {
+        let byte_range = self
+            .ifd
+            .tile_byte_range(x, y)
+            .ok_or(PyValueError::new_err("Not a tiled tiff"))?;
+        Ok(PyTileByteRange(byte_range))
+    }
+
     #[getter]
     fn tile_count(&self) -> Option<(usize, usize)> {
         self.ifd.tile_count()
@@ -496,5 +505,26 @@ impl PyImageFileDirectory {
 impl PartialEq for PyImageFileDirectory {
     fn eq(&self, other: &Self) -> bool {
         self.ifd == other.ifd
+    }
+}
+
+struct PyTileByteRange(TileByteRange);
+
+impl<'py> IntoPyObject<'py> for PyTileByteRange {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        match self.0 {
+            TileByteRange::Chunky(range) => (range.start, range.end).into_bound_py_any(py),
+            TileByteRange::Planar(ranges) => {
+                let py_ranges = ranges
+                    .iter()
+                    .map(|range| (range.start, range.end).into_bound_py_any(py))
+                    .collect::<Result<Vec<_>, PyErr>>()?;
+                py_ranges.into_bound_py_any(py)
+            }
+        }
     }
 }

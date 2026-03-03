@@ -3,19 +3,10 @@ use bytes::Bytes;
 use crate::array::Array;
 use crate::decoder::DecoderRegistry;
 use crate::error::{AsyncTiffResult, TiffError, TiffUnsupportedError};
+use crate::ifd::CompressedBytes;
 use crate::predictor::{fix_endianness, unpredict_float, unpredict_hdiff, PredictorInfo};
 use crate::tags::{Compression, PhotometricInterpretation, PlanarConfiguration, Predictor};
 use crate::DataType;
-
-/// Compressed tile data, either as a single chunk (chunky) or multiple chunks (planar).
-#[derive(Debug, Clone)]
-pub enum CompressedBytes {
-    /// Single compressed chunk for chunky (pixel-interleaved) format.
-    Chunky(Bytes),
-
-    /// Multiple compressed chunks, one per band, for planar (band-interleaved) format.
-    Planar(Vec<Bytes>),
-}
 
 /// A TIFF Tile response.
 ///
