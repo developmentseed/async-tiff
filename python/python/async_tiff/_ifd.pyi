@@ -6,6 +6,7 @@ from ._geo import GeoKeyDirectory
 from ._tile import Tile
 from .enums import (
     Compression,
+    ExtraSamples,
     PhotometricInterpretation,
     PlanarConfiguration,
     Predictor,
@@ -103,7 +104,7 @@ class ImageFileDirectory:
     @property
     def tile_byte_counts(self) -> list[int] | None: ...
     @property
-    def extra_samples(self) -> list[int] | None: ...
+    def extra_samples(self) -> list[ExtraSamples] | None: ...
     @property
     def sample_format(self) -> list[SampleFormat]: ...
     @property
@@ -124,6 +125,9 @@ class ImageFileDirectory:
     def gdal_metadata(self) -> str | None: ...
     @property
     def other_tags(self) -> dict[int, Value]: ...
+    @property
+    def lerc_parameters(self) -> list[int] | None:
+        """The LERC parameters for LERC-compressed images."""
     @property
     def colormap(self) -> Colormap | None:
         """The colormap for palette-color images."""
@@ -147,3 +151,25 @@ class ImageFileDirectory:
         Returns:
             Tile responses.
         """
+
+    def tile_byte_range(
+        self,
+        x: int,
+        y: int,
+    ) -> tuple[int, int] | list[tuple[int, int]]:
+        """The byte range of the tile at the given column and row indices.
+
+        Args:
+            x: The column index within the ifd to read from.
+            y: The row index within the ifd to read from.
+
+        Returns:
+            The byte range or ranges of the tile, as `(start, end)`. The result will be a tuple[int, int] if the IFD is pixel-interleaved. If the IFD is band-interleaved, the result will be a list of byte ranges, one for each band.
+        """
+    @property
+    def tile_count(self) -> tuple[int, int] | None:
+        """The number of tiles in the x and y directions, respectively.
+
+        This will be `None` if the IFD is not tiled.
+        """
+        ...

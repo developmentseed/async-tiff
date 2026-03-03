@@ -30,6 +30,12 @@ class Endianness(IntEnum):
     BigEndian = 1
 
 
+class ExtraSamples(IntEnum):
+    Unspecified = 0
+    AssociatedAlpha = 1
+    UnassociatedAlpha = 2
+
+
 class PhotometricInterpretation(IntEnum):
     WhiteIsZero = 0
     BlackIsZero = 1

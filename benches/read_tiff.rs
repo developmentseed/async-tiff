@@ -48,7 +48,9 @@ async fn read_tiles<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Ve
         .flat_map(|i| (0..y_count).map(move |j| (i, j)))
         .collect();
 
-    let tiles: Vec<Tile> = ifd.fetch_tiles(&xy_ids, None, &reader).await?;
+    let tiles: Vec<Tile> = ifd
+        .fetch_tiles(&xy_ids, &reader, Default::default())
+        .await?;
     Ok(tiles)
 }
 

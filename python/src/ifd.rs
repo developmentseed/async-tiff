@@ -2,17 +2,18 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_tiff::reader::AsyncFileReader;
-use async_tiff::ImageFileDirectory;
-use pyo3::exceptions::PyTypeError;
+use async_tiff::{ImageFileDirectory, TileByteRange};
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::IntoPyObjectExt;
 use pyo3_async_runtimes::tokio::future_into_py;
 
 use crate::colormap::PyColormap;
 use crate::enums::{
-    PyCompression, PyPhotometricInterpretation, PyPlanarConfiguration, PyPredictor,
+    PyCompression, PyExtraSamples, PyPhotometricInterpretation, PyPlanarConfiguration, PyPredictor,
     PyResolutionUnit, PySampleFormat,
 };
+use crate::error::PyAsyncTiffResult;
 use crate::geo::PyGeoKeyDirectory;
 use crate::tile::PyTile;
 use crate::value::PyValue;
@@ -203,8 +204,10 @@ impl PyImageFileDirectory {
     }
 
     #[getter]
-    pub fn extra_samples(&self) -> Option<&[u16]> {
-        self.ifd.extra_samples()
+    pub fn extra_samples(&self) -> Option<Vec<PyExtraSamples>> {
+        self.ifd
+            .extra_samples()
+            .map(|samples| samples.iter().map(|x| (*x).into()).collect())
     }
 
     #[getter]
@@ -265,6 +268,11 @@ impl PyImageFileDirectory {
             .iter()
             .map(|(key, val)| (key.to_u16(), val.clone().into()));
         HashMap::from_iter(iter)
+    }
+
+    #[getter]
+    pub fn lerc_parameters(&self) -> Option<&[u32]> {
+        self.ifd.lerc_parameters()
     }
 
     #[getter]
@@ -378,6 +386,12 @@ impl PyImageFileDirectory {
         if self.gdal_metadata().is_some() {
             keys.push("gdal_metadata");
         }
+        if self.lerc_parameters().is_some() {
+            keys.push("lerc_parameters");
+        }
+        if self.colormap().is_some() {
+            keys.push("colormap");
+        }
 
         keys
     }
@@ -430,6 +444,8 @@ impl PyImageFileDirectory {
             "other_tags" => self.other_tags().into_bound_py_any(py),
             "gdal_nodata" => self.gdal_nodata().into_bound_py_any(py),
             "gdal_metadata" => self.gdal_metadata().into_bound_py_any(py),
+            "lerc_parameters" => self.lerc_parameters().into_bound_py_any(py),
+            "colormap" => self.colormap().into_bound_py_any(py),
             _ => Err(pyo3::exceptions::PyKeyError::new_err(format!(
                 "Unknown IFD property: {}",
                 key
@@ -471,10 +487,44 @@ impl PyImageFileDirectory {
             Ok(py_tiles)
         })
     }
+
+    fn tile_byte_range(&self, x: usize, y: usize) -> PyAsyncTiffResult<PyTileByteRange> {
+        let byte_range = self
+            .ifd
+            .tile_byte_range(x, y)
+            .ok_or(PyValueError::new_err("Not a tiled tiff"))?;
+        Ok(PyTileByteRange(byte_range))
+    }
+
+    #[getter]
+    fn tile_count(&self) -> Option<(usize, usize)> {
+        self.ifd.tile_count()
+    }
 }
 
 impl PartialEq for PyImageFileDirectory {
     fn eq(&self, other: &Self) -> bool {
         self.ifd == other.ifd
+    }
+}
+
+struct PyTileByteRange(TileByteRange);
+
+impl<'py> IntoPyObject<'py> for PyTileByteRange {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        match self.0 {
+            TileByteRange::Chunky(range) => (range.start, range.end).into_bound_py_any(py),
+            TileByteRange::Planar(ranges) => {
+                let py_ranges = ranges
+                    .iter()
+                    .map(|range| (range.start, range.end).into_bound_py_any(py))
+                    .collect::<Result<Vec<_>, PyErr>>()?;
+                py_ranges.into_bound_py_any(py)
+            }
+        }
     }
 }
