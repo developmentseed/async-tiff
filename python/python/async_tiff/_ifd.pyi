@@ -132,21 +132,31 @@ class ImageFileDirectory:
     def colormap(self) -> Colormap | None:
         """The colormap for palette-color images."""
         ...
-    async def fetch_tile(self, x: int, y: int) -> Tile:
+    async def fetch_tile(
+        self,
+        x: int,
+        y: int,
+        *,
+        bands: Sequence[int] | None = None,
+    ) -> Tile:
         """Fetch a single tile.
 
         Args:
             x: The column index within the ifd to read from.
             y: The row index within the ifd to read from.
+            bands: The band indexes to read from. If `None`, all bands will be read.
 
         Returns:
             Tile response.
         """
-    async def fetch_tiles(self, xy: Sequence[tuple[int, int]]) -> list[Tile]:
+    async def fetch_tiles(
+        self, xy: Sequence[tuple[int, int]], *, bands: Sequence[int] | None = None
+    ) -> list[Tile]:
         """Fetch multiple tiles concurrently.
 
         Args:
             xy: The (column, row) indexes within the ifd to read from.
+            bands: The band indexes to read from. If `None`, all bands will be read.
 
         Returns:
             Tile responses.
@@ -156,12 +166,15 @@ class ImageFileDirectory:
         self,
         x: int,
         y: int,
+        *,
+        bands: Sequence[int] | None = None,
     ) -> tuple[int, int] | list[tuple[int, int]]:
         """The byte range of the tile at the given column and row indices.
 
         Args:
             x: The column index within the ifd to read from.
             y: The row index within the ifd to read from.
+            bands: The band indexes to read from. If `None`, all bands will be read.
 
         Returns:
             The byte range or ranges of the tile, as `(start, end)`. The result will be a tuple[int, int] if the IFD is pixel-interleaved. If the IFD is band-interleaved, the result will be a list of byte ranges, one for each band.
