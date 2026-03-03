@@ -270,6 +270,11 @@ impl PyImageFileDirectory {
     }
 
     #[getter]
+    pub fn lerc_parameters(&self) -> Option<&[u32]> {
+        self.ifd.lerc_parameters()
+    }
+
+    #[getter]
     pub fn colormap(&self) -> Option<PyColormap> {
         self.ifd.colormap().map(|c| PyColormap::new(c.clone()))
     }
@@ -380,6 +385,12 @@ impl PyImageFileDirectory {
         if self.gdal_metadata().is_some() {
             keys.push("gdal_metadata");
         }
+        if self.lerc_parameters().is_some() {
+            keys.push("lerc_parameters");
+        }
+        if self.colormap().is_some() {
+            keys.push("colormap");
+        }
 
         keys
     }
@@ -432,6 +443,8 @@ impl PyImageFileDirectory {
             "other_tags" => self.other_tags().into_bound_py_any(py),
             "gdal_nodata" => self.gdal_nodata().into_bound_py_any(py),
             "gdal_metadata" => self.gdal_metadata().into_bound_py_any(py),
+            "lerc_parameters" => self.lerc_parameters().into_bound_py_any(py),
+            "colormap" => self.colormap().into_bound_py_any(py),
             _ => Err(pyo3::exceptions::PyKeyError::new_err(format!(
                 "Unknown IFD property: {}",
                 key
