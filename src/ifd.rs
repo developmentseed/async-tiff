@@ -810,7 +810,7 @@ impl TileByteRange {
 
 /// A description of the byte ranges for multiple tiles
 pub enum TilesByteRanges {
-    /// For chunky TIFFs, a byte range for each tile.
+    /// For chunky TIFFs, a byte range for each tile that includes all bands.
     Chunky(Vec<Range<u64>>),
 
     /// For planar TIFFs, separate byte ranges for each band of each tile.
