@@ -147,6 +147,9 @@ pub struct ImageFileDirectory {
     pub(crate) gdal_nodata: Option<String>,
     pub(crate) gdal_metadata: Option<String>,
     pub(crate) other_tags: HashMap<Tag, TagValue>,
+
+    // Other
+    pub(crate) lerc_parameters: Option<Vec<u32>>,
 }
 
 impl ImageFileDirectory {
@@ -196,6 +199,7 @@ impl ImageFileDirectory {
         let mut geo_double_params: Option<Vec<f64>> = None;
         let mut gdal_nodata = None;
         let mut gdal_metadata = None;
+        let mut lerc_parameters = None;
 
         let mut other_tags = HashMap::new();
 
@@ -278,6 +282,7 @@ impl ImageFileDirectory {
                 Tag::GeoDoubleParams => geo_double_params = Some(value.into_f64_vec()?),
                 Tag::GdalNodata => gdal_nodata = Some(value.into_string()?),
                 Tag::GdalMetadata => gdal_metadata = Some(value.into_string()?),
+                Tag::LercParameters => lerc_parameters = Some(value.into_u32_vec()?),
                 // Tags for which the tiff crate doesn't have a hard-coded enum variant
                 Tag::Unknown(DOCUMENT_NAME) => document_name = Some(value.into_string()?),
                 _ => {
@@ -426,6 +431,7 @@ impl ImageFileDirectory {
             model_transformation,
             gdal_nodata,
             gdal_metadata,
+            lerc_parameters,
             other_tags,
         })
     }
@@ -687,6 +693,13 @@ impl ImageFileDirectory {
         &self.other_tags
     }
 
+    /// LERC parameters, used in [LERC]-compressed TIFFs.
+    ///
+    /// [LERC]: https://esri.github.io/lerc/
+    pub fn lerc_parameters(&self) -> Option<&[u32]> {
+        self.lerc_parameters.as_deref()
+    }
+
     /// A color map for palette color images.
     ///
     /// This field defines a Red-Green-Blue color map (often called a lookup table) for
@@ -748,10 +761,6 @@ impl ImageFileDirectory {
         reader: &dyn AsyncFileReader,
     ) -> AsyncTiffResult<Tile> {
         let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
-        let lerc_parameters = self
-            .other_tags
-            .get(&Tag::LercParameters)
-            .and_then(|v| v.clone().into_u32_vec().ok());
 
         let compressed_bytes = match self.planar_configuration {
             PlanarConfiguration::Chunky => {
@@ -790,7 +799,7 @@ impl ImageFileDirectory {
             compression_method: self.compression,
             photometric_interpretation: self.photometric_interpretation,
             jpeg_tables: self.jpeg_tables.clone(),
-            lerc_parameters,
+            lerc_parameters: self.lerc_parameters.clone(),
         })
     }
 
@@ -802,10 +811,6 @@ impl ImageFileDirectory {
     ) -> AsyncTiffResult<Vec<Tile>> {
         let predictor_info = PredictorInfo::from_ifd(self);
         let data_type = DataType::from_tags(&self.sample_format, &self.bits_per_sample);
-        let lerc_parameters = self
-            .other_tags
-            .get(&Tag::LercParameters)
-            .and_then(|v| v.clone().into_u32_vec().ok());
 
         match self.planar_configuration {
             PlanarConfiguration::Chunky => {
@@ -836,7 +841,7 @@ impl ImageFileDirectory {
                         compression_method: self.compression,
                         photometric_interpretation: self.photometric_interpretation,
                         jpeg_tables: self.jpeg_tables.clone(),
-                        lerc_parameters: lerc_parameters.clone(),
+                        lerc_parameters: self.lerc_parameters.clone(),
                     };
                     tiles.push(tile);
                 }
@@ -880,7 +885,7 @@ impl ImageFileDirectory {
                         compression_method: self.compression,
                         photometric_interpretation: self.photometric_interpretation,
                         jpeg_tables: self.jpeg_tables.clone(),
-                        lerc_parameters: lerc_parameters.clone(),
+                        lerc_parameters: self.lerc_parameters.clone(),
                     };
                     tiles.push(tile);
                 }

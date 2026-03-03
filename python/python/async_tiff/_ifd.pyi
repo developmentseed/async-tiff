@@ -126,6 +126,9 @@ class ImageFileDirectory:
     @property
     def other_tags(self) -> dict[int, Value]: ...
     @property
+    def lerc_parameters(self) -> list[int] | None:
+        """The LERC parameters for LERC-compressed images."""
+    @property
     def colormap(self) -> Colormap | None:
         """The colormap for palette-color images."""
         ...
