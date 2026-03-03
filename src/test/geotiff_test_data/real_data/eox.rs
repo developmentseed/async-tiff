@@ -1,4 +1,4 @@
-use crate::ifd::FetchOptions;
+use crate::ifd::ReadOptions;
 use crate::tags::{PhotometricInterpretation, PlanarConfiguration};
 use crate::test::util::open_tiff;
 
@@ -46,7 +46,7 @@ async fn test_band_interleaved_single_tile_with_specific_bands() {
             0,
             0,
             &reader,
-            FetchOptions {
+            ReadOptions {
                 bands: Some(vec![0, 1]),
             },
         )
@@ -73,7 +73,7 @@ async fn test_band_interleaved_multi_tiles_with_specific_bands() {
         .fetch_tiles(
             &[(0, 0), (1, 0)],
             &reader,
-            FetchOptions {
+            ReadOptions {
                 bands: Some(vec![1, 2]),
             },
         )

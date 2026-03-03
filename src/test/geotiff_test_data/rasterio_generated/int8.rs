@@ -18,7 +18,7 @@ async fn test_fetch_some_bands() {
     assert_eq!(ifd.tile_height(), Some(64));
 
     let tile = ifd
-        .fetch_tile(0, 0, Some(ifd::FetchOptions::new(vec![0, 2])), &reader)
+        .fetch_tile(0, 0, Some(ifd::ReadOptions::new(vec![0, 2])), &reader)
         .await
         .unwrap();
     let array = tile.decode(&Default::default()).unwrap();
@@ -35,7 +35,7 @@ async fn test_fetch_invalid_band() {
     let ifd = &tiff.ifds()[0];
 
     let result = ifd
-        .fetch_tile(0, 0, Some(ifd::FetchOptions::new(vec![3])), &reader) // max is 3 bands, start indexing from 0
+        .fetch_tile(0, 0, Some(ifd::ReadOptions::new(vec![3])), &reader) // max is 3 bands, start indexing from 0
         .await;
     assert_eq!(
         result.err().unwrap().to_string(),
