@@ -43,7 +43,7 @@ let ifds = meta.read_all_ifds(&cache).await.unwrap();
 let tiff = TIFF::new(ifds, meta.endianness());
 
 // Fetch and decode a tile
-let tile = tiff.ifds()[0].fetch_tile(0, 0, None, &reader).await.unwrap();
+let tile = tiff.ifds()[0].fetch_tile(0, 0, &reader, Default::default()).await.unwrap();
 let array = tile.decode(&Default::default()).unwrap();
 println!("shape: {:?}, dtype: {:?}", array.shape(), array.data_type());
 # })

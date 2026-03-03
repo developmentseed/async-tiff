@@ -463,7 +463,7 @@ impl PyImageFileDirectory {
         let ifd = self.ifd.clone();
         future_into_py(py, async move {
             let tile = ifd
-                .fetch_tile(x, y, None, reader.as_ref())
+                .fetch_tile(x, y, reader.as_ref(), Default::default())
                 .await
                 .map_err(|err| PyTypeError::new_err(err.to_string()))?;
 
@@ -480,7 +480,7 @@ impl PyImageFileDirectory {
         let ifd = self.ifd.clone();
         future_into_py(py, async move {
             let tiles = ifd
-                .fetch_tiles(&xy, None, reader.as_ref())
+                .fetch_tiles(&xy, reader.as_ref(), Default::default())
                 .await
                 .map_err(|err| PyTypeError::new_err(err.to_string()))?;
             let py_tiles = tiles.into_iter().map(PyTile::new).collect::<Vec<_>>();
