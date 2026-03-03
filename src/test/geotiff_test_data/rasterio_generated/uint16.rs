@@ -17,7 +17,10 @@ async fn test_uint16() {
     assert_eq!(ifd.tile_width(), Some(64));
     assert_eq!(ifd.tile_height(), Some(64));
 
-    let tile = ifd.fetch_tile(0, 0, None, &reader).await.unwrap();
+    let tile = ifd
+        .fetch_tile(0, 0, &reader, Default::default())
+        .await
+        .unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 

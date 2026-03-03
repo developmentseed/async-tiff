@@ -17,7 +17,10 @@ async fn test_vantor_opendata_yellowstone() {
     assert_eq!(ifd.tile_width(), Some(64));
     assert_eq!(ifd.tile_height(), Some(64));
 
-    let tile = ifd.fetch_tile(0, 0, None, &reader).await.unwrap();
+    let tile = ifd
+        .fetch_tile(0, 0, &reader, Default::default())
+        .await
+        .unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 
@@ -41,7 +44,10 @@ async fn test_load_single_bit_mask() {
     assert_eq!(ifd.tile_width(), Some(64));
     assert_eq!(ifd.tile_height(), Some(64));
 
-    let tile = ifd.fetch_tile(0, 0, None, &reader).await.unwrap();
+    let tile = ifd
+        .fetch_tile(0, 0, &reader, Default::default())
+        .await
+        .unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 
@@ -71,7 +77,10 @@ async fn test_vantor_opendata_yellowstone_overview() {
     assert_eq!(ifd.tile_width(), Some(64));
     assert_eq!(ifd.tile_height(), Some(64));
 
-    let tile = ifd.fetch_tile(0, 0, None, &reader).await.unwrap();
+    let tile = ifd
+        .fetch_tile(0, 0, &reader, Default::default())
+        .await
+        .unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 

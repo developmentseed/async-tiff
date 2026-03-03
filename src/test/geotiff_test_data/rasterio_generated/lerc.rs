@@ -1,4 +1,3 @@
-use crate::tags::Tag;
 use crate::test::util::open_tiff;
 use crate::{DataType, TypedArray};
 
@@ -13,7 +12,10 @@ async fn test_lerc() {
     assert_eq!(ifd.tile_width(), Some(64));
     assert_eq!(ifd.tile_height(), Some(64));
 
-    let tile = ifd.fetch_tile(0, 0, None, &reader).await.unwrap();
+    let tile = ifd
+        .fetch_tile(0, 0, &reader, Default::default())
+        .await
+        .unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 
@@ -29,13 +31,7 @@ async fn test_lerc_deflate() {
     let (reader, tiff) = open_tiff(filename).await;
     let ifd = &tiff.ifds()[0];
 
-    let lerc_params = ifd
-        .other_tags()
-        .get(&Tag::LercParameters)
-        .unwrap()
-        .clone()
-        .into_u32_vec()
-        .unwrap();
+    let lerc_params = ifd.lerc_parameters().unwrap();
 
     let lerc_version = lerc_params[0];
     assert_eq!(lerc_version, 4);
@@ -48,7 +44,10 @@ async fn test_lerc_deflate() {
     assert_eq!(ifd.tile_width(), Some(64));
     assert_eq!(ifd.tile_height(), Some(64));
 
-    let tile = ifd.fetch_tile(0, 0, None, &reader).await.unwrap();
+    let tile = ifd
+        .fetch_tile(0, 0, &reader, Default::default())
+        .await
+        .unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 
@@ -64,13 +63,7 @@ async fn test_lerc_zstd() {
     let (reader, tiff) = open_tiff(filename).await;
     let ifd = &tiff.ifds()[0];
 
-    let lerc_params = ifd
-        .other_tags()
-        .get(&Tag::LercParameters)
-        .unwrap()
-        .clone()
-        .into_u32_vec()
-        .unwrap();
+    let lerc_params = ifd.lerc_parameters().unwrap();
 
     let lerc_version = lerc_params[0];
     assert_eq!(lerc_version, 4);
@@ -83,7 +76,10 @@ async fn test_lerc_zstd() {
     assert_eq!(ifd.tile_width(), Some(64));
     assert_eq!(ifd.tile_height(), Some(64));
 
-    let tile = ifd.fetch_tile(0, 0, None, &reader).await.unwrap();
+    let tile = ifd
+        .fetch_tile(0, 0, &reader, Default::default())
+        .await
+        .unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 

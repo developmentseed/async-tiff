@@ -1,4 +1,4 @@
-use crate::ifd;
+use crate::ifd::FetchOptions;
 use crate::tags::{PhotometricInterpretation, PlanarConfiguration};
 use crate::test::util::open_tiff;
 
@@ -19,7 +19,10 @@ async fn test_band_interleaved() {
     assert_eq!(ifd.tile_height(), Some(256));
 
     // Fetch tile at position (0, 0) - this fetches all 3 bands automatically
-    let tile = ifd.fetch_tile(0, 0, None, &reader).await.unwrap();
+    let tile = ifd
+        .fetch_tile(0, 0, &reader, Default::default())
+        .await
+        .unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
 
@@ -39,7 +42,14 @@ async fn test_band_interleaved_single_tile_with_specific_bands() {
 
     // Fetch tile at position (0, 0) - only first two bands
     let tile = ifd
-        .fetch_tile(0, 0, Some(ifd::FetchOptions::new(vec![0, 1])), &reader)
+        .fetch_tile(
+            0,
+            0,
+            &reader,
+            FetchOptions {
+                bands: Some(vec![0, 1]),
+            },
+        )
         .await
         .unwrap();
     let array = tile.decode(&Default::default()).unwrap();
@@ -62,8 +72,10 @@ async fn test_band_interleaved_multi_tiles_with_specific_bands() {
     let tiles = ifd
         .fetch_tiles(
             &[(0, 0), (1, 0)],
-            Some(ifd::FetchOptions::new(vec![1, 2])),
             &reader,
+            FetchOptions {
+                bands: Some(vec![1, 2]),
+            },
         )
         .await
         .unwrap();
