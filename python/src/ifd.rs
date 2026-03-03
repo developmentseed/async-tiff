@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_tiff::reader::AsyncFileReader;
-use async_tiff::{ImageFileDirectory, TileByteRange, TilesByteRanges};
+use async_tiff::{ImageFileDirectory, TileByteRange};
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::IntoPyObjectExt;
@@ -496,14 +496,6 @@ impl PyImageFileDirectory {
         Ok(PyTileByteRange(byte_range))
     }
 
-    fn tiles_byte_ranges(&self, xy: Vec<(usize, usize)>) -> PyAsyncTiffResult<PyTilesByteRanges> {
-        let byte_ranges = self
-            .ifd
-            .tiles_byte_ranges(&xy)
-            .ok_or(PyValueError::new_err("Not a tiled tiff"))?;
-        Ok(PyTilesByteRanges(byte_ranges))
-    }
-
     #[getter]
     fn tile_count(&self) -> Option<(usize, usize)> {
         self.ifd.tile_count()
@@ -531,33 +523,6 @@ impl<'py> IntoPyObject<'py> for PyTileByteRange {
                     .iter()
                     .map(|range| (range.start, range.end).into_bound_py_any(py))
                     .collect::<Result<Vec<_>, PyErr>>()?;
-                py_ranges.into_bound_py_any(py)
-            }
-        }
-    }
-}
-
-struct PyTilesByteRanges(TilesByteRanges);
-
-impl<'py> IntoPyObject<'py> for PyTilesByteRanges {
-    type Target = PyAny;
-    type Output = Bound<'py, PyAny>;
-    type Error = PyErr;
-
-    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-        match self.0 {
-            TilesByteRanges::Chunky(ranges) => {
-                let py_ranges = ranges
-                    .into_iter()
-                    .map(|range| PyTileByteRange(TileByteRange::Chunky(range)))
-                    .collect::<Vec<_>>();
-                py_ranges.into_bound_py_any(py)
-            }
-            TilesByteRanges::Planar(ranges) => {
-                let py_ranges = ranges
-                    .into_iter()
-                    .map(|range| PyTileByteRange(TileByteRange::Planar(range)))
-                    .collect::<Vec<_>>();
                 py_ranges.into_bound_py_any(py)
             }
         }
