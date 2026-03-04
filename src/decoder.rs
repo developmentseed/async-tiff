@@ -6,10 +6,7 @@ use std::io::{Cursor, Read};
 
 use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
-use zune_core::bytestream::ZCursor;
-use zune_core::colorspace::ColorSpace;
-use zune_core::options::DecoderOptions;
-use zune_jpeg::JpegDecoder as ZuneJpegDecoder;
+use mozjpeg::{ColorSpace as MozColorSpace, Decompress};
 
 use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffUnsupportedError};
 use crate::tags::{Compression, PhotometricInterpretation};
@@ -394,32 +391,30 @@ fn decode_modern_jpeg(
         None => buf.to_vec(),
     };
 
-    // Decode headers first so we can read the input colorspace.
-    let mut decoder = ZuneJpegDecoder::new(ZCursor::new(&jpeg_data));
-    decoder
-        .decode_headers()
-        .map_err(|e| AsyncTiffError::General(format!("JPEG decode headers error: {e:?}")))?;
+    // Use mozjpeg (libjpeg-turbo) for decoding to match libtiff/GDAL/rasterio output exactly.
+    // For YCbCr, decode to raw YCbCr (no internal color conversion) then apply the
+    // TIFF-correct color conversion using the ReferenceBlackWhite tag.
+    let decompress = Decompress::new_mem(&jpeg_data)
+        .map_err(|e| AsyncTiffError::General(format!("JPEG init error: {e}")))?;
 
-    // For YCbCr photometric interpretation, disable zune-jpeg's internal color conversion
-    // by setting output colorspace == input colorspace (raw YCbCr after upsampling), then
-    // apply the TIFF-correct YCbCr->RGB formula using the ReferenceBlackWhite tag.
-    // This matches image-tiff / libtiff / GDAL behavior.
     if photometric_interpretation == PhotometricInterpretation::YCbCr {
-        let input_cs = decoder.input_colorspace().unwrap_or(ColorSpace::YCbCr);
-        let options = DecoderOptions::default().jpeg_set_out_colorspace(input_cs);
-        decoder.set_options(options);
-        let ycbcr = decoder
-            .decode()
-            .map_err(|e| AsyncTiffError::General(format!("JPEG decode error: {e:?}")))?;
+        // Decode to upsampled interleaved YCbCr (no internal color conversion by libjpeg),
+        // then apply the TIFF-correct color conversion using the ReferenceBlackWhite tag.
+        let mut decompress = decompress
+            .to_colorspace(MozColorSpace::JCS_YCbCr)
+            .map_err(|e| AsyncTiffError::General(format!("JPEG colorspace error: {e}")))?;
+        let ycbcr = decompress
+            .read_scanlines::<u8>()
+            .map_err(|e| AsyncTiffError::General(format!("JPEG decode error: {e}")))?;
         return Ok(ycbcr_to_rgb(&ycbcr, reference_black_white));
     }
 
-    let out_colorspace = match photometric_interpretation {
-        PhotometricInterpretation::RGB => ColorSpace::RGB,
+    let moz_cs = match photometric_interpretation {
+        PhotometricInterpretation::RGB => MozColorSpace::JCS_RGB,
         PhotometricInterpretation::WhiteIsZero
         | PhotometricInterpretation::BlackIsZero
-        | PhotometricInterpretation::TransparencyMask => ColorSpace::Luma,
-        PhotometricInterpretation::CMYK => ColorSpace::CMYK,
+        | PhotometricInterpretation::TransparencyMask => MozColorSpace::JCS_GRAYSCALE,
+        PhotometricInterpretation::CMYK => MozColorSpace::JCS_CMYK,
         photometric_interpretation => {
             return Err(TiffError::UnsupportedError(
                 TiffUnsupportedError::UnsupportedInterpretation(photometric_interpretation),
@@ -428,54 +423,87 @@ fn decode_modern_jpeg(
         }
     };
 
-    let options = DecoderOptions::default().jpeg_set_out_colorspace(out_colorspace);
-    decoder.set_options(options);
-    let data = decoder
-        .decode()
-        .map_err(|e| AsyncTiffError::General(format!("JPEG decode error: {e:?}")))?;
+    let mut decompress = decompress
+        .to_colorspace(moz_cs)
+        .map_err(|e| AsyncTiffError::General(format!("JPEG colorspace error: {e}")))?;
+
+    let data = decompress
+        .read_scanlines::<u8>()
+        .map_err(|e| AsyncTiffError::General(format!("JPEG decode error: {e}")))?;
     Ok(data)
 }
 
-/// Convert upsampled YCbCr pixels to RGB using the TIFF ReferenceBlackWhite formula.
+/// Convert upsampled YCbCr pixels to RGB replicating libtiff's exact fixed-point arithmetic.
 ///
-/// TIFF uses: `(component - black) * 255.0 / (white - black)` for each component,
-/// then applies the standard CCIR 601 YCbCr→RGB matrix. This matches libtiff/GDAL behavior.
-///
-/// The JPEG standard just uses `Cb - 128`, which gives slightly different results when
-/// ReferenceBlackWhite is the TIFF default `[0, 255, 128, 255, 128, 255]`.
+/// Replicates `TIFFYCbCrToRGBInit` + `TIFFYCbCrtoRGB` from libtiff/tif_color.c, including
+/// the `Code2V` ReferenceBlackWhite scaling and the 16-bit fixed-point lookup tables.
 fn ycbcr_to_rgb(ycbcr: &[u8], reference_black_white: Option<&[f64; 6]>) -> Vec<u8> {
-    // Default TIFF ReferenceBlackWhite for YCbCr: Y in [0,255], Cb in [128,255], Cr in [128,255]
-    let rbw = reference_black_white.copied().unwrap_or([0.0, 255.0, 128.0, 255.0, 128.0, 255.0]);
-    let [y_black, y_white, cb_black, cb_white, cr_black, cr_white] = rbw;
+    // Default TIFF ReferenceBlackWhite for YCbCr
+    let rbw =
+        reference_black_white.copied().unwrap_or([0.0, 255.0, 128.0, 255.0, 128.0, 255.0]);
+    let [rb0, rw0, rb2, rw2, rb4, rw4] = rbw;
 
-    // Precompute scale factors: component_scaled = (raw - black) * 255 / (white - black)
-    // For Y (luma): scale into [0, 255]
-    // For Cb/Cr (chroma): center around 0 with range [-127.5, +127.5]
-    let y_scale = 255.0 / (y_white - y_black);
-    let cb_scale = 127.5 / (cb_white - cb_black);
-    let cr_scale = 127.5 / (cr_white - cr_black);
+    // libtiff uses SHIFT=16, ONE_HALF=1<<15, FIX(x) = (x*(1<<16)+0.5) as i32
+    const SHIFT: u32 = 16;
+    const ONE_HALF: i64 = 1 << 15;
+
+    // CCIR 601 luma coefficients (ITU-R BT.601)
+    const LUMA_RED: f64 = 0.299;
+    const LUMA_GREEN: f64 = 0.587;
+    const LUMA_BLUE: f64 = 0.114;
+
+    let fix = |x: f64| -> i64 { (x * (1i64 << SHIFT) as f64 + 0.5) as i64 };
+
+    // libtiff D1..D4 fixed-point matrix coefficients
+    let d1 = fix(2.0 - 2.0 * LUMA_RED); // Cr -> R
+    let d2 = fix(-(LUMA_RED * (2.0 - 2.0 * LUMA_RED) / LUMA_GREEN)); // Cr -> G
+    let d3 = fix(2.0 - 2.0 * LUMA_BLUE); // Cb -> B
+    let d4 = fix(-(LUMA_BLUE * (2.0 - 2.0 * LUMA_BLUE) / LUMA_GREEN)); // Cb -> G
+
+    // Code2V: maps raw code to scaled value using ReferenceBlackWhite
+    let code2v = |c: i32, rb: f64, rw: f64, cr: f64| -> i32 {
+        let denom = if (rw - rb).abs() > f64::EPSILON { rw - rb } else { 1.0 };
+        // CLAMPw to [-128*32, 128*32]
+        ((c as f64 - rb) * cr / denom).clamp(-128.0 * 32.0, 128.0 * 32.0) as i32
+    };
+
+    // Build lookup tables indexed by raw 0..=255 pixel values.
+    // libtiff loop: for (i=0, x=-128; i<256; i++, x++)
+    let mut y_tab = [0i32; 256];
+    let mut cr_r_tab = [0i32; 256];
+    let mut cb_b_tab = [0i32; 256];
+    let mut cr_g_tab = [0i64; 256]; // stored unshifted
+    let mut cb_g_tab = [0i64; 256]; // stored unshifted + ONE_HALF
+
+    for i in 0usize..256 {
+        let x = i as i32 - 128;
+        y_tab[i] = code2v(x + 128, rb0, rw0, 255.0);
+
+        let cr = code2v(x, rb4 - 128.0, rw4 - 128.0, 127.0) as i64;
+        cr_r_tab[i] = ((d1 * cr + ONE_HALF) >> SHIFT) as i32;
+        cr_g_tab[i] = d2 * cr;
+
+        let cb = code2v(x, rb2 - 128.0, rw2 - 128.0, 127.0) as i64;
+        cb_b_tab[i] = ((d3 * cb + ONE_HALF) >> SHIFT) as i32;
+        cb_g_tab[i] = d4 * cb + ONE_HALF;
+    }
 
     let n_pixels = ycbcr.len() / 3;
     let mut rgb = vec![0u8; n_pixels * 3];
 
     for i in 0..n_pixels {
-        let y = ycbcr[i * 3] as f64;
-        let cb = ycbcr[i * 3 + 1] as f64;
-        let cr = ycbcr[i * 3 + 2] as f64;
+        let y = ycbcr[i * 3] as usize;
+        let cb = ycbcr[i * 3 + 1] as usize;
+        let cr = ycbcr[i * 3 + 2] as usize;
 
-        // Apply ReferenceBlackWhite scaling
-        let y_f = (y - y_black) * y_scale;
-        let cb_f = (cb - cb_black) * cb_scale; // centered around 0
-        let cr_f = (cr - cr_black) * cr_scale; // centered around 0
+        let yv = y_tab[y];
+        let r = yv + cr_r_tab[cr];
+        let g = yv + ((cb_g_tab[cb] + cr_g_tab[cr]) >> SHIFT) as i32;
+        let b = yv + cb_b_tab[cb];
 
-        // CCIR 601 YCbCr -> RGB matrix (same as libtiff TIFFYCbCrToRGBInit)
-        let r = y_f + 1.402 * cr_f;
-        let g = y_f - 0.344136 * cb_f - 0.714136 * cr_f;
-        let b = y_f + 1.772 * cb_f;
-
-        rgb[i * 3] = r.round().clamp(0.0, 255.0) as u8;
-        rgb[i * 3 + 1] = g.round().clamp(0.0, 255.0) as u8;
-        rgb[i * 3 + 2] = b.round().clamp(0.0, 255.0) as u8;
+        rgb[i * 3] = r.clamp(0, 255) as u8;
+        rgb[i * 3 + 1] = g.clamp(0, 255) as u8;
+        rgb[i * 3 + 2] = b.clamp(0, 255) as u8;
     }
 
     rgb

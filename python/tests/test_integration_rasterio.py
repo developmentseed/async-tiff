@@ -41,11 +41,9 @@ if TYPE_CHECKING:
         ("rasterio", "uint8_rgb_deflate_block64_cog"),
         ("rasterio", "uint8_rgb_webp_block64_cog"),
         ("rasterio", "uint8_rgba_webp_block64_cog"),
-        # Ycbcr subsampling not implemented
-        # ("rio-tiler", "cog_rgb_with_stats"),
+        ("rio-tiler", "cog_rgb_with_stats"),
         ("umbra", "sydney_airport_GEC"),
-        # Ycbcr subsampling not implemented
-        # ("vantor", "maxar_opendata_yellowstone_visual"),
+        ("vantor", "maxar_opendata_yellowstone_visual"),
     ],
 )
 async def test_read(
@@ -68,6 +66,9 @@ async def test_read(
     x_count, y_count = tile_count
 
     with load_rasterio(file_name, variant=variant) as rasterio_ds:
+        img_width = rasterio_ds.width
+        img_height = rasterio_ds.height
+
         for x in range(x_count):
             for y in range(y_count):
                 tile = await ifd.fetch_tile(x, y)
@@ -78,10 +79,21 @@ async def test_read(
 
                 rasterio_data = rasterio_ds.read(window=rasterio_window, boundless=True)
 
+                # Clip to valid image region — JPEG edge tiles contain padded data beyond
+                # image boundaries that rasterio zeroes out with boundless=True.
+                valid_cols = min(tile_width, img_width - x * tile_width)
+                valid_rows = min(tile_height, img_height - y * tile_height)
+
                 if ifd.planar_configuration == PlanarConfiguration.Chunky:
-                    np.testing.assert_array_equal(data, reshape_as_image(rasterio_data))
+                    np.testing.assert_array_equal(
+                        data[:valid_rows, :valid_cols],
+                        reshape_as_image(rasterio_data)[:valid_rows, :valid_cols],
+                    )
                 else:
-                    np.testing.assert_array_equal(data, rasterio_data)
+                    np.testing.assert_array_equal(
+                        data[..., :valid_rows, :valid_cols],
+                        rasterio_data[..., :valid_rows, :valid_cols],
+                    )
 
 
 def create_window(tile_width: int, tile_height: int, x: int, y: int) -> Window:

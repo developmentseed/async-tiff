@@ -26,9 +26,8 @@ thiserror = "2"
 tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
 webp = { version = "0.3", optional = true }
 weezl = "0.1.0"
+mozjpeg = { version = "0.10", default-features = false, features = ["with_simd"] }
 zstd = "0.13"
-zune-core = "0.5.1"
-zune-jpeg = "0.5.12"
 
 [dev-dependencies]
 criterion = { package = "codspeed-criterion-compat", version = "4.1.0" }
