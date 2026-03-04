@@ -7,7 +7,6 @@ use num_enum::TryFromPrimitive;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffFormatError};
 use crate::geo::{GeoKeyDirectory, GeoKeyTag};
-use crate::predictor::PredictorInfo;
 use crate::reader::{AsyncFileReader, Endianness};
 use crate::tag_value::TagValue;
 use crate::tags::{
@@ -917,8 +916,9 @@ impl CompressedBytes {
             height: ifd.tile_height.unwrap_or(ifd.image_height),
             planar_configuration: ifd.planar_configuration,
             samples_per_pixel: ifd.samples_per_pixel,
+            bits_per_sample: ifd.bits_per_sample[0],
+            endianness: ifd.endianness,
             predictor: ifd.predictor.unwrap_or(Predictor::None),
-            predictor_info: PredictorInfo::from_ifd(ifd),
             compressed_bytes: self,
             compression_method: ifd.compression,
             photometric_interpretation: ifd.photometric_interpretation,
