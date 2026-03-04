@@ -136,9 +136,7 @@ impl Tile {
                 );
                 Ok(decoded_tile)
             }
-            Predictor::Horizontal => {
-                unpredict_hdiff(decoded_tile, &self.predictor_info, self.x as _)
-            }
+            Predictor::Horizontal => unpredict_hdiff(decoded_tile, &self.predictor_info),
             Predictor::FloatingPoint => {
                 unpredict_float(decoded_tile, &self.predictor_info, self.x as _, self.y as _)
             }
