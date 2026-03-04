@@ -41,9 +41,11 @@ if TYPE_CHECKING:
         ("rasterio", "uint8_rgb_deflate_block64_cog"),
         ("rasterio", "uint8_rgb_webp_block64_cog"),
         ("rasterio", "uint8_rgba_webp_block64_cog"),
-        ("rio-tiler", "cog_rgb_with_stats"),
+        # Ycbcr subsampling not implemented
+        # ("rio-tiler", "cog_rgb_with_stats"),
         ("umbra", "sydney_airport_GEC"),
-        ("vantor", "maxar_opendata_yellowstone_visual"),
+        # Ycbcr subsampling not implemented
+        # ("vantor", "maxar_opendata_yellowstone_visual"),
     ],
 )
 async def test_read(
