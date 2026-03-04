@@ -82,6 +82,7 @@ impl Decoder for PyDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         Python::attach(|py| self.call(py, buffer))
             .map_err(|err| AsyncTiffError::General(err.to_string()))
