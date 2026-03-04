@@ -4,7 +4,8 @@ use crate::array::Array;
 use crate::decoder::DecoderRegistry;
 use crate::error::{AsyncTiffResult, TiffError, TiffUnsupportedError};
 use crate::ifd::CompressedBytes;
-use crate::predictor::{fix_endianness, unpredict_float, unpredict_hdiff, PredictorInfo};
+use crate::predictor::{fix_endianness, unpredict_float, unpredict_hdiff};
+use crate::reader::Endianness;
 use crate::tags::{Compression, PhotometricInterpretation, PlanarConfiguration, Predictor};
 use crate::DataType;
 
@@ -22,11 +23,12 @@ pub struct Tile {
     pub(crate) y: usize,
     pub(crate) data_type: Option<DataType>,
     pub(crate) samples_per_pixel: u16,
+    pub(crate) bits_per_sample: u16,
+    pub(crate) endianness: Endianness,
     pub(crate) width: u32,
     pub(crate) height: u32,
     pub(crate) planar_configuration: PlanarConfiguration,
     pub(crate) predictor: Predictor,
-    pub(crate) predictor_info: PredictorInfo,
     pub(crate) compressed_bytes: CompressedBytes,
     pub(crate) compression_method: Compression,
     pub(crate) photometric_interpretation: PhotometricInterpretation,
@@ -83,26 +85,24 @@ impl Tile {
                 TiffUnsupportedError::UnsupportedCompression(self.compression_method),
             ))?;
 
+        let samples = self.samples_per_pixel as usize;
+        let bits_per_sample = self.bits_per_sample;
+        // tile_width is the full encoded tile width — predictor must use this, not the cropped width
+        let tile_width = self.width as usize;
+
         let mut decoded_tile = match &self.compressed_bytes {
-            CompressedBytes::Chunky(bytes) => {
-                // Decode single compressed chunk
-                decoder.decode_tile(
-                    bytes.clone(),
-                    self.photometric_interpretation,
-                    self.jpeg_tables.as_deref(),
-                    self.samples_per_pixel,
-                    self.predictor_info.bits_per_sample(),
-                    self.lerc_parameters.as_deref(),
-                )?
-            }
+            CompressedBytes::Chunky(bytes) => decoder.decode_tile(
+                bytes.clone(),
+                self.photometric_interpretation,
+                self.jpeg_tables.as_deref(),
+                self.samples_per_pixel,
+                bits_per_sample,
+                self.lerc_parameters.as_deref(),
+            )?,
             CompressedBytes::Planar(band_bytes) => {
-                // Decode each band separately and concatenate
-                // Pre-allocate buffer: bands × width × height × bytes_per_sample
-                let bytes_per_sample = (self.predictor_info.bits_per_sample() / 8) as usize;
-                let total_size = band_bytes.len()
-                    * (self.width as usize)
-                    * (self.height as usize)
-                    * bytes_per_sample;
+                let bytes_per_sample = (bits_per_sample as usize).div_ceil(8);
+                let total_size =
+                    band_bytes.len() * tile_width * (self.height as usize) * bytes_per_sample;
                 let mut result = Vec::with_capacity(total_size);
 
                 for band_data in band_bytes {
@@ -110,45 +110,44 @@ impl Tile {
                         band_data.clone(),
                         self.photometric_interpretation,
                         self.jpeg_tables.as_deref(),
-                        1, // Each band is decoded as a single sample
-                        self.predictor_info.bits_per_sample(),
+                        1,
+                        bits_per_sample,
                         self.lerc_parameters.as_deref(),
                     )?;
                     result.extend_from_slice(&decoded_band);
                 }
 
-                debug_assert_eq!(
-                    result.len(),
-                    total_size,
-                    "Pre-allocated size should match actual decoded size"
-                );
-
+                debug_assert_eq!(result.len(), total_size);
                 result
             }
         };
 
+        // Apply predictor on the full encoded tile width, then crop afterward.
         let decoded = match self.predictor {
             Predictor::None => {
-                fix_endianness(
-                    &mut decoded_tile,
-                    self.predictor_info.endianness(),
-                    self.predictor_info.bits_per_sample(),
-                );
-                Ok(decoded_tile)
+                fix_endianness(&mut decoded_tile, self.endianness, bits_per_sample);
+                decoded_tile
             }
-            Predictor::Horizontal => {
-                unpredict_hdiff(decoded_tile, &self.predictor_info, self.x as _)
-            }
-            Predictor::FloatingPoint => {
-                unpredict_float(decoded_tile, &self.predictor_info, self.x as _, self.y as _)
-            }
-        }?;
+            Predictor::Horizontal => unpredict_hdiff(
+                decoded_tile,
+                self.endianness,
+                samples,
+                bits_per_sample,
+                tile_width,
+            ),
+            Predictor::FloatingPoint => unpredict_float(
+                decoded_tile,
+                samples,
+                bits_per_sample,
+                tile_width,
+            )?,
+        };
 
         let shape = infer_shape(
             self.planar_configuration,
             self.width as _,
             self.height as _,
-            self.samples_per_pixel as _,
+            samples,
         );
         Array::try_new(decoded, shape, self.data_type)
     }
