@@ -36,6 +36,8 @@ pub struct Tile {
     /// LERC parameters from the LercParameters tag: [version, compression_type, ...]
     /// compression_type: 0 = none, 1 = deflate, 2 = zstd
     pub(crate) lerc_parameters: Option<Vec<u32>>,
+    /// ReferenceBlackWhite tag values: [Y_black, Y_white, Cb_black, Cb_white, Cr_black, Cr_white]
+    pub(crate) reference_black_white: Option<[f64; 6]>,
 }
 
 impl Tile {
@@ -98,6 +100,7 @@ impl Tile {
                 self.samples_per_pixel,
                 bits_per_sample,
                 self.lerc_parameters.as_deref(),
+                self.reference_black_white.as_ref(),
             )?,
             CompressedBytes::Planar(band_bytes) => {
                 let bytes_per_sample = (bits_per_sample as usize).div_ceil(8);
@@ -113,6 +116,7 @@ impl Tile {
                         1,
                         bits_per_sample,
                         self.lerc_parameters.as_deref(),
+                        self.reference_black_white.as_ref(),
                     )?;
                     result.extend_from_slice(&decoded_band);
                 }

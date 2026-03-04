@@ -78,6 +78,7 @@ pub trait Decoder: Debug + Send + Sync {
         samples_per_pixel: u16,
         bits_per_sample: u16,
         lerc_parameters: Option<&[u32]>,
+        reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>>;
 }
 
@@ -94,6 +95,7 @@ impl Decoder for DeflateDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         let mut decoder = ZlibDecoder::new(Cursor::new(buffer));
         let mut buf = Vec::new();
@@ -156,6 +158,7 @@ impl Decoder for LercDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         // LercParameters[1] is the inner compression type:
         //   0 = none, 1 = deflate, 2 = zstd
@@ -213,6 +216,7 @@ impl Decoder for LZMADecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         use bytes::Buf;
         use lzma_rust2::XzReader;
@@ -237,6 +241,7 @@ impl Decoder for LZWDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         // https://github.com/image-rs/image-tiff/blob/90ae5b8e54356a35e266fb24e969aafbcb26e990/src/decoder/stream.rs#L147
         let mut decoder = weezl::decode::Decoder::with_tiff_size_switch(weezl::BitOrder::Msb, 8);
@@ -260,6 +265,7 @@ impl Decoder for JPEG2kDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         let decoder = jpeg2k::DecodeParameters::new();
 
@@ -294,6 +300,7 @@ impl Decoder for WebPDecoder {
         samples_per_pixel: u16,
         bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         let decoded = webp::Decoder::new(&buffer)
             .decode()
@@ -330,6 +337,7 @@ impl Decoder for UncompressedDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         Ok(buffer.to_vec())
     }
@@ -348,6 +356,7 @@ impl Decoder for ZstdDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         let mut decoder = zstd::Decoder::new(Cursor::new(buffer))?;
         let mut buf = Vec::new();
