@@ -272,18 +272,12 @@ impl ImageFileDirectory {
                 }
                 Tag::JPEGTables => jpeg_tables = Some(value.into_u8_vec()?.into()),
                 Tag::ReferenceBlackWhite => {
+                    // alternating numerator/denominator for RATIONAL values
                     let vals = value.into_f64_vec()?;
-                    // into_f64_vec returns alternating numerator/denominator for RATIONAL values
-                    if vals.len() == 12 {
-                        reference_black_white = Some([
-                            vals[0] / vals[1],
-                            vals[2] / vals[3],
-                            vals[4] / vals[5],
-                            vals[6] / vals[7],
-                            vals[8] / vals[9],
-                            vals[10] / vals[11],
-                        ]);
+                    if vals.len() != 6 {
+                        return Err(TiffError::FormatError(TiffFormatError::InvalidTag));
                     }
+                    reference_black_white = Some(vals.try_into().expect("Convert Vec to [f64; 6]"));
                 }
                 Tag::Copyright => copyright = Some(value.into_string()?),
 
