@@ -9,6 +9,9 @@ site_url: https://developmentseed.org/async-tiff/
 docs_dir: docs
 
 extra:
+  analytics:
+    provider: plausible
+    domain: async-tiff
   social:
     - icon: "fontawesome/brands/github"
       link: "https://github.com/developmentseed"
