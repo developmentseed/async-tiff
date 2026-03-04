@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::io::{Cursor, Read};
+use std::panic;
 
 use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
@@ -391,46 +392,58 @@ fn decode_modern_jpeg(
         None => buf.to_vec(),
     };
 
-    // Use mozjpeg (libjpeg-turbo) for decoding to match libtiff/GDAL/rasterio output exactly.
-    // For YCbCr, decode to raw YCbCr (no internal color conversion) then apply the
-    // TIFF-correct color conversion using the ReferenceBlackWhite tag.
-    let decompress = Decompress::new_mem(&jpeg_data)
-        .map_err(|e| AsyncTiffError::General(format!("JPEG init error: {e}")))?;
+    // mozjpeg (libjpeg-turbo) uses panic-based error handling internally.
+    // All mozjpeg calls must be wrapped in catch_unwind per the library's requirements.
+    // See: https://docs.rs/mozjpeg/latest/mozjpeg/
+    let result = panic::catch_unwind(|| -> std::io::Result<Vec<u8>> {
+        // Use mozjpeg (libjpeg-turbo) for decoding to match libtiff/GDAL/rasterio output exactly.
+        // For YCbCr, decode to raw YCbCr (no internal color conversion) then apply the
+        // TIFF-correct color conversion using the ReferenceBlackWhite tag.
+        if photometric_interpretation == PhotometricInterpretation::YCbCr {
+            // Decode to upsampled interleaved YCbCr (no internal color conversion by libjpeg),
+            // then apply the TIFF-correct color conversion using the ReferenceBlackWhite tag.
+            let mut decompress = Decompress::new_mem(&jpeg_data)?
+                .to_colorspace(MozColorSpace::JCS_YCbCr)?;
+            let ycbcr = decompress.read_scanlines::<u8>()?;
+            return Ok(ycbcr_to_rgb(&ycbcr, reference_black_white));
+        }
 
-    if photometric_interpretation == PhotometricInterpretation::YCbCr {
-        // Decode to upsampled interleaved YCbCr (no internal color conversion by libjpeg),
-        // then apply the TIFF-correct color conversion using the ReferenceBlackWhite tag.
-        let mut decompress = decompress
-            .to_colorspace(MozColorSpace::JCS_YCbCr)
-            .map_err(|e| AsyncTiffError::General(format!("JPEG colorspace error: {e}")))?;
-        let ycbcr = decompress
-            .read_scanlines::<u8>()
-            .map_err(|e| AsyncTiffError::General(format!("JPEG decode error: {e}")))?;
-        return Ok(ycbcr_to_rgb(&ycbcr, reference_black_white));
+        let moz_cs = match photometric_interpretation {
+            PhotometricInterpretation::RGB => MozColorSpace::JCS_RGB,
+            PhotometricInterpretation::WhiteIsZero
+            | PhotometricInterpretation::BlackIsZero
+            | PhotometricInterpretation::TransparencyMask => MozColorSpace::JCS_GRAYSCALE,
+            PhotometricInterpretation::CMYK => MozColorSpace::JCS_CMYK,
+            _ => {
+                // Unsupported colorspaces are handled outside catch_unwind via the outer match.
+                // Return an empty vec as sentinel; the outer code handles the error.
+                return Ok(vec![]);
+            }
+        };
+
+        let mut decompress = Decompress::new_mem(&jpeg_data)?.to_colorspace(moz_cs)?;
+        decompress.read_scanlines::<u8>()
+    });
+
+    // Handle unsupported photometric interpretation (avoids passing non-UnwindSafe types into closure)
+    if !matches!(
+        photometric_interpretation,
+        PhotometricInterpretation::RGB
+            | PhotometricInterpretation::YCbCr
+            | PhotometricInterpretation::WhiteIsZero
+            | PhotometricInterpretation::BlackIsZero
+            | PhotometricInterpretation::TransparencyMask
+            | PhotometricInterpretation::CMYK
+    ) {
+        return Err(TiffError::UnsupportedError(
+            TiffUnsupportedError::UnsupportedInterpretation(photometric_interpretation),
+        )
+        .into());
     }
 
-    let moz_cs = match photometric_interpretation {
-        PhotometricInterpretation::RGB => MozColorSpace::JCS_RGB,
-        PhotometricInterpretation::WhiteIsZero
-        | PhotometricInterpretation::BlackIsZero
-        | PhotometricInterpretation::TransparencyMask => MozColorSpace::JCS_GRAYSCALE,
-        PhotometricInterpretation::CMYK => MozColorSpace::JCS_CMYK,
-        photometric_interpretation => {
-            return Err(TiffError::UnsupportedError(
-                TiffUnsupportedError::UnsupportedInterpretation(photometric_interpretation),
-            )
-            .into());
-        }
-    };
-
-    let mut decompress = decompress
-        .to_colorspace(moz_cs)
-        .map_err(|e| AsyncTiffError::General(format!("JPEG colorspace error: {e}")))?;
-
-    let data = decompress
-        .read_scanlines::<u8>()
-        .map_err(|e| AsyncTiffError::General(format!("JPEG decode error: {e}")))?;
-    Ok(data)
+    result
+        .map_err(|_| AsyncTiffError::General("JPEG decode panicked".to_string()))?
+        .map_err(|e| AsyncTiffError::General(format!("JPEG decode error: {e}")))
 }
 
 /// Convert upsampled YCbCr pixels to RGB replicating libtiff's exact fixed-point arithmetic.
