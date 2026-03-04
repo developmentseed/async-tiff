@@ -15,7 +15,6 @@ byteorder = "1"
 bytes = "1.7.0"
 flate2 = "1.0.20"
 futures = "0.3.31"
-jpeg = { package = "jpeg-decoder", version = "0.3.0", default-features = false }
 jpeg2k = { version = "0.10.1", optional = true }
 lerc = { version = "0.2.1", optional = true }
 lzma-rust2 = { version = "0.15.7", optional = true, features = ["xz"] }
@@ -28,6 +27,8 @@ tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
 webp = { version = "0.3", optional = true }
 weezl = "0.1.0"
 zstd = "0.13"
+zune-core = "0.5.1"
+zune-jpeg = "0.5.12"
 
 [dev-dependencies]
 criterion = { package = "codspeed-criterion-compat", version = "4.1.0" }

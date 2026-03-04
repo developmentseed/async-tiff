@@ -6,6 +6,10 @@ use std::io::{Cursor, Read};
 
 use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
+use zune_core::bytestream::ZCursor;
+use zune_core::colorspace::ColorSpace;
+use zune_core::options::DecoderOptions;
+use zune_jpeg::JpegDecoder as ZuneJpegDecoder;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffUnsupportedError};
 use crate::tags::{Compression, PhotometricInterpretation};
@@ -117,8 +121,9 @@ impl Decoder for JPEGDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
-        decode_modern_jpeg(buffer, photometric_interpretation, jpeg_tables)
+        decode_modern_jpeg(buffer, photometric_interpretation, jpeg_tables, reference_black_white)
     }
 }
 
@@ -365,56 +370,113 @@ impl Decoder for ZstdDecoder {
     }
 }
 
-// https://github.com/image-rs/image-tiff/blob/3bfb43e83e31b0da476832067ada68a82b378b7b/src/decoder/image.rs#L389-L450
 fn decode_modern_jpeg(
     buf: Bytes,
     photometric_interpretation: PhotometricInterpretation,
     jpeg_tables: Option<&[u8]>,
+    reference_black_white: Option<&[f64; 6]>,
 ) -> AsyncTiffResult<Vec<u8>> {
-    // Construct new jpeg_reader wrapping a SmartReader.
-    //
     // JPEG compression in TIFF allows saving quantization and/or huffman tables in one central
-    // location. These `jpeg_tables` are simply prepended to the remaining jpeg image data. Because
-    // these `jpeg_tables` start with a `SOI` (HEX: `0xFFD8`) or __start of image__ marker which is
-    // also at the beginning of the remaining JPEG image data and would confuse the JPEG renderer,
-    // one of these has to be taken off. In this case the first two bytes of the remaining JPEG
-    // data is removed because it follows `jpeg_tables`. Similary, `jpeg_tables` ends with a `EOI`
-    // (HEX: `0xFFD9`) or __end of image__ marker, this has to be removed as well (last two bytes
-    // of `jpeg_tables`).
-    let reader = Cursor::new(buf);
-
-    let jpeg_reader = match jpeg_tables {
-        Some(jpeg_tables) => {
-            let mut reader = reader;
-            reader.read_exact(&mut [0; 2])?;
-
-            Box::new(Cursor::new(&jpeg_tables[..jpeg_tables.len() - 2]).chain(reader))
-                as Box<dyn Read>
+    // location. These `jpeg_tables` are simply prepended to the remaining jpeg image data.
+    // `jpeg_tables` starts with SOI (0xFFD8) and ends with EOI (0xFFD9); strip them off before
+    // concatenating with the tile data (which starts with its own SOI).
+    let jpeg_data: Vec<u8> = match jpeg_tables {
+        Some(tables) => {
+            // Strip SOI from tile data (first 2 bytes) and EOI from tables (last 2 bytes),
+            // then prepend the stripped tables to the tile data.
+            let stripped_tables = &tables[..tables.len() - 2];
+            let stripped_tile = &buf[2..];
+            let mut data = Vec::with_capacity(stripped_tables.len() + stripped_tile.len());
+            data.extend_from_slice(stripped_tables);
+            data.extend_from_slice(stripped_tile);
+            data
         }
-        None => Box::new(reader),
+        None => buf.to_vec(),
     };
 
-    let mut decoder = jpeg::Decoder::new(jpeg_reader);
+    // Decode headers first so we can read the input colorspace.
+    let mut decoder = ZuneJpegDecoder::new(ZCursor::new(&jpeg_data));
+    decoder
+        .decode_headers()
+        .map_err(|e| AsyncTiffError::General(format!("JPEG decode headers error: {e:?}")))?;
 
-    match photometric_interpretation {
-        PhotometricInterpretation::RGB => decoder.set_color_transform(jpeg::ColorTransform::RGB),
+    // For YCbCr photometric interpretation, disable zune-jpeg's internal color conversion
+    // by setting output colorspace == input colorspace (raw YCbCr after upsampling), then
+    // apply the TIFF-correct YCbCr->RGB formula using the ReferenceBlackWhite tag.
+    // This matches image-tiff / libtiff / GDAL behavior.
+    if photometric_interpretation == PhotometricInterpretation::YCbCr {
+        let input_cs = decoder.input_colorspace().unwrap_or(ColorSpace::YCbCr);
+        let options = DecoderOptions::default().jpeg_set_out_colorspace(input_cs);
+        decoder.set_options(options);
+        let ycbcr = decoder
+            .decode()
+            .map_err(|e| AsyncTiffError::General(format!("JPEG decode error: {e:?}")))?;
+        return Ok(ycbcr_to_rgb(&ycbcr, reference_black_white));
+    }
+
+    let out_colorspace = match photometric_interpretation {
+        PhotometricInterpretation::RGB => ColorSpace::RGB,
         PhotometricInterpretation::WhiteIsZero
         | PhotometricInterpretation::BlackIsZero
-        | PhotometricInterpretation::TransparencyMask => {
-            decoder.set_color_transform(jpeg::ColorTransform::None)
-        }
-        PhotometricInterpretation::CMYK => decoder.set_color_transform(jpeg::ColorTransform::CMYK),
-        PhotometricInterpretation::YCbCr => {
-            decoder.set_color_transform(jpeg::ColorTransform::YCbCr)
-        }
+        | PhotometricInterpretation::TransparencyMask => ColorSpace::Luma,
+        PhotometricInterpretation::CMYK => ColorSpace::CMYK,
         photometric_interpretation => {
             return Err(TiffError::UnsupportedError(
                 TiffUnsupportedError::UnsupportedInterpretation(photometric_interpretation),
             )
             .into());
         }
+    };
+
+    let options = DecoderOptions::default().jpeg_set_out_colorspace(out_colorspace);
+    decoder.set_options(options);
+    let data = decoder
+        .decode()
+        .map_err(|e| AsyncTiffError::General(format!("JPEG decode error: {e:?}")))?;
+    Ok(data)
+}
+
+/// Convert upsampled YCbCr pixels to RGB using the TIFF ReferenceBlackWhite formula.
+///
+/// TIFF uses: `(component - black) * 255.0 / (white - black)` for each component,
+/// then applies the standard CCIR 601 YCbCr→RGB matrix. This matches libtiff/GDAL behavior.
+///
+/// The JPEG standard just uses `Cb - 128`, which gives slightly different results when
+/// ReferenceBlackWhite is the TIFF default `[0, 255, 128, 255, 128, 255]`.
+fn ycbcr_to_rgb(ycbcr: &[u8], reference_black_white: Option<&[f64; 6]>) -> Vec<u8> {
+    // Default TIFF ReferenceBlackWhite for YCbCr: Y in [0,255], Cb in [128,255], Cr in [128,255]
+    let rbw = reference_black_white.copied().unwrap_or([0.0, 255.0, 128.0, 255.0, 128.0, 255.0]);
+    let [y_black, y_white, cb_black, cb_white, cr_black, cr_white] = rbw;
+
+    // Precompute scale factors: component_scaled = (raw - black) * 255 / (white - black)
+    // For Y (luma): scale into [0, 255]
+    // For Cb/Cr (chroma): center around 0 with range [-127.5, +127.5]
+    let y_scale = 255.0 / (y_white - y_black);
+    let cb_scale = 127.5 / (cb_white - cb_black);
+    let cr_scale = 127.5 / (cr_white - cr_black);
+
+    let n_pixels = ycbcr.len() / 3;
+    let mut rgb = vec![0u8; n_pixels * 3];
+
+    for i in 0..n_pixels {
+        let y = ycbcr[i * 3] as f64;
+        let cb = ycbcr[i * 3 + 1] as f64;
+        let cr = ycbcr[i * 3 + 2] as f64;
+
+        // Apply ReferenceBlackWhite scaling
+        let y_f = (y - y_black) * y_scale;
+        let cb_f = (cb - cb_black) * cb_scale; // centered around 0
+        let cr_f = (cr - cr_black) * cr_scale; // centered around 0
+
+        // CCIR 601 YCbCr -> RGB matrix (same as libtiff TIFFYCbCrToRGBInit)
+        let r = y_f + 1.402 * cr_f;
+        let g = y_f - 0.344136 * cb_f - 0.714136 * cr_f;
+        let b = y_f + 1.772 * cb_f;
+
+        rgb[i * 3] = r.round().clamp(0.0, 255.0) as u8;
+        rgb[i * 3 + 1] = g.round().clamp(0.0, 255.0) as u8;
+        rgb[i * 3 + 2] = b.round().clamp(0.0, 255.0) as u8;
     }
 
-    let data = decoder.decode()?;
-    Ok(data)
+    rgb
 }

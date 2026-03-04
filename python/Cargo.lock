@@ -42,7 +42,6 @@ dependencies = [
  "bytes",
  "flate2",
  "futures",
- "jpeg-decoder",
  "jpeg2k",
  "lerc",
  "lzma-rust2",
@@ -54,6 +53,8 @@ dependencies = [
  "webp",
  "weezl",
  "zstd",
+ "zune-core",
+ "zune-jpeg",
 ]
 
 [[package]]
@@ -849,12 +850,6 @@ dependencies = [
  "getrandom 0.3.4",
  "libc",
 ]
-
-[[package]]
-name = "jpeg-decoder"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00810f1d8b74be64b13dbf3db89ac67740615d6c891f0e7b6179326533011a07"
 
 [[package]]
 name = "jpeg2k"
