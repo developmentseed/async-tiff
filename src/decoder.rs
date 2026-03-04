@@ -72,6 +72,7 @@ impl Default for DecoderRegistry {
 /// A trait to decode a TIFF tile.
 pub trait Decoder: Debug + Send + Sync {
     /// Decode a TIFF tile.
+    #[allow(clippy::too_many_arguments)]
     fn decode_tile(
         &self,
         buffer: Bytes,
@@ -121,7 +122,12 @@ impl Decoder for JPEGDecoder {
         _lerc_parameters: Option<&[u32]>,
         reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
-        decode_modern_jpeg(buffer, photometric_interpretation, jpeg_tables, reference_black_white)
+        decode_modern_jpeg(
+            buffer,
+            photometric_interpretation,
+            jpeg_tables,
+            reference_black_white,
+        )
     }
 }
 
@@ -402,8 +408,8 @@ fn decode_modern_jpeg(
         if photometric_interpretation == PhotometricInterpretation::YCbCr {
             // Decode to upsampled interleaved YCbCr (no internal color conversion by libjpeg),
             // then apply the TIFF-correct color conversion using the ReferenceBlackWhite tag.
-            let mut decompress = Decompress::new_mem(&jpeg_data)?
-                .to_colorspace(MozColorSpace::JCS_YCbCr)?;
+            let mut decompress =
+                Decompress::new_mem(&jpeg_data)?.to_colorspace(MozColorSpace::JCS_YCbCr)?;
             let ycbcr = decompress.read_scanlines::<u8>()?;
             return Ok(ycbcr_to_rgb(&ycbcr, reference_black_white));
         }
@@ -435,10 +441,12 @@ fn decode_modern_jpeg(
             | PhotometricInterpretation::TransparencyMask
             | PhotometricInterpretation::CMYK
     ) {
-        return Err(TiffError::UnsupportedError(
-            TiffUnsupportedError::UnsupportedInterpretation(photometric_interpretation),
-        )
-        .into());
+        return Err(
+            TiffError::UnsupportedError(TiffUnsupportedError::UnsupportedInterpretation(
+                photometric_interpretation,
+            ))
+            .into(),
+        );
     }
 
     result
@@ -452,8 +460,9 @@ fn decode_modern_jpeg(
 /// the `Code2V` ReferenceBlackWhite scaling and the 16-bit fixed-point lookup tables.
 fn ycbcr_to_rgb(ycbcr: &[u8], reference_black_white: Option<&[f64; 6]>) -> Vec<u8> {
     // Default TIFF ReferenceBlackWhite for YCbCr
-    let rbw =
-        reference_black_white.copied().unwrap_or([0.0, 255.0, 128.0, 255.0, 128.0, 255.0]);
+    let rbw = reference_black_white
+        .copied()
+        .unwrap_or([0.0, 255.0, 128.0, 255.0, 128.0, 255.0]);
     let [rb0, rw0, rb2, rw2, rb4, rw4] = rbw;
 
     // libtiff uses SHIFT=16, ONE_HALF=1<<15, FIX(x) = (x*(1<<16)+0.5) as i32
@@ -475,7 +484,11 @@ fn ycbcr_to_rgb(ycbcr: &[u8], reference_black_white: Option<&[f64; 6]>) -> Vec<u
 
     // Code2V: maps raw code to scaled value using ReferenceBlackWhite
     let code2v = |c: i32, rb: f64, rw: f64, cr: f64| -> i32 {
-        let denom = if (rw - rb).abs() > f64::EPSILON { rw - rb } else { 1.0 };
+        let denom = if (rw - rb).abs() > f64::EPSILON {
+            rw - rb
+        } else {
+            1.0
+        };
         // CLAMPw to [-128*32, 128*32]
         ((c as f64 - rb) * cr / denom).clamp(-128.0 * 32.0, 128.0 * 32.0) as i32
     };
