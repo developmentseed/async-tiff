@@ -11,7 +11,7 @@ docs_dir: docs
 extra:
   analytics:
     provider: plausible
-    domain: async-tiff
+    domain: developmentseed.org/async-tiff
   social:
     - icon: "fontawesome/brands/github"
       link: "https://github.com/developmentseed"
