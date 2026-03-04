@@ -135,12 +135,9 @@ impl Tile {
                 bits_per_sample,
                 tile_width,
             ),
-            Predictor::FloatingPoint => unpredict_float(
-                decoded_tile,
-                samples,
-                bits_per_sample,
-                tile_width,
-            )?,
+            Predictor::FloatingPoint => {
+                unpredict_float(decoded_tile, samples, bits_per_sample, tile_width)?
+            }
         };
 
         let shape = infer_shape(
