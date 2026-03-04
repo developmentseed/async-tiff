@@ -133,6 +133,16 @@ pub struct ImageFileDirectory {
 
     pub(crate) jpeg_tables: Option<Bytes>,
 
+    /// Specifies a pair of headroom and footroom image data values (codes) for each pixel
+    /// component.
+    ///
+    /// The first component code within a pair is associated with ReferenceBlack, and the second is
+    /// associated with ReferenceWhite. The ordering of pairs is the same as those for pixel
+    /// components of the PhotometricInterpretation type. ReferenceBlackWhite can be applied to
+    /// images with a PhotometricInterpretation value of RGB or YCbCr. ReferenceBlackWhite is not
+    /// used with other PhotometricInterpretation values.
+    ///
+    /// <https://web.archive.org/web/20240329145229/https://www.awaresystems.be/imaging/tiff/tifftags/referenceblackwhite.html>
     pub(crate) reference_black_white: Option<[f64; 6]>,
 
     pub(crate) copyright: Option<String>,
