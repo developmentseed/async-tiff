@@ -20,7 +20,7 @@ env:
 
 jobs:
   clippy_check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
 
     steps:
       - name: Checkout repository
@@ -34,7 +34,7 @@ jobs:
           cargo clippy --all-targets --all-features --manifest-path python/Cargo.toml
 
   format_check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
 
     steps:
       - name: Checkout repository
@@ -49,7 +49,7 @@ jobs:
 
   docs-no-warnings:
     name: Docs should build without warnings
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@v6
         with:
