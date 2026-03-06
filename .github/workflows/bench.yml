@@ -4,11 +4,11 @@ name: Benchmarks
 on:
   push:
     branches: ["main"]
-  release:
-    types: [published]
+  # Run on PRs but only if the PR has the 'run/benchmark' label
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, labeled, synchronize]
     branches: ["main"]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -20,6 +20,7 @@ env:
 jobs:
   rust-bench:
     runs-on: ubuntu-24.04
+    if: github.repository == 'developmentseed/async-tiff' && (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'run/benchmark'))
     container:
       image: ghcr.io/osgeo/gdal:ubuntu-small-3.12.2
       options: --privileged
