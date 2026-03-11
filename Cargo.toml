@@ -18,7 +18,7 @@ futures = "0.3.31"
 jpeg = { package = "jpeg-decoder", version = "0.3.0", default-features = false }
 jpeg2k = { version = "0.10.1", optional = true }
 lerc = { version = "0.2.1", optional = true }
-lzma-rust2 = { version = "0.15.7", optional = true, features = ["xz"] }
+lzma-rust2 = { version = "0.16.2", optional = true, features = ["xz"] }
 ndarray = { version = "0.17", optional = true }
 num_enum = "0.7.3"
 object_store = { version = "0.13", optional = true }
