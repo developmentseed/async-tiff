@@ -3,9 +3,11 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::io::{Cursor, Read};
+use std::panic;
 
 use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
+use mozjpeg::{ColorSpace as MozColorSpace, Decompress};
 
 use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffUnsupportedError};
 use crate::tags::{Compression, PhotometricInterpretation};
@@ -70,6 +72,7 @@ impl Default for DecoderRegistry {
 /// A trait to decode a TIFF tile.
 pub trait Decoder: Debug + Send + Sync {
     /// Decode a TIFF tile.
+    #[allow(clippy::too_many_arguments)]
     fn decode_tile(
         &self,
         buffer: Bytes,
@@ -78,6 +81,7 @@ pub trait Decoder: Debug + Send + Sync {
         samples_per_pixel: u16,
         bits_per_sample: u16,
         lerc_parameters: Option<&[u32]>,
+        reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>>;
 }
 
@@ -94,6 +98,7 @@ impl Decoder for DeflateDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         let mut decoder = ZlibDecoder::new(Cursor::new(buffer));
         let mut buf = Vec::new();
@@ -115,8 +120,14 @@ impl Decoder for JPEGDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
-        decode_modern_jpeg(buffer, photometric_interpretation, jpeg_tables)
+        decode_modern_jpeg(
+            buffer,
+            photometric_interpretation,
+            jpeg_tables,
+            reference_black_white,
+        )
     }
 }
 
@@ -156,6 +167,7 @@ impl Decoder for LercDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         // LercParameters[1] is the inner compression type:
         //   0 = none, 1 = deflate, 2 = zstd
@@ -213,6 +225,7 @@ impl Decoder for LZMADecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         use bytes::Buf;
         use lzma_rust2::XzReader;
@@ -237,6 +250,7 @@ impl Decoder for LZWDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         // https://github.com/image-rs/image-tiff/blob/90ae5b8e54356a35e266fb24e969aafbcb26e990/src/decoder/stream.rs#L147
         let mut decoder = weezl::decode::Decoder::with_tiff_size_switch(weezl::BitOrder::Msb, 8);
@@ -260,6 +274,7 @@ impl Decoder for JPEG2kDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         let decoder = jpeg2k::DecodeParameters::new();
 
@@ -294,6 +309,7 @@ impl Decoder for WebPDecoder {
         samples_per_pixel: u16,
         bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         let decoded = webp::Decoder::new(&buffer)
             .decode()
@@ -330,6 +346,7 @@ impl Decoder for UncompressedDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         Ok(buffer.to_vec())
     }
@@ -348,6 +365,7 @@ impl Decoder for ZstdDecoder {
         _samples_per_pixel: u16,
         _bits_per_sample: u16,
         _lerc_parameters: Option<&[u32]>,
+        _reference_black_white: Option<&[f64; 6]>,
     ) -> AsyncTiffResult<Vec<u8>> {
         let mut decoder = zstd::Decoder::new(Cursor::new(buffer))?;
         let mut buf = Vec::new();
@@ -356,56 +374,163 @@ impl Decoder for ZstdDecoder {
     }
 }
 
-// https://github.com/image-rs/image-tiff/blob/3bfb43e83e31b0da476832067ada68a82b378b7b/src/decoder/image.rs#L389-L450
 fn decode_modern_jpeg(
     buf: Bytes,
     photometric_interpretation: PhotometricInterpretation,
     jpeg_tables: Option<&[u8]>,
+    reference_black_white: Option<&[f64; 6]>,
 ) -> AsyncTiffResult<Vec<u8>> {
-    // Construct new jpeg_reader wrapping a SmartReader.
-    //
     // JPEG compression in TIFF allows saving quantization and/or huffman tables in one central
-    // location. These `jpeg_tables` are simply prepended to the remaining jpeg image data. Because
-    // these `jpeg_tables` start with a `SOI` (HEX: `0xFFD8`) or __start of image__ marker which is
-    // also at the beginning of the remaining JPEG image data and would confuse the JPEG renderer,
-    // one of these has to be taken off. In this case the first two bytes of the remaining JPEG
-    // data is removed because it follows `jpeg_tables`. Similary, `jpeg_tables` ends with a `EOI`
-    // (HEX: `0xFFD9`) or __end of image__ marker, this has to be removed as well (last two bytes
-    // of `jpeg_tables`).
-    let reader = Cursor::new(buf);
-
-    let jpeg_reader = match jpeg_tables {
-        Some(jpeg_tables) => {
-            let mut reader = reader;
-            reader.read_exact(&mut [0; 2])?;
-
-            Box::new(Cursor::new(&jpeg_tables[..jpeg_tables.len() - 2]).chain(reader))
-                as Box<dyn Read>
+    // location. These `jpeg_tables` are simply prepended to the remaining jpeg image data.
+    // `jpeg_tables` starts with SOI (0xFFD8) and ends with EOI (0xFFD9); strip them off before
+    // concatenating with the tile data (which starts with its own SOI).
+    let jpeg_data: Vec<u8> = match jpeg_tables {
+        Some(tables) => {
+            // Strip SOI from tile data (first 2 bytes) and EOI from tables (last 2 bytes),
+            // then prepend the stripped tables to the tile data.
+            let stripped_tables = &tables[..tables.len() - 2];
+            let stripped_tile = &buf[2..];
+            let mut data = Vec::with_capacity(stripped_tables.len() + stripped_tile.len());
+            data.extend_from_slice(stripped_tables);
+            data.extend_from_slice(stripped_tile);
+            data
         }
-        None => Box::new(reader),
+        None => buf.to_vec(),
     };
 
-    let mut decoder = jpeg::Decoder::new(jpeg_reader);
+    // mozjpeg (libjpeg-turbo) uses panic-based error handling internally.
+    // All mozjpeg calls must be wrapped in catch_unwind per the library's requirements.
+    // See: https://docs.rs/mozjpeg/latest/mozjpeg/
+    let result = panic::catch_unwind(|| -> std::io::Result<Vec<u8>> {
+        // Use mozjpeg (libjpeg-turbo) for decoding to match libtiff/GDAL/rasterio output exactly.
+        // For YCbCr, decode to raw YCbCr (no internal color conversion) then apply the
+        // TIFF-correct color conversion using the ReferenceBlackWhite tag.
+        if photometric_interpretation == PhotometricInterpretation::YCbCr {
+            // Decode to upsampled interleaved YCbCr (no internal color conversion by libjpeg),
+            // then apply the TIFF-correct color conversion using the ReferenceBlackWhite tag.
+            let mut decompress =
+                Decompress::new_mem(&jpeg_data)?.to_colorspace(MozColorSpace::JCS_YCbCr)?;
+            let ycbcr = decompress.read_scanlines::<u8>()?;
+            return Ok(ycbcr_to_rgb(&ycbcr, reference_black_white));
+        }
 
-    match photometric_interpretation {
-        PhotometricInterpretation::RGB => decoder.set_color_transform(jpeg::ColorTransform::RGB),
-        PhotometricInterpretation::WhiteIsZero
-        | PhotometricInterpretation::BlackIsZero
-        | PhotometricInterpretation::TransparencyMask => {
-            decoder.set_color_transform(jpeg::ColorTransform::None)
-        }
-        PhotometricInterpretation::CMYK => decoder.set_color_transform(jpeg::ColorTransform::CMYK),
-        PhotometricInterpretation::YCbCr => {
-            decoder.set_color_transform(jpeg::ColorTransform::YCbCr)
-        }
-        photometric_interpretation => {
-            return Err(TiffError::UnsupportedError(
-                TiffUnsupportedError::UnsupportedInterpretation(photometric_interpretation),
-            )
-            .into());
-        }
+        let moz_cs = match photometric_interpretation {
+            PhotometricInterpretation::RGB => MozColorSpace::JCS_RGB,
+            PhotometricInterpretation::WhiteIsZero
+            | PhotometricInterpretation::BlackIsZero
+            | PhotometricInterpretation::TransparencyMask => MozColorSpace::JCS_GRAYSCALE,
+            PhotometricInterpretation::CMYK => MozColorSpace::JCS_CMYK,
+            _ => {
+                // Unsupported colorspaces are handled outside catch_unwind via the outer match.
+                // Return an empty vec as sentinel; the outer code handles the error.
+                return Ok(vec![]);
+            }
+        };
+
+        let mut decompress = Decompress::new_mem(&jpeg_data)?.to_colorspace(moz_cs)?;
+        decompress.read_scanlines::<u8>()
+    });
+
+    // Handle unsupported photometric interpretation (avoids passing non-UnwindSafe types into closure)
+    if !matches!(
+        photometric_interpretation,
+        PhotometricInterpretation::RGB
+            | PhotometricInterpretation::YCbCr
+            | PhotometricInterpretation::WhiteIsZero
+            | PhotometricInterpretation::BlackIsZero
+            | PhotometricInterpretation::TransparencyMask
+            | PhotometricInterpretation::CMYK
+    ) {
+        return Err(
+            TiffError::UnsupportedError(TiffUnsupportedError::UnsupportedInterpretation(
+                photometric_interpretation,
+            ))
+            .into(),
+        );
     }
 
-    let data = decoder.decode()?;
-    Ok(data)
+    result
+        .map_err(|_| AsyncTiffError::General("JPEG decode panicked".to_string()))?
+        .map_err(|e| AsyncTiffError::General(format!("JPEG decode error: {e}")))
+}
+
+/// Convert upsampled YCbCr pixels to RGB replicating libtiff's exact fixed-point arithmetic.
+///
+/// Replicates `TIFFYCbCrToRGBInit` + `TIFFYCbCrtoRGB` from libtiff/tif_color.c, including
+/// the `Code2V` ReferenceBlackWhite scaling and the 16-bit fixed-point lookup tables.
+fn ycbcr_to_rgb(ycbcr: &[u8], reference_black_white: Option<&[f64; 6]>) -> Vec<u8> {
+    // Default TIFF ReferenceBlackWhite for YCbCr
+    let rbw = reference_black_white
+        .copied()
+        .unwrap_or([0.0, 255.0, 128.0, 255.0, 128.0, 255.0]);
+    let [rb0, rw0, rb2, rw2, rb4, rw4] = rbw;
+
+    // libtiff uses SHIFT=16, ONE_HALF=1<<15, FIX(x) = (x*(1<<16)+0.5) as i32
+    const SHIFT: u32 = 16;
+    const ONE_HALF: i64 = 1 << 15;
+
+    // CCIR 601 luma coefficients (ITU-R BT.601)
+    const LUMA_RED: f64 = 0.299;
+    const LUMA_GREEN: f64 = 0.587;
+    const LUMA_BLUE: f64 = 0.114;
+
+    let fix = |x: f64| -> i64 { (x * (1i64 << SHIFT) as f64 + 0.5) as i64 };
+
+    // libtiff D1..D4 fixed-point matrix coefficients
+    let d1 = fix(2.0 - 2.0 * LUMA_RED); // Cr -> R
+    let d2 = fix(-(LUMA_RED * (2.0 - 2.0 * LUMA_RED) / LUMA_GREEN)); // Cr -> G
+    let d3 = fix(2.0 - 2.0 * LUMA_BLUE); // Cb -> B
+    let d4 = fix(-(LUMA_BLUE * (2.0 - 2.0 * LUMA_BLUE) / LUMA_GREEN)); // Cb -> G
+
+    // Code2V: maps raw code to scaled value using ReferenceBlackWhite
+    let code2v = |c: i32, rb: f64, rw: f64, cr: f64| -> i32 {
+        let denom = if (rw - rb).abs() > f64::EPSILON {
+            rw - rb
+        } else {
+            1.0
+        };
+        // CLAMPw to [-128*32, 128*32]
+        ((c as f64 - rb) * cr / denom).clamp(-128.0 * 32.0, 128.0 * 32.0) as i32
+    };
+
+    // Build lookup tables indexed by raw 0..=255 pixel values.
+    // libtiff loop: for (i=0, x=-128; i<256; i++, x++)
+    let mut y_tab = [0i32; 256];
+    let mut cr_r_tab = [0i32; 256];
+    let mut cb_b_tab = [0i32; 256];
+    let mut cr_g_tab = [0i64; 256]; // stored unshifted
+    let mut cb_g_tab = [0i64; 256]; // stored unshifted + ONE_HALF
+
+    for i in 0usize..256 {
+        let x = i as i32 - 128;
+        y_tab[i] = code2v(x + 128, rb0, rw0, 255.0);
+
+        let cr = code2v(x, rb4 - 128.0, rw4 - 128.0, 127.0) as i64;
+        cr_r_tab[i] = ((d1 * cr + ONE_HALF) >> SHIFT) as i32;
+        cr_g_tab[i] = d2 * cr;
+
+        let cb = code2v(x, rb2 - 128.0, rw2 - 128.0, 127.0) as i64;
+        cb_b_tab[i] = ((d3 * cb + ONE_HALF) >> SHIFT) as i32;
+        cb_g_tab[i] = d4 * cb + ONE_HALF;
+    }
+
+    let n_pixels = ycbcr.len() / 3;
+    let mut rgb = vec![0u8; n_pixels * 3];
+
+    for i in 0..n_pixels {
+        let y = ycbcr[i * 3] as usize;
+        let cb = ycbcr[i * 3 + 1] as usize;
+        let cr = ycbcr[i * 3 + 2] as usize;
+
+        let yv = y_tab[y];
+        let r = yv + cr_r_tab[cr];
+        let g = yv + ((cb_g_tab[cb] + cr_g_tab[cr]) >> SHIFT) as i32;
+        let b = yv + cb_b_tab[cb];
+
+        rgb[i * 3] = r.clamp(0, 255) as u8;
+        rgb[i * 3 + 1] = g.clamp(0, 255) as u8;
+        rgb[i * 3 + 2] = b.clamp(0, 255) as u8;
+    }
+
+    rgb
 }

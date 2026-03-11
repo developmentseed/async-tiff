@@ -167,6 +167,10 @@ impl TagValue {
     pub fn into_f64(self) -> TiffResult<f64> {
         match self {
             Double(val) => Ok(val),
+            Rational(numerator, denominator) => Ok(numerator as f64 / denominator as f64),
+            RationalBig(numerator, denominator) => Ok(numerator as f64 / denominator as f64),
+            SRational(numerator, denominator) => Ok(numerator as f64 / denominator as f64),
+            SRationalBig(numerator, denominator) => Ok(numerator as f64 / denominator as f64),
             val => Err(TiffError::FormatError(
                 TiffFormatError::SignedIntegerExpected(val),
             )),

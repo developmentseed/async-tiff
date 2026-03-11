@@ -130,6 +130,11 @@ pub enum Tag(u16) unknown("A private or extension tag") {
     SMaxSampleValue = 341,
     // JPEG
     JPEGTables = 347,
+    // YCbCr
+    YCbCrCoefficients = 529,
+    YCbCrSubSampling = 530,
+    YCbCrPositioning = 531,
+    ReferenceBlackWhite = 532,
     // GeoTIFF
     ModelPixelScale = 33550, // (SoftDesk)
     ModelTransformation = 34264, // (JPL Carto Group)

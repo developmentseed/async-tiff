@@ -133,6 +133,18 @@ pub struct ImageFileDirectory {
 
     pub(crate) jpeg_tables: Option<Bytes>,
 
+    /// Specifies a pair of headroom and footroom image data values (codes) for each pixel
+    /// component.
+    ///
+    /// The first component code within a pair is associated with ReferenceBlack, and the second is
+    /// associated with ReferenceWhite. The ordering of pairs is the same as those for pixel
+    /// components of the PhotometricInterpretation type. ReferenceBlackWhite can be applied to
+    /// images with a PhotometricInterpretation value of RGB or YCbCr. ReferenceBlackWhite is not
+    /// used with other PhotometricInterpretation values.
+    ///
+    /// <https://web.archive.org/web/20240329145229/https://www.awaresystems.be/imaging/tiff/tifftags/referenceblackwhite.html>
+    pub(crate) reference_black_white: Option<[f64; 6]>,
+
     pub(crate) copyright: Option<String>,
 
     // Geospatial tags
@@ -188,6 +200,7 @@ impl ImageFileDirectory {
         let mut extra_samples = None;
         let mut sample_format = None;
         let mut jpeg_tables = None;
+        let mut reference_black_white = None;
         let mut copyright = None;
         let mut geo_key_directory_data = None;
         let mut model_pixel_scale = None;
@@ -268,6 +281,14 @@ impl ImageFileDirectory {
                     );
                 }
                 Tag::JPEGTables => jpeg_tables = Some(value.into_u8_vec()?.into()),
+                Tag::ReferenceBlackWhite => {
+                    // alternating numerator/denominator for RATIONAL values
+                    let vals = value.into_f64_vec()?;
+                    if vals.len() != 6 {
+                        return Err(TiffError::FormatError(TiffFormatError::InvalidTag));
+                    }
+                    reference_black_white = Some(vals.try_into().expect("Convert Vec to [f64; 6]"));
+                }
                 Tag::Copyright => copyright = Some(value.into_string()?),
 
                 // Geospatial tags
@@ -423,6 +444,7 @@ impl ImageFileDirectory {
                 .unwrap_or(vec![SampleFormat::Uint; samples_per_pixel as _]),
             copyright,
             jpeg_tables,
+            reference_black_white,
             geo_key_directory,
             model_pixel_scale,
             model_tiepoint,
@@ -640,6 +662,14 @@ impl ImageFileDirectory {
     /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/jpegtables.html>
     pub fn jpeg_tables(&self) -> Option<&[u8]> {
         self.jpeg_tables.as_deref()
+    }
+
+    /// Headroom and footroom codes for each pixel component used for YCbCr and RGB images.
+    ///
+    /// Six values as `[Y_black, Y_white, Cb_black, Cb_white, Cr_black, Cr_white]`.
+    /// <https://web.archive.org/web/20240329145250/https://www.awaresystems.be/imaging/tiff/tifftags/referenceblackwhite.html>
+    pub fn reference_black_white(&self) -> Option<&[f64; 6]> {
+        self.reference_black_white.as_ref()
     }
 
     /// Copyright notice.
@@ -924,6 +954,7 @@ impl CompressedBytes {
             photometric_interpretation: ifd.photometric_interpretation,
             jpeg_tables: ifd.jpeg_tables.clone(),
             lerc_parameters: ifd.lerc_parameters.clone(),
+            reference_black_white: ifd.reference_black_white,
         }
     }
 }
