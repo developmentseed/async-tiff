@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.1] - 2026-03-11
+
+### What's Changed
+
+* ci: Build and publish sdist in python wheels by @kylebarron in https://github.com/developmentseed/async-tiff/pull/277
+* chore: Bump pyo3 to 0.28 by @kylebarron in https://github.com/developmentseed/async-tiff/pull/280
+
+**Full Changelog**: https://github.com/developmentseed/async-tiff/compare/py-v0.7.0...py-v0.7.1
+
 ## [0.7.0] - 2026-03-03
 
 ### What's Changed
