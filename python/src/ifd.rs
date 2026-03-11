@@ -18,7 +18,7 @@ use crate::geo::PyGeoKeyDirectory;
 use crate::tile::PyTile;
 use crate::value::PyValue;
 
-#[pyclass(name = "ImageFileDirectory", frozen, eq)]
+#[pyclass(name = "ImageFileDirectory", frozen, eq, skip_from_py_object)]
 #[derive(Debug, Clone)]
 pub(crate) struct PyImageFileDirectory {
     ifd: Arc<ImageFileDirectory>,
