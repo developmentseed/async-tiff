@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.3.0] - 2026-04-01
+
+### What's Changed
+
+* test: Setup Rust benchmarks by @weiji14 in https://github.com/developmentseed/async-tiff/pull/139
+* chore: Add additional license copyright from image-tiff by @kylebarron in https://github.com/developmentseed/async-tiff/pull/200
+* feat!: Handle transparency/nodata bit masks by @kylebarron in https://github.com/developmentseed/async-tiff/pull/205
+* feat: Add webp decompression support by @kylebarron in https://github.com/developmentseed/async-tiff/pull/171
+* feat!: Rename `CompressionMethod` to `Compression` by @kylebarron in https://github.com/developmentseed/async-tiff/pull/213
+* feat!: Expose colormap as unaltered `[u16]`; implement buffer protocol exchange by @kylebarron in https://github.com/developmentseed/async-tiff/pull/219
+* feat: Change `fetch_tiles` to take tuples of `(x, y)` instead of two separate vecs by @kylebarron in https://github.com/developmentseed/async-tiff/pull/229
+* feat: LZMA decoder by @kylebarron in https://github.com/developmentseed/async-tiff/pull/230
+* feat: support LERC, LERC_DEFLATE, LERC_ZSTD decompression by @kylebarron in https://github.com/developmentseed/async-tiff/pull/204
+* feat!: Add support for band-interleaved data by @kylebarron in https://github.com/developmentseed/async-tiff/pull/240
+* feat: Define `ExtraSamples` enum by @kylebarron in https://github.com/developmentseed/async-tiff/pull/258
+* feat: Expose lerc_parameters as ifd attribute by @kylebarron in https://github.com/developmentseed/async-tiff/pull/262
+* feat: Expose API to find byte range of an internal COG tile by @kylebarron in https://github.com/developmentseed/async-tiff/pull/261
+* refactor: refactor predictor.rs for simplicity by @kylebarron in https://github.com/developmentseed/async-tiff/pull/265
+* chore(deps): update lzma-rust2 requirement from 0.15.7 to 0.16.2 by @dependabot[bot] in https://github.com/developmentseed/async-tiff/pull/286
+* ci: Run linter workflows on ubuntu-slim or ubuntu-24.04-arm by @weiji14 in https://github.com/developmentseed/async-tiff/pull/274
+
+### New Contributors
+
+* @dependabot[bot] made their first contribution in https://github.com/developmentseed/async-tiff/pull/281
+
+**Full Changelog**: https://github.com/developmentseed/async-tiff/compare/rust-v0.2.0...rust-v0.3.0
+
 ## [0.2.0] - 2026-01-26
 
 ### Feature Changes
