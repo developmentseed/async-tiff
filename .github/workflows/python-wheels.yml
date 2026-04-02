@@ -34,12 +34,12 @@ jobs:
             target: aarch64
             manylinux: "2_28"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: "recursive"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
           version: "0.5.x"
@@ -48,7 +48,7 @@ jobs:
         run: uv python install 3.10 3.13 pypy3.11
 
       - name: Build abi3-py311 wheels
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i 3.13 --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
@@ -63,7 +63,7 @@ jobs:
             fi
 
       - name: Build version-specific wheels
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i 3.10 -i pypy3.11 --features extension-module --manifest-path python/Cargo.toml
@@ -78,7 +78,7 @@ jobs:
             fi
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: wheels-linux-${{ matrix.platform.target }}
           path: dist
@@ -93,12 +93,12 @@ jobs:
           - runner: ubuntu-latest
             target: x86
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: "recursive"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
           version: "0.5.x"
@@ -107,7 +107,7 @@ jobs:
         run: uv python install 3.10 3.13 pypy3.11
 
       - name: Build abi3-py311 wheels
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i 3.13 --no-default-features --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
@@ -115,7 +115,7 @@ jobs:
           manylinux: musllinux_1_2
 
       - name: Build version-specific wheels
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i 3.10 -i pypy3.11 --no-default-features --features extension-module --manifest-path python/Cargo.toml
@@ -123,7 +123,7 @@ jobs:
           manylinux: musllinux_1_2
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
@@ -136,14 +136,14 @@ jobs:
           - runner: windows-latest
             target: x64
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: "recursive"
       # There seem to be linking errors on Windows with the uv-provided Python
       # executables, so we use the Python versions provided by github actions
       # for now.
       # Seems to be this question: https://stackoverflow.com/questions/78557803/python-with-rust-cannot-open-input-file-python3-lib
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: 3.13
           architecture: ${{ matrix.platform.target }}
@@ -152,21 +152,21 @@ jobs:
         shell: pwsh
 
       - name: Build abi3-py311 wheels
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i 3.13 --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
 
       - name: Build version-specific wheels
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i 3.10 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: wheels-windows-${{ matrix.platform.target }}
           path: dist
@@ -181,12 +181,12 @@ jobs:
           - runner: macos-15
             target: aarch64
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: "recursive"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
           version: "0.5.x"
@@ -195,21 +195,21 @@ jobs:
         run: uv python install 3.10 3.13 pypy3.11
 
       - name: Build abi3-py311 wheels
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i 3.13 --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
 
       - name: Build version-specific wheels
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i 3.10 -i pypy3.11 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
@@ -217,11 +217,11 @@ jobs:
   sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           submodules: "recursive"
       - name: Build sdist
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@04ac600d27cdf7a9a280dadf7147097c42b757ad # v1
         with:
           command: sdist
           args: --out dist --manifest-path python/Cargo.toml
@@ -229,7 +229,7 @@ jobs:
         run: |
           python -m pip install dist/*.tar.gz
       - name: Upload sdist
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: wheels-sdist
           path: dist
@@ -246,14 +246,14 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     needs: [linux, musllinux, windows, macos, sdist]
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: wheels-*
           merge-multiple: true
           path: dist
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: 3.11
 
       - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
