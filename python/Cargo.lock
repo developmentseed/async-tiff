@@ -34,7 +34,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "async-tiff"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "async-trait",
  "bytemuck",
@@ -1234,7 +1234,7 @@ dependencies = [
  "futures",
  "object_store",
  "pyo3",
- "pyo3-async-runtimes",
+ "pyo3-async-runtimes 0.28.0 (git+https://github.com/PyO3/pyo3-async-runtimes?rev=4e28dd9c9ca26d51faf51b4ed3ce465ba08fbfe9)",
  "pyo3-bytes",
  "pyo3-object_store",
  "rayon",
@@ -1271,6 +1271,18 @@ dependencies = [
  "pin-project-lite",
  "pyo3",
  "tokio",
+]
+
+[[package]]
+name = "pyo3-async-runtimes"
+version = "0.28.0"
+source = "git+https://github.com/PyO3/pyo3-async-runtimes?rev=4e28dd9c9ca26d51faf51b4ed3ce465ba08fbfe9#4e28dd9c9ca26d51faf51b4ed3ce465ba08fbfe9"
+dependencies = [
+ "futures-channel",
+ "futures-util",
+ "once_cell",
+ "pin-project-lite",
+ "pyo3",
 ]
 
 [[package]]
@@ -1343,7 +1355,7 @@ dependencies = [
  "object_store",
  "percent-encoding",
  "pyo3",
- "pyo3-async-runtimes",
+ "pyo3-async-runtimes 0.28.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "thiserror 1.0.69",
  "tokio",
