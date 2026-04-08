@@ -29,7 +29,7 @@ bytes = "1.10.1"
 futures = "0.3.31"
 object_store = "0.13"
 pyo3 = { version = "0.28.0", features = ["macros"] }
-pyo3-async-runtimes = "0.28"
+pyo3-async-runtimes = { git = "https://github.com/PyO3/pyo3-async-runtimes", rev = "4e28dd9c9ca26d51faf51b4ed3ce465ba08fbfe9" }
 pyo3-bytes = "0.6"
 pyo3-object_store = "0.9.0"
 rayon = "1.11.0"
