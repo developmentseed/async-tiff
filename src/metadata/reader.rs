@@ -215,8 +215,7 @@ impl ImageFileDirectoryReader {
         tag_idx: u64,
     ) -> AsyncTiffResult<(Tag, TagValue)> {
         assert!(tag_idx < self.tag_count);
-        let tag_offset =
-            self.ifd_start_offset + self.tag_count_byte_size + (self.ifd_entry_byte_size * tag_idx);
+        let tag_offset = self.tag_offset(tag_idx);
         let (tag_name, tag_value) =
             read_tag(fetch, tag_offset, self.endianness, self.bigtiff).await?;
         Ok((tag_name, tag_value))
@@ -256,6 +255,16 @@ impl ImageFileDirectoryReader {
         } else {
             Ok(Some(next_ifd_offset))
         }
+    }
+
+    /// The number of tags in this IFD
+    pub fn tag_count(&self) -> u64 {
+        self.tag_count
+    }
+
+    /// The offset of the nth IFD tag in the tiff
+    pub fn tag_offset(&self, tag_idx: u64) -> u64 {
+        self.ifd_start_offset + self.tag_count_byte_size + (self.ifd_entry_byte_size * tag_idx)
     }
 }
 

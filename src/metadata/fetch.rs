@@ -28,13 +28,16 @@ impl<T: AsyncFileReader> MetadataFetch for T {
     }
 }
 
-pub(crate) struct MetadataCursor<'a, F: MetadataFetch> {
+/// An endian-aware cursor into the tiff
+#[derive(Debug)]
+pub struct MetadataCursor<'a, F: MetadataFetch> {
     fetch: &'a F,
     offset: u64,
     endianness: Endianness,
 }
 
 impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
+    /// Create a new MetadataCursor pointing at the start of the tiff
     pub fn new(fetch: &'a F, endianness: Endianness) -> Self {
         Self {
             fetch,
@@ -43,6 +46,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         }
     }
 
+    /// Create a new Metadata cursor at the specified offset
     pub fn new_with_offset(fetch: &'a F, endianness: Endianness, offset: u64) -> Self {
         Self {
             fetch,
@@ -51,11 +55,18 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
         }
     }
 
+    /// set the offset on this cursor
+    ///
+    /// ```ignore
+    /// use async_tiff::metadata::MetadataCursor;
+    /// let cursor = MetadataCursor::new().with_offset(42);
+    /// ```
     pub fn with_offset(mut self, offset: u64) -> Self {
         self.offset = offset;
         self
     }
 
+    /// seek to a pre-determined offset in the tiff
     pub fn seek(&mut self, offset: u64) {
         self.offset = offset;
     }
@@ -84,7 +95,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
     }
 
     /// Read a u16 from the cursor, advancing the internal state by 2 bytes.
-    pub(crate) async fn read_u16(&mut self) -> AsyncTiffResult<u16> {
+    pub async fn read_u16(&mut self) -> AsyncTiffResult<u16> {
         self.read(2).await?.read_u16()
     }
 
@@ -94,7 +105,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
     }
 
     /// Read a u32 from the cursor, advancing the internal state by 4 bytes.
-    pub(crate) async fn read_u32(&mut self) -> AsyncTiffResult<u32> {
+    pub async fn read_u32(&mut self) -> AsyncTiffResult<u32> {
         self.read(4).await?.read_u32()
     }
 
@@ -104,7 +115,7 @@ impl<'a, F: MetadataFetch> MetadataCursor<'a, F> {
     }
 
     /// Read a u64 from the cursor, advancing the internal state by 8 bytes.
-    pub(crate) async fn read_u64(&mut self) -> AsyncTiffResult<u64> {
+    pub async fn read_u64(&mut self) -> AsyncTiffResult<u64> {
         self.read(8).await?.read_u64()
     }
 
