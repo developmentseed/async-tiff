@@ -32,7 +32,7 @@ pyo3 = { version = "0.28.3", features = ["macros"] }
 pyo3-async-runtimes = "0.28"
 pyo3-bytes = "0.6"
 pyo3-object_store = "0.9.0"
-rayon = "1.11.0"
+rayon = "1.12.0"
 tokio-rayon = "2.1.0"
 thiserror = "2"
 
