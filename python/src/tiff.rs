@@ -66,6 +66,22 @@ impl PyTIFF {
         self.endianness.into()
     }
 
+    #[getter]
+    fn header_byte_size(&self) -> u64 {
+        self.ifds
+            .iter()
+            .flat_map(|ifd| {
+                ifd.tile_offsets()
+                    .into_iter()
+                    .chain(ifd.strip_offsets())
+                    .flatten()
+                    .copied()
+                    .filter(|&o| o != 0)
+            })
+            .min()
+            .expect("TIFF spec requires every IFD to have StripOffsets or TileOffsets")
+    }
+
     fn ifd(&self, index: usize) -> PyResult<PyImageFileDirectory> {
         let ifd = self
             .ifds
