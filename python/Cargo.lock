@@ -1226,7 +1226,7 @@ checksum = "b5a041e753da8b807c9255f28de81879c78c876392ff2469cde94799b2896b9d"
 
 [[package]]
 name = "py-async-tiff"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-tiff",
  "async-trait",
