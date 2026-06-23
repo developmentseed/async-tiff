@@ -12,7 +12,8 @@ use crate::reader::{AsyncFileReader, EndianAwareReader, Endianness};
 /// [`ImageFileDirectory`][crate::ImageFileDirectory]s.
 ///
 /// Note that implementation is provided for [`AsyncFileReader`].
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait MetadataFetch: Debug + Send + Sync + 'static {
     /// Return a future that fetches the specified range of bytes asynchronously
     ///
@@ -21,7 +22,8 @@ pub trait MetadataFetch: Debug + Send + Sync + 'static {
     async fn fetch(&self, range: Range<u64>) -> AsyncTiffResult<Bytes>;
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl<T: AsyncFileReader> MetadataFetch for T {
     async fn fetch(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
         self.get_bytes(range).await

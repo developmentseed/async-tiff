@@ -53,6 +53,7 @@ reqwest = ["dep:reqwest"]
 tokio = ["tokio/io-util"]
 webp = ["dep:webp"]
 
+
 [package.metadata.cargo-all-features]
 # The maximum number of features to try at once. Does not count features from
 # `always_include_features`. This is useful for reducing the number of

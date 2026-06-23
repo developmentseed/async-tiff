@@ -29,7 +29,8 @@ use crate::error::AsyncTiffResult;
 /// [`ObjectStore`]: object_store::ObjectStore
 ///
 /// [`tokio::fs::File`]: https://docs.rs/tokio/latest/tokio/fs/struct.File.html
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait AsyncFileReader: Debug + Send + Sync + 'static {
     /// Retrieve the bytes in `range` as part of a request for image data, not header metadata.
     ///
@@ -52,7 +53,8 @@ pub trait AsyncFileReader: Debug + Send + Sync + 'static {
 }
 
 /// This allows Box<dyn AsyncFileReader + '_> to be used as an AsyncFileReader,
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
     async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
         self.as_ref().get_bytes(range).await
@@ -64,7 +66,8 @@ impl AsyncFileReader for Box<dyn AsyncFileReader + '_> {
 }
 
 /// This allows Arc<dyn AsyncFileReader + '_> to be used as an AsyncFileReader,
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl AsyncFileReader for Arc<dyn AsyncFileReader + '_> {
     async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
         self.as_ref().get_bytes(range).await
@@ -121,7 +124,8 @@ impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug> Toki
 }
 
 #[cfg(feature = "tokio")]
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl<T: tokio::io::AsyncRead + tokio::io::AsyncSeek + Unpin + Send + Debug + 'static>
     AsyncFileReader for TokioReader<T>
 {
@@ -158,7 +162,8 @@ impl ObjectReader {
 }
 
 #[cfg(feature = "object_store")]
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl AsyncFileReader for ObjectReader {
     async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
         self.make_range_request(range).await
@@ -211,7 +216,8 @@ impl ReqwestReader {
 }
 
 #[cfg(feature = "reqwest")]
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl AsyncFileReader for ReqwestReader {
     async fn get_bytes(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
         self.make_range_request(range).await
