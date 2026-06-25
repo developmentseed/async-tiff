@@ -12,7 +12,7 @@ readme = "README.md"
 async-trait = "0.1.89"
 bytemuck = { version = "1.24", features = ["extern_crate_alloc"] }
 byteorder = "1"
-bytes = "1.7.0"
+bytes = "1.12.0"
 flate2 = "1.0.20"
 futures = "0.3.31"
 jpeg = { package = "jpeg-decoder", version = "0.3.0", default-features = false }
@@ -21,7 +21,7 @@ lerc = { version = "0.2.1", optional = true }
 lzma-rust2 = { version = "0.16.2", optional = true, features = ["xz"] }
 ndarray = { version = "0.17", optional = true }
 num_enum = "0.7.3"
-object_store = { version = "0.13", optional = true }
+object_store = { version = "0.14", optional = true }
 reqwest = { version = "0.13", default-features = false, optional = true }
 thiserror = "2"
 tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
@@ -31,7 +31,7 @@ zstd = "0.13"
 
 [dev-dependencies]
 criterion = { package = "codspeed-criterion-compat", version = "4.1.0" }
-object_store = { version = "0.13", features = ["http"] }
+object_store = { version = "0.14", features = ["http"] }
 rayon = "1.11.0"
 tiff = "0.11"
 tokio = { version = "1.9", features = [
