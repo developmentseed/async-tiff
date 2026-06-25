@@ -44,7 +44,7 @@ impl PyTIFF {
     #[classmethod]
     #[pyo3(signature = (path, *, store, prefetch=32768, multiplier=2.0))]
     fn open<'py>(
-        _cls: &'py Bound<PyType>,
+        _cls: &Bound<'py, PyType>,
         py: Python<'py>,
         path: String,
         store: StoreInput,
