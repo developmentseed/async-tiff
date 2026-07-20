@@ -143,7 +143,8 @@ impl<F: MetadataFetch> ReadaheadMetadataCache<F> {
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl<F: MetadataFetch + Send + Sync> MetadataFetch for ReadaheadMetadataCache<F> {
     async fn fetch(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
         let mut cache = self.cache.lock().await;
@@ -190,7 +191,8 @@ mod test {
         }
     }
 
-    #[async_trait]
+    #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+    #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
     impl MetadataFetch for TestFetch {
         async fn fetch(&self, range: Range<u64>) -> crate::error::AsyncTiffResult<Bytes> {
             if range.start as usize >= self.data.len() {
