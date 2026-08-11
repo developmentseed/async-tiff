@@ -124,6 +124,22 @@ impl TiffMetadataReader {
         }
     }
 
+    /// Read a single IFD at a given byte offset.
+    ///
+    /// The top-level chain is not the whole story: the spec allows IFDs anywhere in the file, and
+    /// SubIFDs (tag 330) are exactly that — offsets to directories outside the chain, which
+    /// [`read_all_ifds`][Self::read_all_ifds] therefore never reaches. Pyramid levels are commonly
+    /// written that way, so a reader that only follows the chain sees one resolution.
+    pub async fn read_ifd_at<F: MetadataFetch>(
+        &self,
+        fetch: &F,
+        offset: u64,
+    ) -> AsyncTiffResult<ImageFileDirectory> {
+        let ifd_reader =
+            ImageFileDirectoryReader::open(fetch, offset, self.bigtiff, self.endianness).await?;
+        ifd_reader.read(fetch).await
+    }
+
     /// Read all IFDs from the file.
     pub async fn read_all_ifds<F: MetadataFetch>(
         &mut self,

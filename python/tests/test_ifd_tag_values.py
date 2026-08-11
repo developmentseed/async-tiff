@@ -56,6 +56,25 @@ async def test_subifds_tag_reads_as_offsets(tmp_path, bigtiff, expected_type):
     assert all(0 < offset < path.stat().st_size for offset in offsets)
 
 
+async def test_subifds_can_be_read_at_their_offsets(tmp_path):
+    """And the levels they point at are reachable, which is the reason to expose the tag.
+
+    `ifds` follows the top-level chain, which SubIFDs are not part of, so a pyramid written that way
+    is invisible to a reader that only walks the chain -- one resolution out of however many.
+    """
+    path = tmp_path / "subifd_levels.tif"
+    write_with_subifd(path, bigtiff=False)
+
+    tiff = await TIFF.open(path.name, store=LocalStore(tmp_path))
+    assert len(tiff.ifds) == 1, "the reduced level is not in the top-level chain"
+
+    offsets = tiff.ifds[0].other_tags[SUBIFDS_TAG]
+    if isinstance(offsets, int):
+        offsets = [offsets]
+    reduced = await tiff.ifd_at(offsets[0])
+    assert (reduced.image_height, reduced.image_width) == (32, 32)
+
+
 async def test_the_image_beside_the_tag_still_reads(tmp_path):
     """And the IFD carrying the tag is otherwise unaffected: its own tiles are where it says."""
     path = tmp_path / "subifd_pixels.tif"
