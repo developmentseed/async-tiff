@@ -43,11 +43,8 @@ async fn read_ifd_at(
     reader: Arc<dyn AsyncFileReader>,
     offset: u64,
     prefetch: u64,
-    multiplier: f64,
 ) -> PyAsyncTiffResult<PyImageFileDirectory> {
-    let metadata_fetch = ReadaheadMetadataCache::new(reader.clone())
-        .with_initial_size(prefetch)
-        .with_multiplier(multiplier);
+    let metadata_fetch = ReadaheadMetadataCache::new(reader.clone()).with_initial_size(prefetch);
     // Re-reads the 16-byte header to learn the byte order and whether this is a BigTIFF, which
     // decide how the directory at `offset` is laid out.
     let metadata_reader = TiffMetadataReader::try_open(&metadata_fetch).await?;
@@ -111,17 +108,16 @@ impl PyTIFF {
     ///
     /// `ifds` follows the chain, which does not include SubIFDs (tag 330); those offsets are values
     /// of that tag, and pyramid levels are commonly written there.
-    #[pyo3(signature = (offset, *, prefetch=32768, multiplier=2.0))]
+    #[pyo3(signature = (offset, *, prefetch=32768))]
     fn ifd_at<'py>(
         &'py self,
         py: Python<'py>,
         offset: u64,
         prefetch: u64,
-        multiplier: f64,
     ) -> PyResult<Bound<'py, PyAny>> {
         let reader = self.reader.clone();
         future_into_py(py, async move {
-            Ok(read_ifd_at(reader, offset, prefetch, multiplier).await?)
+            Ok(read_ifd_at(reader, offset, prefetch).await?)
         })
     }
 

@@ -1,13 +1,7 @@
-"""Tags whose values are IFD offsets, which the Python layer used to refuse.
-
-`TagValue::Ifd` and `TagValue::IfdBig` were the only variants `PyValue` had no conversion for, so any
-file carrying such a tag raised `RuntimeError: Unsupported value type 'Ifd'` — and it raised while the
-directory was being read, before a caller could choose to ignore the tag. One tag made the whole file
-unopenable.
+"""Tags whose values are IFD offsets.
 
 The tag that matters in practice is 330, SubIFDs, which microscopy writers use for pyramid levels:
-typed IFD in a classic TIFF and IFD8 in a BigTIFF. The Rust core already parsed both and converts
-them to integers; only the binding declined.
+typed IFD in a classic TIFF and IFD8 in a BigTIFF.
 """
 
 import numpy as np

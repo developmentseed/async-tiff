@@ -100,7 +100,7 @@ impl SequentialBlockCache {
 ///
 /// The sequential cache above is contiguous from zero, which cannot describe a read far into the
 /// file. This holds a single window instead, replaced whenever a request falls outside it.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct WindowCache {
     /// Where `buffer` begins in the file
     start: u64,
@@ -108,13 +108,6 @@ struct WindowCache {
 }
 
 impl WindowCache {
-    fn new() -> Self {
-        Self {
-            start: 0,
-            buffer: Bytes::new(),
-        }
-    }
-
     fn contains(&self, range: &Range<u64>) -> bool {
         !self.buffer.is_empty()
             && range.start >= self.start
@@ -146,7 +139,7 @@ impl<F: MetadataFetch> ReadaheadMetadataCache<F> {
         Self {
             inner,
             cache: Arc::new(Mutex::new(SequentialBlockCache::new())),
-            window: Arc::new(Mutex::new(WindowCache::new())),
+            window: Arc::new(Mutex::new(WindowCache::default())),
             initial: 32 * 1024,
             multiplier: 2.0,
         }

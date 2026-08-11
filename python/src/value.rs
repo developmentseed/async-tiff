@@ -33,9 +33,7 @@ impl<'py> IntoPyObject<'py> for PyValue {
             TagValue::SRationalBig(num, denom) => (num, denom).into_bound_py_any(py),
             TagValue::Ascii(val) => val.into_bound_py_any(py),
             // An IFD tag value is an offset into the file, so it converts like any other unsigned
-            // integer. Refusing it made whole files unreadable rather than one tag: tag 330
-            // (SubIFDs) is typed IFD in a classic TIFF and IFD8 in a BigTIFF, and the error surfaced
-            // while reading the directory, before any caller could choose to ignore the tag.
+            // integer. Tag 330 (SubIFDs) is typed IFD in a classic TIFF and IFD8 in a BigTIFF.
             TagValue::Ifd(val) => val.into_bound_py_any(py),
             TagValue::IfdBig(val) => val.into_bound_py_any(py),
             v => Err(PyRuntimeError::new_err(format!(
