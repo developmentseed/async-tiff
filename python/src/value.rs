@@ -32,10 +32,12 @@ impl<'py> IntoPyObject<'py> for PyValue {
             TagValue::SRational(num, denom) => (num, denom).into_bound_py_any(py),
             TagValue::SRationalBig(num, denom) => (num, denom).into_bound_py_any(py),
             TagValue::Ascii(val) => val.into_bound_py_any(py),
-            TagValue::Ifd(_val) => Err(PyRuntimeError::new_err("Unsupported value type 'Ifd'")),
-            TagValue::IfdBig(_val) => {
-                Err(PyRuntimeError::new_err("Unsupported value type 'IfdBig'"))
-            }
+            // An IFD tag value is an offset into the file, so it converts like any other unsigned
+            // integer. Refusing it made whole files unreadable rather than one tag: tag 330
+            // (SubIFDs) is typed IFD in a classic TIFF and IFD8 in a BigTIFF, and the error surfaced
+            // while reading the directory, before any caller could choose to ignore the tag.
+            TagValue::Ifd(val) => val.into_bound_py_any(py),
+            TagValue::IfdBig(val) => val.into_bound_py_any(py),
             v => Err(PyRuntimeError::new_err(format!(
                 "Unknown value type: {v:?}"
             ))),
