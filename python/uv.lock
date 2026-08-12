@@ -60,9 +60,6 @@ dev = [
     { name = "rasterio", version = "1.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "rasterio", version = "1.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "ruff" },
-    { name = "tifffile", version = "2025.5.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "tifffile", version = "2026.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
-    { name = "tifffile", version = "2026.7.31", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 
 [package.metadata]
@@ -86,7 +83,6 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=1.3" },
     { name = "rasterio", specifier = ">=1.4" },
     { name = "ruff", specifier = ">=0.15" },
-    { name = "tifffile", specifier = ">=2024.1.30" },
 ]
 
 [[package]]
@@ -2036,51 +2032,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/28/e3/55dcc2cfbc3ca9c29519eb6884dd1415ecb53b0e934862d3559ddcb7e20b/stack_data-0.6.3.tar.gz", hash = "sha256:836a778de4fec4dcd1dcd89ed8abff8a221f58308462e1c4aa2a3cf30148f0b9", size = 44707, upload-time = "2023-09-30T13:58:05.479Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f1/7b/ce1eafaf1a76852e2ec9b22edecf1daa58175c090266e9f6c64afcd81d91/stack_data-0.6.3-py3-none-any.whl", hash = "sha256:d5558e0c25a4cb0853cddad3d77da9891a08cb85dd9f9f91b9f8cd66e511e695", size = 24521, upload-time = "2023-09-30T13:58:03.53Z" },
-]
-
-[[package]]
-name = "tifffile"
-version = "2025.5.10"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version < '3.11'",
-]
-dependencies = [
-    { name = "numpy", marker = "python_full_version < '3.11'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/44/d0/18fed0fc0916578a4463f775b0fbd9c5fed2392152d039df2fb533bfdd5d/tifffile-2025.5.10.tar.gz", hash = "sha256:018335d34283aa3fd8c263bae5c3c2b661ebc45548fde31504016fcae7bf1103", size = 365290, upload-time = "2025-05-10T19:22:34.386Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/06/bd0a6097da704a7a7c34a94cfd771c3ea3c2f405dd214e790d22c93f6be1/tifffile-2025.5.10-py3-none-any.whl", hash = "sha256:e37147123c0542d67bc37ba5cdd67e12ea6fbe6e86c52bee037a9eb6a064e5ad", size = 226533, upload-time = "2025-05-10T19:22:27.279Z" },
-]
-
-[[package]]
-name = "tifffile"
-version = "2026.3.3"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version == '3.11.*'",
-]
-dependencies = [
-    { name = "numpy", marker = "python_full_version == '3.11.*'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c5/cb/2f6d79c7576e22c116352a801f4c3c8ace5957e9aced862012430b62e14f/tifffile-2026.3.3.tar.gz", hash = "sha256:d9a1266bed6f2ee1dd0abde2018a38b4f8b2935cb843df381d70ac4eac5458b7", size = 388745, upload-time = "2026-03-03T19:14:38.134Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/e4/e804505f87627cd8cdae9c010c47c4485fd8c1ce31a7dd0ab7fcc4707377/tifffile-2026.3.3-py3-none-any.whl", hash = "sha256:e8be15c94273113d31ecb7aa3a39822189dd11c4967e3cc88c178f1ad2fd1170", size = 243960, upload-time = "2026-03-03T19:14:35.808Z" },
-]
-
-[[package]]
-name = "tifffile"
-version = "2026.7.31"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.12'",
-]
-dependencies = [
-    { name = "numpy", marker = "python_full_version >= '3.12'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/21/62/083288b8d6b9ecb2968e7573e60aa0694089e960e203934bc217169acf64/tifffile-2026.7.31.tar.gz", hash = "sha256:79b1f4b1aba3ef3e6b6f1691a32abb62f5d7383faa52a12771c695232ba40bee", size = 442177, upload-time = "2026-08-01T02:28:32.523Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/da/ed/75bf4d6ae6fec7233ef466f27dffc99f91fde53a31e69f02640b418317ec/tifffile-2026.7.31-py3-none-any.whl", hash = "sha256:81adfa08012be1c478f99b83cda2f529eef8620cfbdf94fc41eef6f1d7b47dc5", size = 271576, upload-time = "2026-08-01T02:28:31.068Z" },
 ]
 
 [[package]]

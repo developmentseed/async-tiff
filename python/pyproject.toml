@@ -38,8 +38,6 @@ dev-dependencies = [
     "pytest>=9.0",
     "rasterio>=1.4",
     "ruff>=0.15",
-    # writes the SubIFD fixture in test_ifd_tag_values.py; nothing else here can make one
-    "tifffile>=2024.1.30",
 ]
 
 [tool.pytest.ini_options]
