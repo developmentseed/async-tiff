@@ -297,7 +297,10 @@ mod test {
 
         // And the reads that follow it come from the window rather than the wire.
         let fetches_after_the_jump = *counter.lock().await;
-        assert_eq!(cache.fetch(4103..4108).await.unwrap(), data.slice(4103..4108));
+        assert_eq!(
+            cache.fetch(4103..4108).await.unwrap(),
+            data.slice(4103..4108)
+        );
         assert_eq!(
             *counter.lock().await,
             fetches_after_the_jump,
