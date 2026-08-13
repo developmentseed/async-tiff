@@ -23,7 +23,7 @@ def subifd_offsets(tiff):
 
 @FIXTURES
 async def test_subifds_tag_reads_as_offsets(load_tiff, fixtures_dir, name):
-    """The tag arrives as integers, and the file opens; both variants used to raise."""
+    """The tag arrives as integers, and the file opens, for both variants."""
     tiff = await load_tiff(name, variant="tifffile")
     offsets = subifd_offsets(tiff)
 
@@ -42,8 +42,8 @@ async def test_subifds_tag_reads_as_offsets(load_tiff, fixtures_dir, name):
 async def test_subifds_can_be_read_at_their_offsets(load_tiff, name):
     """And the levels they point at are reachable, which is the reason to expose the tag.
 
-    `ifds` follows the top-level chain, which SubIFDs are not part of, so a pyramid written that way
-    is invisible to a reader that only walks the chain -- one resolution out of however many.
+    `ifds` follows the top-level chain, which SubIFDs are not part of, so a walk of the chain
+    alone finds one resolution level out of the total in the file.
     """
     tiff = await load_tiff(name, variant="tifffile")
     assert len(tiff.ifds) == 1, "the reduced levels are not in the top-level chain"
@@ -55,7 +55,7 @@ async def test_subifds_can_be_read_at_their_offsets(load_tiff, name):
 
 @FIXTURES
 async def test_the_image_beside_the_tag_still_reads(load_tiff, name):
-    """And the IFD carrying the tag is otherwise unaffected: its own tiles are where it says."""
+    """And the IFD that carries the tag is otherwise unaffected: its tiles are at the offsets it stores."""
     tiff = await load_tiff(name, variant="tifffile")
     ifd = tiff.ifds[0]
     assert (ifd.image_height, ifd.image_width) == (256, 256)

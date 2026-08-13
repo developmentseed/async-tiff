@@ -33,7 +33,7 @@ async fn assert_pyramid(filename: &str) {
     let offsets = subifd_offsets(&full.other_tags()[&SUBIFDS]);
     assert_eq!(offsets.len(), 2);
 
-    // They are where the tag says: one IFD per level, each half the size of the one before.
+    // The offsets point at real IFDs: one per level, each half the size of the previous level.
     let metadata_reader = TiffMetadataReader::try_open(&reader).await.unwrap();
     for (offset, expected_size) in offsets.into_iter().zip([128, 64]) {
         let level = metadata_reader.read_ifd_at(&reader, offset).await.unwrap();

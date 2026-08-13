@@ -19,8 +19,8 @@ async fn test_trailing_directory() {
     let reader =
         Arc::new(ObjectReader::new(store, path.as_str().into())) as Arc<dyn AsyncFileReader>;
 
-    // The directory sits past the default 32 KiB window, so reading it takes the jump
-    // rather than the sequential growth path.
+    // The directory sits past the default 32 KiB window, so the read uses the window fetch
+    // path rather than the sequential growth path.
     let cache = ReadaheadMetadataCache::new(reader.clone());
     let mut metadata_reader = TiffMetadataReader::try_open(&cache).await.unwrap();
     let tiff = metadata_reader.read(&cache).await.unwrap();

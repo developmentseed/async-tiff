@@ -72,7 +72,7 @@ async def test_first_ifd_at_the_end_of_the_file(
     data = np.array(array)
 
     window = Window(0, 0, ifd.tile_width, ifd.tile_height)
-    # The fixture carries no georeferencing, and rasterio says so.
+    # The fixture carries no georeferencing, so rasterio warns.
     with (
         pytest.warns(NotGeoreferencedWarning),
         load_rasterio("trailing_directory", variant="tifffile") as rasterio_ds,

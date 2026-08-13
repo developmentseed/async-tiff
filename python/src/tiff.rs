@@ -45,8 +45,8 @@ async fn read_ifd_at(
     prefetch: u64,
 ) -> PyAsyncTiffResult<PyImageFileDirectory> {
     let metadata_fetch = ReadaheadMetadataCache::new(reader.clone()).with_initial_size(prefetch);
-    // Re-reads the 16-byte header to learn the byte order and whether this is a BigTIFF, which
-    // decide how the directory at `offset` is laid out.
+    // Re-reads the 16-byte header to learn the byte order and whether the file is a BigTIFF.
+    // Those two facts decide the structure of the directory at `offset`.
     let metadata_reader = TiffMetadataReader::try_open(&metadata_fetch).await?;
     let ifd = metadata_reader.read_ifd_at(&metadata_fetch, offset).await?;
     Ok(PyImageFileDirectory::new(Arc::new(ifd), reader))

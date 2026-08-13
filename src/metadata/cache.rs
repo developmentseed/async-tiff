@@ -164,10 +164,10 @@ impl<F: MetadataFetch> ReadaheadMetadataCache<F> {
 
     /// Fetch a range that lies far beyond the sequential cache, through the window.
     ///
-    /// Reads here are as small as a single tag entry, so fetching exactly what is asked would put a
-    /// request on the wire for every one of them -- thousands, for an image with thousands of tiles.
-    /// The window is filled with at least `initial` bytes so that the reads following a miss are
-    /// served from memory, the same bargain the sequential cache makes at the front of the file.
+    /// Reads here are as small as a single tag entry, so a fetch of exactly what is asked would
+    /// send one request per entry — thousands, for an image with thousands of tiles. The window is
+    /// filled with at least `initial` bytes so that the reads after a miss come from memory, for
+    /// the same reason the sequential cache reads ahead at the front of the file.
     async fn fetch_distant(&self, range: Range<u64>) -> AsyncTiffResult<Bytes> {
         let mut window = self.window.lock().await;
         if window.contains(&range) {
@@ -284,8 +284,8 @@ mod test {
         let data = Bytes::from(data);
         let fetch = TestFetch::new(data.clone());
         let counter = fetch.num_fetches.clone();
-        // 8 bytes would make a window too small to serve the reads that follow it, which is the
-        // point of having one: the default is 32 KiB.
+        // A 64-byte window is large enough for the reads below and far smaller than the
+        // 32 KiB default, so the test does not depend on that default.
         let cache = ReadaheadMetadataCache::new(fetch).with_initial_size(64);
 
         // A header read at the front, as a reader does first.
