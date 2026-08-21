@@ -27,11 +27,11 @@ async-tiff = { path = "../", features = ["jpeg2k", "webp", "lzma"] }
 async-trait = "0.1.89"
 bytes = "1.10.1"
 futures = "0.3.31"
-object_store = "0.13"
-pyo3 = { version = "0.28.3", features = ["macros"] }
-pyo3-async-runtimes = "0.28"
-pyo3-bytes = "0.6"
-pyo3-object_store = "0.9.0"
+object_store = "0.14"
+pyo3 = { version = "0.29", features = ["macros"] }
+pyo3-async-runtimes = "0.29"
+pyo3-bytes = "0.7"
+pyo3-object_store = "0.12.0"
 rayon = "1.12.0"
 tokio-rayon = "2.1.0"
 thiserror = "2"
