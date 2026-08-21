@@ -631,7 +631,8 @@ mod test {
 
     use super::*;
 
-    #[async_trait]
+    #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+    #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
     impl MetadataFetch for Bytes {
         async fn fetch(&self, range: std::ops::Range<u64>) -> crate::error::AsyncTiffResult<Bytes> {
             let usize_range = range.start as usize..range.end as usize;
