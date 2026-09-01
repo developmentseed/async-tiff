@@ -306,7 +306,7 @@ impl Decoder for WebPDecoder {
         // Only do this for 8-bit data since WebP only supports 8-bit.
         if samples_per_pixel == 4 && bits_per_sample == 8 && !decoded.is_alpha() {
             let mut rgba = Vec::with_capacity(data.len() / 3 * 4);
-            for chunk in data.chunks_exact(3) {
+            for chunk in data.as_chunks::<3>().0 {
                 rgba.extend_from_slice(chunk);
                 rgba.push(255); // opaque alpha
             }

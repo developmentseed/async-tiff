@@ -2,6 +2,7 @@
 name = "async-tiff"
 version = "0.3.0"
 edition = "2021"
+rust-version = "1.88"
 authors = ["Kyle Barron <kyle@developmentseed.org>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/developmentseed/async-tiff"
