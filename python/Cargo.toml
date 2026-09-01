@@ -9,7 +9,7 @@ repository = "https://github.com/developmentseed/async-tiff"
 license = "MIT OR Apache-2.0"
 keywords = ["python", "geospatial"]
 categories = ["science::geo"]
-rust-version = "1.75"
+rust-version = "1.89"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
