@@ -11,6 +11,21 @@ use crate::tag_value::TagValue;
 use crate::tags::{Tag, Type};
 use crate::{ImageFileDirectory, TIFF};
 
+/// A tag's element `count` is read straight from the (untrusted) file, so it
+/// must not size an allocation on its own: a malformed tag can claim billions
+/// of elements and a matching `Vec::with_capacity` would abort the process
+/// before a single byte is read. Pre-allocate at most this many elements; the
+/// reading loop still grows the vector to hold whatever the file actually
+/// contains (and fails cleanly at EOF).
+const MAX_PREALLOC_ELEMENTS: u64 = 16 * 1024;
+
+/// Capacity to pre-allocate for a tag with `count` elements, bounded so an
+/// oversized `count` cannot drive an unbounded allocation.
+#[inline]
+fn prealloc_capacity(count: u64) -> usize {
+    count.min(MAX_PREALLOC_ELEMENTS) as usize
+}
+
 /// Entry point to reading TIFF metadata.
 ///
 /// This is a stateful reader because we don't know how many IFDs will be encountered.
@@ -271,9 +286,9 @@ async fn read_tag<F: MetadataFetch>(
     let tag_name = Tag::from_u16_exhaustive(cursor.read_u16().await?);
 
     let tag_type_code = cursor.read_u16().await?;
-    let tag_type = Type::from_u16(tag_type_code).expect(
-        "Unknown tag type {tag_type_code}. TODO: we should skip entries with unknown tag types.",
-    );
+    let tag_type = Type::from_u16(tag_type_code).ok_or(TiffError::FormatError(
+        TiffFormatError::InvalidTagValueType(tag_name),
+    ))?;
     let count = if bigtiff {
         cursor.read_u64().await?
     } else {
@@ -359,8 +374,7 @@ async fn read_tag_value<F: MetadataFetch>(
                 if data.as_ref()[0] == 0 {
                     TagValue::Ascii("".to_string())
                 } else {
-                    panic!("Invalid tag");
-                    // return Err(TiffError::FormatError(TiffFormatError::InvalidTag));
+                    return Err(TiffError::FormatError(TiffFormatError::InvalidTag).into());
                 }
             }
             Type::LONG8 => {
@@ -430,7 +444,7 @@ async fn read_tag_value<F: MetadataFetch>(
                 }
             }
             Type::ASCII => {
-                let mut buf = vec![0; count as usize];
+                let mut buf = vec![0; prealloc_capacity(count)];
                 data.read_exact(&mut buf)?;
                 if buf.is_ascii() && buf.ends_with(&[0]) {
                     let v = std::str::from_utf8(&buf)
@@ -438,8 +452,7 @@ async fn read_tag_value<F: MetadataFetch>(
                     let v = v.trim_matches(char::from(0));
                     return Ok(TagValue::Ascii(v.into()));
                 } else {
-                    panic!("Invalid tag");
-                    // return Err(TiffError::FormatError(TiffFormatError::InvalidTag));
+                    return Err(TiffError::FormatError(TiffFormatError::InvalidTag).into());
                 }
             }
             Type::SHORT => {
@@ -508,63 +521,63 @@ async fn read_tag_value<F: MetadataFetch>(
         // TODO check if this could give wrong results
         // at a different endianess of file/computer.
         Type::BYTE | Type::UNDEFINED => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::Byte(cursor.read_u8().await?))
             }
             Ok(TagValue::List(v))
         }
         Type::SBYTE => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::SignedByte(cursor.read_i8().await?))
             }
             Ok(TagValue::List(v))
         }
         Type::SHORT => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::Short(cursor.read_u16().await?))
             }
             Ok(TagValue::List(v))
         }
         Type::SSHORT => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::SignedShort(cursor.read_i16().await?))
             }
             Ok(TagValue::List(v))
         }
         Type::LONG => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::Unsigned(cursor.read_u32().await?))
             }
             Ok(TagValue::List(v))
         }
         Type::SLONG => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::Signed(cursor.read_i32().await?))
             }
             Ok(TagValue::List(v))
         }
         Type::FLOAT => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::Float(cursor.read_f32().await?))
             }
             Ok(TagValue::List(v))
         }
         Type::DOUBLE => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::Double(cursor.read_f64().await?))
             }
             Ok(TagValue::List(v))
         }
         Type::RATIONAL => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::Rational(
                     cursor.read_u32().await?,
@@ -574,7 +587,7 @@ async fn read_tag_value<F: MetadataFetch>(
             Ok(TagValue::List(v))
         }
         Type::SRATIONAL => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::SRational(
                     cursor.read_i32().await?,
@@ -584,36 +597,40 @@ async fn read_tag_value<F: MetadataFetch>(
             Ok(TagValue::List(v))
         }
         Type::LONG8 => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::UnsignedBig(cursor.read_u64().await?))
             }
             Ok(TagValue::List(v))
         }
         Type::SLONG8 => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::SignedBig(cursor.read_i64().await?))
             }
             Ok(TagValue::List(v))
         }
         Type::IFD => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::Ifd(cursor.read_u32().await?))
             }
             Ok(TagValue::List(v))
         }
         Type::IFD8 => {
-            let mut v = Vec::with_capacity(count as _);
+            let mut v = Vec::with_capacity(prealloc_capacity(count));
             for _ in 0..count {
                 v.push(TagValue::IfdBig(cursor.read_u64().await?))
             }
             Ok(TagValue::List(v))
         }
         Type::ASCII => {
-            let mut out = vec![0; count as _];
-            let mut buf = cursor.read(count).await?;
+            let buf = cursor.read(count).await?;
+            // `count` is untrusted; size the output to the bytes actually
+            // fetched (the fetch layer clamps to what the file contains) rather
+            // than pre-allocating the claimed `count`.
+            let mut out = vec![0; buf.as_ref().len()];
+            let mut buf = buf;
             buf.read_exact(&mut out)?;
 
             // Strings may be null-terminated, so we trim anything downstream of the null byte

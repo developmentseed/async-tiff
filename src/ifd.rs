@@ -224,11 +224,19 @@ impl ImageFileDirectory {
                 Tag::MaxSampleValue => max_sample_value = Some(value.into_u16_vec()?),
                 Tag::XResolution => match value {
                     TagValue::Rational(n, d) => x_resolution = Some(n as f64 / d as f64),
-                    _ => unreachable!("Expected rational type for XResolution."),
+                    _ => {
+                        return Err(TiffError::FormatError(
+                            TiffFormatError::InvalidTagValueType(Tag::XResolution),
+                        ))
+                    }
                 },
                 Tag::YResolution => match value {
                     TagValue::Rational(n, d) => y_resolution = Some(n as f64 / d as f64),
-                    _ => unreachable!("Expected rational type for YResolution."),
+                    _ => {
+                        return Err(TiffError::FormatError(
+                            TiffFormatError::InvalidTagValueType(Tag::YResolution),
+                        ))
+                    }
                 },
                 Tag::PlanarConfiguration => {
                     planar_configuration = PlanarConfiguration::from_u16(value.into_u16()?)
@@ -299,12 +307,19 @@ impl ImageFileDirectory {
 
             let header = chunks
                 .next()
-                .expect("If the geo key directory exists, a header should exist.");
+                .ok_or(TiffError::FormatError(TiffFormatError::InvalidTag))?;
+            if header.len() < 4 {
+                return Err(TiffError::FormatError(TiffFormatError::InvalidTag).into());
+            }
             let key_directory_version = header[0];
-            assert_eq!(key_directory_version, 1);
+            if key_directory_version != 1 {
+                return Err(TiffError::FormatError(TiffFormatError::InvalidTag).into());
+            }
 
             let key_revision = header[1];
-            assert_eq!(key_revision, 1);
+            if key_revision != 1 {
+                return Err(TiffError::FormatError(TiffFormatError::InvalidTag).into());
+            }
 
             let _key_minor_revision = header[2];
             let number_of_keys = header[3];
@@ -313,7 +328,10 @@ impl ImageFileDirectory {
             for _ in 0..number_of_keys {
                 let chunk = chunks
                     .next()
-                    .expect("There should be a chunk for each key.");
+                    .ok_or(TiffError::FormatError(TiffFormatError::InvalidTag))?;
+                if chunk.len() < 4 {
+                    return Err(TiffError::FormatError(TiffFormatError::InvalidTag).into());
+                }
 
                 let key_id = chunk[0];
                 let tag_name = if let Ok(tag_name) = GeoKeyTag::try_from_primitive(key_id) {
@@ -338,9 +356,14 @@ impl ImageFileDirectory {
 
                     let geo_ascii_params = geo_ascii_params
                         .as_ref()
-                        .expect("GeoAsciiParamsTag exists but geo_ascii_params does not.");
+                        .ok_or(TiffError::FormatError(TiffFormatError::InvalidTag))?;
                     let value_offset = value_offset as usize;
-                    let mut s = &geo_ascii_params[value_offset..value_offset + count as usize];
+                    let end = value_offset
+                        .checked_add(count as usize)
+                        .ok_or(TiffError::FormatError(TiffFormatError::InvalidTag))?;
+                    let mut s = geo_ascii_params
+                        .get(value_offset..end)
+                        .ok_or(TiffError::FormatError(TiffFormatError::InvalidTag))?;
 
                     // It seems that this string subslice might always include the final |
                     // character?
@@ -355,12 +378,21 @@ impl ImageFileDirectory {
 
                     let geo_double_params = geo_double_params
                         .as_ref()
-                        .expect("GeoDoubleParamsTag exists but geo_double_params does not.");
+                        .ok_or(TiffError::FormatError(TiffFormatError::InvalidTag))?;
                     let value_offset = value_offset as usize;
                     let value = if count == 1 {
-                        TagValue::Double(geo_double_params[value_offset])
+                        TagValue::Double(
+                            *geo_double_params
+                                .get(value_offset)
+                                .ok_or(TiffError::FormatError(TiffFormatError::InvalidTag))?,
+                        )
                     } else {
-                        let x = geo_double_params[value_offset..value_offset + count as usize]
+                        let end = value_offset
+                            .checked_add(count as usize)
+                            .ok_or(TiffError::FormatError(TiffFormatError::InvalidTag))?;
+                        let x = geo_double_params
+                            .get(value_offset..end)
+                            .ok_or(TiffError::FormatError(TiffFormatError::InvalidTag))?
                             .iter()
                             .map(|val| TagValue::Double(*val))
                             .collect();
@@ -372,7 +404,9 @@ impl ImageFileDirectory {
             geo_key_directory = Some(GeoKeyDirectory::from_tags(tags)?);
         }
 
-        let samples_per_pixel = samples_per_pixel.expect("samples_per_pixel not found");
+        let samples_per_pixel = samples_per_pixel.ok_or(TiffError::FormatError(
+            TiffFormatError::RequiredTagNotFound(Tag::SamplesPerPixel),
+        ))?;
         let planar_configuration = if let Some(planar_configuration) = planar_configuration {
             planar_configuration
         } else if samples_per_pixel == 1 {
@@ -385,14 +419,23 @@ impl ImageFileDirectory {
         Ok(Self {
             endianness,
             new_subfile_type,
-            image_width: image_width.expect("image_width not found"),
-            image_height: image_height.expect("image_height not found"),
-            bits_per_sample: bits_per_sample.expect("bits per sample not found"),
+            image_width: image_width.ok_or(TiffError::FormatError(
+                TiffFormatError::RequiredTagNotFound(Tag::ImageWidth),
+            ))?,
+            image_height: image_height.ok_or(TiffError::FormatError(
+                TiffFormatError::RequiredTagNotFound(Tag::ImageLength),
+            ))?,
+            bits_per_sample: bits_per_sample.ok_or(TiffError::FormatError(
+                TiffFormatError::RequiredTagNotFound(Tag::BitsPerSample),
+            ))?,
             // Defaults to no compression
             // https://web.archive.org/web/20240329145331/https://www.awaresystems.be/imaging/tiff/tifftags/compression.html
             compression: compression.unwrap_or(Compression::None),
-            photometric_interpretation: photometric_interpretation
-                .expect("photometric interpretation not found"),
+            photometric_interpretation: photometric_interpretation.ok_or(
+                TiffError::FormatError(TiffFormatError::RequiredTagNotFound(
+                    Tag::PhotometricInterpretation,
+                )),
+            )?,
             document_name,
             image_description,
             strip_offsets,
