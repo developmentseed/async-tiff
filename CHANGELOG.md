@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.4.0] - 2026-09-18
+
+## What's Changed
+* ci: Try to fix conventional commit labeling from forks by @kylebarron in https://github.com/developmentseed/async-tiff/pull/297
+* ci: fix fixture dir discovery by @autra in https://github.com/developmentseed/async-tiff/pull/292
+* feat: expose TIFF.header_byte_size for prefetch sizing by @kylebarron in https://github.com/developmentseed/async-tiff/pull/302
+* chore: Bump to 0.7.2 by @kylebarron in https://github.com/developmentseed/async-tiff/pull/303
+* chore: Bump dependencies by @kylebarron in https://github.com/developmentseed/async-tiff/pull/315
+* feat: Relax 'Send' on `[async-trait]` by @dmarteau in https://github.com/developmentseed/async-tiff/pull/311
+* chore: fix clippy lints from Rust 1.98 by @kylebarron in https://github.com/developmentseed/async-tiff/pull/337
+
+## New Contributors
+* @autra made their first contribution in https://github.com/developmentseed/async-tiff/pull/292
+* @dmarteau made their first contribution in https://github.com/developmentseed/async-tiff/pull/311
+
+**Full Changelog**: https://github.com/developmentseed/async-tiff/compare/rust-v0.3.0...rust-v0.4.0
+
+---
+
 ## [0.3.0] - 2026-04-01
 
 ### What's Changed
@@ -26,6 +45,8 @@
 * @dependabot[bot] made their first contribution in https://github.com/developmentseed/async-tiff/pull/281
 
 **Full Changelog**: https://github.com/developmentseed/async-tiff/compare/rust-v0.2.0...rust-v0.3.0
+
+---
 
 ## [0.2.0] - 2026-01-26
 
@@ -71,6 +92,8 @@
 - @pmarks made their first contribution in https://github.com/developmentseed/async-tiff/pull/162
 
 **Full Changelog**: https://github.com/developmentseed/async-tiff/compare/rust-v0.1.0...rust-v0.2.0
+
+---
 
 ## [0.1.0] - 2025-03-14
 
