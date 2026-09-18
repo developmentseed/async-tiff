@@ -20,27 +20,39 @@ pub(crate) fn fix_endianness(buffer: &mut [u8], byte_order: Endianness, bits_per
     match byte_order {
         Endianness::LittleEndian => match bits_per_sample {
             0..=8 => {}
-            9..=16 => buffer.chunks_exact_mut(2).for_each(|v| {
-                v.copy_from_slice(&u16::from_le_bytes((*v).try_into().unwrap()).to_ne_bytes())
-            }),
-            17..=32 => buffer.chunks_exact_mut(4).for_each(|v| {
-                v.copy_from_slice(&u32::from_le_bytes((*v).try_into().unwrap()).to_ne_bytes())
-            }),
-            _ => buffer.chunks_exact_mut(8).for_each(|v| {
-                v.copy_from_slice(&u64::from_le_bytes((*v).try_into().unwrap()).to_ne_bytes())
-            }),
+            9..=16 => buffer
+                .as_chunks_mut::<2>()
+                .0
+                .iter_mut()
+                .for_each(|v| *v = u16::from_le_bytes(*v).to_ne_bytes()),
+            17..=32 => buffer
+                .as_chunks_mut::<4>()
+                .0
+                .iter_mut()
+                .for_each(|v| *v = u32::from_le_bytes(*v).to_ne_bytes()),
+            _ => buffer
+                .as_chunks_mut::<8>()
+                .0
+                .iter_mut()
+                .for_each(|v| *v = u64::from_le_bytes(*v).to_ne_bytes()),
         },
         Endianness::BigEndian => match bits_per_sample {
             0..=8 => {}
-            9..=16 => buffer.chunks_exact_mut(2).for_each(|v| {
-                v.copy_from_slice(&u16::from_be_bytes((*v).try_into().unwrap()).to_ne_bytes())
-            }),
-            17..=32 => buffer.chunks_exact_mut(4).for_each(|v| {
-                v.copy_from_slice(&u32::from_be_bytes((*v).try_into().unwrap()).to_ne_bytes())
-            }),
-            _ => buffer.chunks_exact_mut(8).for_each(|v| {
-                v.copy_from_slice(&u64::from_be_bytes((*v).try_into().unwrap()).to_ne_bytes())
-            }),
+            9..=16 => buffer
+                .as_chunks_mut::<2>()
+                .0
+                .iter_mut()
+                .for_each(|v| *v = u16::from_be_bytes(*v).to_ne_bytes()),
+            17..=32 => buffer
+                .as_chunks_mut::<4>()
+                .0
+                .iter_mut()
+                .for_each(|v| *v = u32::from_be_bytes(*v).to_ne_bytes()),
+            _ => buffer
+                .as_chunks_mut::<8>()
+                .0
+                .iter_mut()
+                .for_each(|v| *v = u64::from_be_bytes(*v).to_ne_bytes()),
         },
     }
 }
@@ -145,11 +157,8 @@ fn rev_predict_f16(input: &mut [u8], output: &mut [u8], samples: usize) {
     for i in samples..input.len() {
         input[i] = input[i].wrapping_add(input[i - samples]);
     }
-    for (i, chunk) in output.chunks_exact_mut(2).enumerate() {
-        chunk.copy_from_slice(&u16::to_ne_bytes(u16::from_be_bytes([
-            input[i],
-            input[input.len() / 2 + i],
-        ])));
+    for (i, chunk) in output.as_chunks_mut::<2>().0.iter_mut().enumerate() {
+        *chunk = u16::from_be_bytes([input[i], input[input.len() / 2 + i]]).to_ne_bytes();
     }
 }
 
@@ -157,13 +166,14 @@ fn rev_predict_f32(input: &mut [u8], output: &mut [u8], samples: usize) {
     for i in samples..input.len() {
         input[i] = input[i].wrapping_add(input[i - samples]);
     }
-    for (i, chunk) in output.chunks_exact_mut(4).enumerate() {
-        chunk.copy_from_slice(&u32::to_ne_bytes(u32::from_be_bytes([
+    for (i, chunk) in output.as_chunks_mut::<4>().0.iter_mut().enumerate() {
+        *chunk = u32::from_be_bytes([
             input[i],
             input[input.len() / 4 + i],
             input[input.len() / 4 * 2 + i],
             input[input.len() / 4 * 3 + i],
-        ])));
+        ])
+        .to_ne_bytes();
     }
 }
 
@@ -171,8 +181,8 @@ fn rev_predict_f64(input: &mut [u8], output: &mut [u8], samples: usize) {
     for i in samples..input.len() {
         input[i] = input[i].wrapping_add(input[i - samples]);
     }
-    for (i, chunk) in output.chunks_exact_mut(8).enumerate() {
-        chunk.copy_from_slice(&u64::to_ne_bytes(u64::from_be_bytes([
+    for (i, chunk) in output.as_chunks_mut::<8>().0.iter_mut().enumerate() {
+        *chunk = u64::from_be_bytes([
             input[i],
             input[input.len() / 8 + i],
             input[input.len() / 8 * 2 + i],
@@ -181,6 +191,7 @@ fn rev_predict_f64(input: &mut [u8], output: &mut [u8], samples: usize) {
             input[input.len() / 8 * 5 + i],
             input[input.len() / 8 * 6 + i],
             input[input.len() / 8 * 7 + i],
-        ])));
+        ])
+        .to_ne_bytes();
     }
 }

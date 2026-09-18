@@ -23,6 +23,32 @@ impl TIFF {
     pub fn endianness(&self) -> Endianness {
         self.endianness
     }
+
+    /// Returns the minimum prefetch size that covers all metadata.
+    ///
+    /// Computed as the minimum non-zero offset across every IFD's `TileOffsets`
+    /// and `StripOffsets`. For a typical Cloud-Optimized GeoTIFF, prefetching
+    /// this many bytes lets a future [`TIFF`] open complete metadata reading in
+    /// a single request.
+    ///
+    /// # Panics
+    ///
+    /// Panics if no IFD has either `TileOffsets` or `StripOffsets`. Per the TIFF
+    /// specification, every image IFD must have one of the two.
+    pub fn header_byte_size(&self) -> u64 {
+        self.ifds
+            .iter()
+            .flat_map(|ifd| {
+                ifd.tile_offsets()
+                    .into_iter()
+                    .chain(ifd.strip_offsets())
+                    .flatten()
+                    .copied()
+                    .filter(|&o| o != 0)
+            })
+            .min()
+            .expect("TIFF spec requires every IFD to have StripOffsets or TileOffsets")
+    }
 }
 
 #[cfg(test)]
@@ -38,6 +64,32 @@ mod test {
     use crate::metadata::TiffMetadataReader;
     use crate::reader::{AsyncFileReader, ObjectReader};
     use crate::TypedArray;
+
+    #[tokio::test]
+    async fn test_header_byte_size_matches_min_tile_offset() {
+        use crate::test::util::open_tiff;
+        let (_reader, tiff) = open_tiff(
+            "geotiff-test-data/rasterio_generated/fixtures/uint16_1band_lzw_block128_predictor2.tif",
+        )
+        .await;
+
+        let expected = tiff
+            .ifds()
+            .iter()
+            .flat_map(|ifd| {
+                ifd.tile_offsets()
+                    .into_iter()
+                    .chain(ifd.strip_offsets())
+                    .flatten()
+                    .copied()
+                    .filter(|&o| o != 0)
+            })
+            .min()
+            .expect("fixture must have at least one tile offset");
+
+        assert_eq!(tiff.header_byte_size(), expected);
+        assert!(tiff.header_byte_size() > 0);
+    }
 
     #[ignore = "local file"]
     #[tokio::test]

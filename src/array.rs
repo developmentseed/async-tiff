@@ -160,8 +160,11 @@ impl TypedArray {
                 Ok(TypedArray::UInt16(try_cast_vec(data).unwrap_or_else(
                     |(_, data)| {
                         // Fallback to manual conversion when not aligned
-                        data.chunks_exact(2)
-                            .map(|b| u16::from_ne_bytes([b[0], b[1]]))
+                        data.as_chunks::<2>()
+                            .0
+                            .iter()
+                            .copied()
+                            .map(u16::from_ne_bytes)
                             .collect()
                     },
                 )))
@@ -176,8 +179,11 @@ impl TypedArray {
                 Ok(TypedArray::UInt32(try_cast_vec(data).unwrap_or_else(
                     |(_, data)| {
                         // Fallback to manual conversion when not aligned
-                        data.chunks_exact(4)
-                            .map(|b| u32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+                        data.as_chunks::<4>()
+                            .0
+                            .iter()
+                            .copied()
+                            .map(u32::from_ne_bytes)
                             .collect()
                     },
                 )))
@@ -192,10 +198,11 @@ impl TypedArray {
                 Ok(TypedArray::UInt64(try_cast_vec(data).unwrap_or_else(
                     |(_, data)| {
                         // Fallback to manual conversion when not aligned
-                        data.chunks_exact(8)
-                            .map(|b| {
-                                u64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
-                            })
+                        data.as_chunks::<8>()
+                            .0
+                            .iter()
+                            .copied()
+                            .map(u64::from_ne_bytes)
                             .collect()
                     },
                 )))
@@ -212,8 +219,11 @@ impl TypedArray {
                 Ok(TypedArray::Int16(try_cast_vec(data).unwrap_or_else(
                     |(_, data)| {
                         // Fallback to manual conversion when not aligned
-                        data.chunks_exact(2)
-                            .map(|b| i16::from_ne_bytes([b[0], b[1]]))
+                        data.as_chunks::<2>()
+                            .0
+                            .iter()
+                            .copied()
+                            .map(i16::from_ne_bytes)
                             .collect()
                     },
                 )))
@@ -228,8 +238,11 @@ impl TypedArray {
                 Ok(TypedArray::Int32(try_cast_vec(data).unwrap_or_else(
                     |(_, data)| {
                         // Fallback to manual conversion when not aligned
-                        data.chunks_exact(4)
-                            .map(|b| i32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+                        data.as_chunks::<4>()
+                            .0
+                            .iter()
+                            .copied()
+                            .map(i32::from_ne_bytes)
                             .collect()
                     },
                 )))
@@ -244,10 +257,11 @@ impl TypedArray {
                 Ok(TypedArray::Int64(try_cast_vec(data).unwrap_or_else(
                     |(_, data)| {
                         // Fallback to manual conversion when not aligned
-                        data.chunks_exact(8)
-                            .map(|b| {
-                                i64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
-                            })
+                        data.as_chunks::<8>()
+                            .0
+                            .iter()
+                            .copied()
+                            .map(i64::from_ne_bytes)
                             .collect()
                     },
                 )))
@@ -262,8 +276,11 @@ impl TypedArray {
                 Ok(TypedArray::Float32(try_cast_vec(data).unwrap_or_else(
                     |(_, data)| {
                         // Fallback to manual conversion when not aligned
-                        data.chunks_exact(4)
-                            .map(|b| f32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+                        data.as_chunks::<4>()
+                            .0
+                            .iter()
+                            .copied()
+                            .map(f32::from_ne_bytes)
                             .collect()
                     },
                 )))
@@ -278,10 +295,11 @@ impl TypedArray {
                 Ok(TypedArray::Float64(try_cast_vec(data).unwrap_or_else(
                     |(_, data)| {
                         // Fallback to manual conversion when not aligned
-                        data.chunks_exact(8)
-                            .map(|b| {
-                                f64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
-                            })
+                        data.as_chunks::<8>()
+                            .0
+                            .iter()
+                            .copied()
+                            .map(f64::from_ne_bytes)
                             .collect()
                     },
                 )))

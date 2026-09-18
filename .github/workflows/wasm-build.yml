@@ -1,4 +1,4 @@
-name: Rust
+name: Wasm
 
 on:
   push:
@@ -6,29 +6,27 @@ on:
       - main
   pull_request:
 
+permissions: {}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Test
+  wasm_build:
+    name: Wasm build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
-          submodules: "recursive"
+          persist-credentials: false
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
 
       - uses: Swatinem/rust-cache@v2
 
-      - run: cargo install cargo-all-features
-
-      - name: Check all combinations of features can build
-        run: cargo all-features check
-
-      - name: "cargo test"
-        run: |
-          cargo test --all --all-features
+      - name: Wasm target compilation
+        run: cargo check --target wasm32-unknown-unknown --lib

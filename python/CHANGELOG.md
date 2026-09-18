@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.7.2] - 2026-05-06
+
+- feat: expose TIFF.header_byte_size for prefetch sizing by @kylebarron in https://github.com/developmentseed/async-tiff/pull/302
+
 ## [0.7.1] - 2026-03-11
 
 ### What's Changed
