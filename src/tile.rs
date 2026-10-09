@@ -122,7 +122,11 @@ impl Tile {
             }
         };
 
-        // Apply predictor on the full encoded tile width, then crop afterward.
+        // Reverse predictor on the full encoded tile width, then crop afterward.
+        let stride: usize = match &self.compressed_bytes() {
+            CompressedBytes::Chunky(_) => samples,
+            CompressedBytes::Planar(_) => 1, // band or tile interleave
+        };
         let decoded = match self.predictor {
             Predictor::None => {
                 fix_endianness(&mut decoded_tile, self.endianness, bits_per_sample);
@@ -131,12 +135,12 @@ impl Tile {
             Predictor::Horizontal => unpredict_hdiff(
                 decoded_tile,
                 self.endianness,
-                samples,
+                stride,
                 bits_per_sample,
                 tile_width,
             ),
             Predictor::FloatingPoint => {
-                unpredict_float(decoded_tile, samples, bits_per_sample, tile_width)?
+                unpredict_float(decoded_tile, stride, bits_per_sample, tile_width)?
             }
         };
 
