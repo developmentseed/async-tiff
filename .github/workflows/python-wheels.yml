@@ -45,7 +45,7 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python versions
-        run: uv python install 3.10 3.13 pypy3.11
+        run: uv python install 3.13 pypy3.11
 
       - name: Build abi3-py311 wheels
         uses: PyO3/maturin-action@v1
@@ -62,11 +62,11 @@ jobs:
               apt-get update && apt-get install -y libclang-dev
             fi
 
-      - name: Build version-specific wheels
+      - name: Build PyPy wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.10 -i pypy3.11 --features extension-module --manifest-path python/Cargo.toml
+          args: --release --out dist -i pypy3.11 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
           manylinux: ${{ matrix.platform.manylinux }}
           before-script-linux: |
@@ -104,7 +104,7 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python versions
-        run: uv python install 3.10 3.13 pypy3.11
+        run: uv python install 3.13 pypy3.11
 
       - name: Build abi3-py311 wheels
         uses: PyO3/maturin-action@v1
@@ -114,11 +114,11 @@ jobs:
           sccache: "true"
           manylinux: musllinux_1_2
 
-      - name: Build version-specific wheels
+      - name: Build PyPy wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.10 -i pypy3.11 --no-default-features --features extension-module --manifest-path python/Cargo.toml
+          args: --release --out dist -i pypy3.11 --no-default-features --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
           manylinux: musllinux_1_2
 
@@ -158,13 +158,6 @@ jobs:
           args: --release --out dist -i 3.13 --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
 
-      - name: Build version-specific wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.10 --features extension-module --manifest-path python/Cargo.toml
-          sccache: "true"
-
       - name: Upload wheels
         uses: actions/upload-artifact@v7
         with:
@@ -192,7 +185,7 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python versions
-        run: uv python install 3.10 3.13 pypy3.11
+        run: uv python install 3.13 pypy3.11
 
       - name: Build abi3-py311 wheels
         uses: PyO3/maturin-action@v1
@@ -201,11 +194,11 @@ jobs:
           args: --release --out dist -i 3.13 --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
 
-      - name: Build version-specific wheels
+      - name: Build PyPy wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.10 -i pypy3.11 --features extension-module --manifest-path python/Cargo.toml
+          args: --release --out dist -i pypy3.11 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
 
       - name: Upload wheels
