@@ -35,18 +35,20 @@ class LoadRasterio(Protocol):
 
 
 @pytest.fixture(scope="session")
-def root_dir() -> Path:
-    root_dir = Path(__file__).parent.resolve()
+def fixtures_dir() -> Path:
+    python_root_dir = Path(__file__).parent.resolve()
 
-    while root_dir.name != "async-tiff":
-        root_dir = root_dir.parent
+    while python_root_dir != Path("/") and not (python_root_dir / "pyproject.toml").exists():
+        python_root_dir = python_root_dir.parent
 
-    return root_dir
+    if not (python_root_dir / "pyproject.toml").exists():
+        raise RuntimeError("Couldn't find the fixtures dir")
+    return (python_root_dir.parent / "fixtures").resolve()
 
 
 @pytest.fixture(scope="session")
-def fixture_store(root_dir) -> LocalStore:
-    return LocalStore(root_dir / "fixtures")
+def fixture_store(fixtures_dir) -> LocalStore:
+    return LocalStore(fixtures_dir)
 
 
 @pytest.fixture
@@ -66,7 +68,7 @@ def load_tiff(fixture_store):
 
 
 @pytest.fixture
-def load_rasterio(root_dir):
+def load_rasterio(fixtures_dir):
     @contextmanager
     def _load(
         name: str,
@@ -75,7 +77,7 @@ def load_rasterio(root_dir):
         OVERVIEW_LEVEL: int | None = None,  # noqa: N803
         **kwargs: Any,  # noqa: ANN401
     ) -> Generator[DatasetReader, None, None]:
-        path = f"{root_dir}/fixtures/geotiff-test-data/"
+        path = f"{fixtures_dir}/geotiff-test-data/"
         if variant == "rasterio":
             path += "rasterio_generated/fixtures/"
         else:

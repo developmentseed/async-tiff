@@ -34,7 +34,7 @@ jobs:
             target: aarch64
             manylinux: "2_28"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: "recursive"
 
@@ -45,7 +45,7 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python versions
-        run: uv python install 3.10 3.13 pypy3.11
+        run: uv python install 3.13 pypy3.11
 
       - name: Build abi3-py311 wheels
         uses: PyO3/maturin-action@v1
@@ -62,11 +62,11 @@ jobs:
               apt-get update && apt-get install -y libclang-dev
             fi
 
-      - name: Build version-specific wheels
+      - name: Build PyPy wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.10 -i pypy3.11 --features extension-module --manifest-path python/Cargo.toml
+          args: --release --out dist -i pypy3.11 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
           manylinux: ${{ matrix.platform.manylinux }}
           before-script-linux: |
@@ -78,7 +78,7 @@ jobs:
             fi
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-linux-${{ matrix.platform.target }}
           path: dist
@@ -93,7 +93,7 @@ jobs:
           - runner: ubuntu-latest
             target: x86
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: "recursive"
 
@@ -104,7 +104,7 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python versions
-        run: uv python install 3.10 3.13 pypy3.11
+        run: uv python install 3.13 pypy3.11
 
       - name: Build abi3-py311 wheels
         uses: PyO3/maturin-action@v1
@@ -114,16 +114,16 @@ jobs:
           sccache: "true"
           manylinux: musllinux_1_2
 
-      - name: Build version-specific wheels
+      - name: Build PyPy wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.10 -i pypy3.11 --no-default-features --features extension-module --manifest-path python/Cargo.toml
+          args: --release --out dist -i pypy3.11 --no-default-features --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
           manylinux: musllinux_1_2
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-musllinux-${{ matrix.platform.target }}
           path: dist
@@ -136,14 +136,14 @@ jobs:
           - runner: windows-latest
             target: x64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: "recursive"
       # There seem to be linking errors on Windows with the uv-provided Python
       # executables, so we use the Python versions provided by github actions
       # for now.
       # Seems to be this question: https://stackoverflow.com/questions/78557803/python-with-rust-cannot-open-input-file-python3-lib
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: 3.13
           architecture: ${{ matrix.platform.target }}
@@ -158,15 +158,8 @@ jobs:
           args: --release --out dist -i 3.13 --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
 
-      - name: Build version-specific wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.10 --features extension-module --manifest-path python/Cargo.toml
-          sccache: "true"
-
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-windows-${{ matrix.platform.target }}
           path: dist
@@ -181,7 +174,7 @@ jobs:
           - runner: macos-15
             target: aarch64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: "recursive"
 
@@ -192,7 +185,7 @@ jobs:
           version: "0.5.x"
 
       - name: Install Python versions
-        run: uv python install 3.10 3.13 pypy3.11
+        run: uv python install 3.13 pypy3.11
 
       - name: Build abi3-py311 wheels
         uses: PyO3/maturin-action@v1
@@ -201,58 +194,59 @@ jobs:
           args: --release --out dist -i 3.13 --features abi3-py311 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
 
-      - name: Build version-specific wheels
+      - name: Build PyPy wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist -i 3.10 -i pypy3.11 --features extension-module --manifest-path python/Cargo.toml
+          args: --release --out dist -i pypy3.11 --features extension-module --manifest-path python/Cargo.toml
           sccache: "true"
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-macos-${{ matrix.platform.target }}
           path: dist
 
-  # sdist:
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Build sdist
-  #       uses: PyO3/maturin-action@v1
-  #       with:
-  #         command: sdist
-  #         args: --out dist --manifest-path python/Cargo.toml
-  #     - name: Upload sdist
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: wheels-sdist
-  #         path: dist
+  sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: "recursive"
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist --manifest-path python/Cargo.toml
+      - name: Test sdist
+        run: |
+          python -m pip install dist/*.tar.gz
+      - name: Upload sdist
+        uses: actions/upload-artifact@v7
+        with:
+          name: wheels-sdist
+          path: dist
 
   release:
     runs-on: ubuntu-latest
     name: Release
-    # environment:
-    #   name: release
-    #   url: https://pypi.org/p/async-tiff
-    # permissions:
-    #   # IMPORTANT: this permission is mandatory for trusted publishing
-    #   id-token: write
+    environment:
+      name: pypi-release
+      url: https://pypi.org/p/async-tiff
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [linux, musllinux, windows, macos]
+    needs: [linux, musllinux, windows, macos, sdist]
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: wheels-*
           merge-multiple: true
           path: dist
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: 3.11
 
-      - uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

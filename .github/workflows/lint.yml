@@ -7,6 +7,10 @@ on:
     types: [opened, reopened, synchronize]
     branches: ["main"]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions: {}
 
 # Make sure CI fails on all warnings, including Clippy lints
@@ -16,11 +20,11 @@ env:
 
 jobs:
   clippy_check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -30,11 +34,11 @@ jobs:
           cargo clippy --all-targets --all-features --manifest-path python/Cargo.toml
 
   format_check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -45,9 +49,9 @@ jobs:
 
   docs-no-warnings:
     name: Docs should build without warnings
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: "recursive"
       - name: Install Rust

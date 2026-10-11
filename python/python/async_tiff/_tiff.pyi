@@ -35,6 +35,17 @@ class TIFF:
     def endianness(self) -> Endianness:
         """The endianness of this TIFF file."""
 
+    @property
+    def header_byte_size(self) -> int:
+        """Minimum prefetch size that covers all metadata.
+
+        Pass this value as `prefetch` on a future [`TIFF.open`][async_tiff.TIFF.open]
+        call to complete metadata reading in a single request.
+
+        This is computed as the minimum non-zero offset across every IFD's `TileOffsets`
+        and `StripOffsets`.
+        """
+
     def ifd(self, index: int) -> ImageFileDirectory:
         """Access a specific IFD by index.
 

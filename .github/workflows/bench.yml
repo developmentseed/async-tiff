@@ -4,11 +4,15 @@ name: Benchmarks
 on:
   push:
     branches: ["main"]
-  release:
-    types: [published]
+  # Run on PRs but only if the PR has the 'run/benchmark' label
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, labeled, synchronize]
     branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -16,6 +20,7 @@ env:
 jobs:
   rust-bench:
     runs-on: ubuntu-24.04
+    if: github.repository == 'developmentseed/async-tiff' && (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'run/benchmark'))
     container:
       image: ghcr.io/osgeo/gdal:ubuntu-small-3.12.2
       options: --privileged
@@ -31,7 +36,7 @@ jobs:
           git config --global --add safe.directory $GITHUB_WORKSPACE
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -52,7 +57,7 @@ jobs:
         run: cargo codspeed build
 
       - name: Run the benchmarks
-        uses: CodSpeedHQ/action@v4
+        uses: CodSpeedHQ/action@v5
         with:
           mode: simulation
           run: cargo codspeed run
