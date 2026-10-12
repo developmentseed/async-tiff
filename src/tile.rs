@@ -104,8 +104,7 @@ impl Tile {
                 // Pre-allocate buffer: bands × width × height × bytes_per_sample
                 let bytes_per_sample = (bits_per_sample as usize).div_ceil(8);
                 let num_bands = band_bytes.len();
-                let total_size =
-                    num_bands * tile_width * (self.height as usize) * bytes_per_sample;
+                let total_size = num_bands * tile_width * (self.height as usize) * bytes_per_sample;
                 let mut result = Vec::with_capacity(total_size);
 
                 for band_data in band_bytes {
