@@ -33,7 +33,8 @@ async def test_read_band_interleaved_tiff_window(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("variant", "file_name"), [("rasterio", "int8_3band_zstd_block64")]
+    ("variant", "file_name"),
+    [("source-coop-alpha-earth", "xjejfvrbm1fbu1ecw-0000000000-0000008192")],
 )
 async def test_fetch_specific_bands(
     load_tiff: LoadTIFF,
@@ -46,12 +47,12 @@ async def test_fetch_specific_bands(
     """
     tiff = await load_tiff(file_name, variant=variant)
 
-    tile = await tiff.fetch_tile(0, 0, z=1, bands=[0, 2])  # 0-indexing
+    tile = await tiff.fetch_tile(0, 0, z=0, bands=[0, 42, 63])  # 0-indexing
     array = await tile.decode()
     data = np.array(array)
 
-    with load_rasterio(file_name, variant=variant, OVERVIEW_LEVEL=0) as rasterio_ds:
-        rasterio_data = rasterio_ds.read(indexes=[1, 3])  # 1-indexing
+    with load_rasterio(file_name, variant=variant) as rasterio_ds:
+        rasterio_data = rasterio_ds.read(indexes=[1, 43, 64])  # 1-indexing
 
     np.testing.assert_array_equal(data, rasterio_data)
 
