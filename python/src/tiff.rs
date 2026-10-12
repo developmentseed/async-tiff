@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_tiff::metadata::cache::ReadaheadMetadataCache;
 use async_tiff::metadata::TiffMetadataReader;
 use async_tiff::reader::{AsyncFileReader, Endianness};
-use async_tiff::ImageFileDirectory;
+use async_tiff::{ImageFileDirectory, ReadOptions};
 use pyo3::exceptions::{PyIndexError, PyTypeError};
 use pyo3::prelude::*;
 use pyo3::types::PyType;
@@ -99,13 +99,16 @@ impl PyTIFF {
             .collect()
     }
 
+    #[pyo3(signature = (x, y, z, *, bands=None))]
     fn fetch_tile<'py>(
         &'py self,
         py: Python<'py>,
         x: usize,
         y: usize,
         z: usize,
+        bands: Option<Vec<usize>>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let options = ReadOptions { bands };
         let reader = self.reader.clone();
         let ifd = self
             .ifds
@@ -114,20 +117,22 @@ impl PyTIFF {
             .clone();
         future_into_py(py, async move {
             let tile = ifd
-                .fetch_tile(x, y, reader.as_ref(), Default::default())
+                .fetch_tile(x, y, reader.as_ref(), options)
                 .await
                 .map_err(|err| PyTypeError::new_err(err.to_string()))?;
 
             Ok(PyTile::new(tile))
         })
     }
-
+    #[pyo3(signature = (xy, z, *, bands=None))]
     fn fetch_tiles<'py>(
         &'py self,
         py: Python<'py>,
         xy: Vec<(usize, usize)>,
         z: usize,
+        bands: Option<Vec<usize>>,
     ) -> PyResult<Bound<'py, PyAny>> {
+        let options = ReadOptions { bands };
         let reader = self.reader.clone();
         let ifd = self
             .ifds
@@ -136,7 +141,7 @@ impl PyTIFF {
             .clone();
         future_into_py(py, async move {
             let tiles = ifd
-                .fetch_tiles(&xy, reader.as_ref(), Default::default())
+                .fetch_tiles(&xy, reader.as_ref(), options)
                 .await
                 .map_err(|err| PyTypeError::new_err(err.to_string()))?;
             let py_tiles = tiles.into_iter().map(PyTile::new).collect::<Vec<_>>();
