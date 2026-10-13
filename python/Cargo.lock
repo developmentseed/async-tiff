@@ -42,7 +42,6 @@ dependencies = [
  "bytes",
  "flate2",
  "futures",
- "jpeg-decoder",
  "jpeg2k",
  "lerc",
  "lzma-rust2",
@@ -54,6 +53,7 @@ dependencies = [
  "webp",
  "weezl",
  "zstd",
+ "zune-jpeg",
 ]
 
 [[package]]
@@ -1026,12 +1026,6 @@ dependencies = [
  "getrandom 0.3.4",
  "libc",
 ]
-
-[[package]]
-name = "jpeg-decoder"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00810f1d8b74be64b13dbf3db89ac67740615d6c891f0e7b6179326533011a07"
 
 [[package]]
 name = "jpeg2k"
@@ -3190,9 +3184,9 @@ checksum = "cb8a0807f7c01457d0379ba880ba6322660448ddebc890ce29bb64da71fb40f9"
 
 [[package]]
 name = "zune-jpeg"
-version = "0.5.13"
+version = "0.5.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec5f41c76397b7da451efd19915684f727d7e1d516384ca6bd0ec43ec94de23c"
+checksum = "27bc9d5b815bc103f142aa054f561d9187d191692ec7c2d1e2b4737f8dbd7296"
 dependencies = [
  "zune-core",
 ]

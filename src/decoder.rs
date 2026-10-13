@@ -6,6 +6,10 @@ use std::io::{Cursor, Read};
 
 use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
+use zune_jpeg::zune_core::bytestream::ZCursor;
+use zune_jpeg::zune_core::colorspace::ColorSpace;
+use zune_jpeg::zune_core::options::DecoderOptions;
+use zune_jpeg::JpegDecoder;
 
 use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffUnsupportedError};
 use crate::tags::{Compression, PhotometricInterpretation};
@@ -356,14 +360,12 @@ impl Decoder for ZstdDecoder {
     }
 }
 
-// https://github.com/image-rs/image-tiff/blob/3bfb43e83e31b0da476832067ada68a82b378b7b/src/decoder/image.rs#L389-L450
+// https://github.com/image-rs/image-tiff/blob/e41159ce058bf193718b017599e2d7d53e9ccc92/src/decoder/image.rs#L552-L604
 fn decode_modern_jpeg(
     buf: Bytes,
     photometric_interpretation: PhotometricInterpretation,
     jpeg_tables: Option<&[u8]>,
 ) -> AsyncTiffResult<Vec<u8>> {
-    // Construct new jpeg_reader wrapping a SmartReader.
-    //
     // JPEG compression in TIFF allows saving quantization and/or huffman tables in one central
     // location. These `jpeg_tables` are simply prepended to the remaining jpeg image data. Because
     // these `jpeg_tables` start with a `SOI` (HEX: `0xFFD8`) or __start of image__ marker which is
@@ -372,40 +374,93 @@ fn decode_modern_jpeg(
     // data is removed because it follows `jpeg_tables`. Similary, `jpeg_tables` ends with a `EOI`
     // (HEX: `0xFFD9`) or __end of image__ marker, this has to be removed as well (last two bytes
     // of `jpeg_tables`).
-    let reader = Cursor::new(buf);
-
-    let jpeg_reader = match jpeg_tables {
+    //
+    // zune-jpeg decodes from a single contiguous buffer, so the two are copied into a new one.
+    let jpeg_data = match jpeg_tables {
         Some(jpeg_tables) => {
-            let mut reader = reader;
-            reader.read_exact(&mut [0; 2])?;
-
-            Box::new(Cursor::new(&jpeg_tables[..jpeg_tables.len() - 2]).chain(reader))
-                as Box<dyn Read>
+            if jpeg_tables.len() < 2 || buf.len() < 2 {
+                return Err(AsyncTiffError::General(format!(
+                    "JPEG tile ({} bytes) or JPEGTables ({} bytes) is too short to hold a JPEG marker",
+                    buf.len(),
+                    jpeg_tables.len()
+                )));
+            }
+            let tables = &jpeg_tables[..jpeg_tables.len() - 2];
+            let tile = &buf[2..];
+            let mut data = Vec::with_capacity(tables.len() + tile.len());
+            data.extend_from_slice(tables);
+            data.extend_from_slice(tile);
+            Bytes::from(data)
         }
-        None => Box::new(reader),
+        None => buf,
     };
 
-    let mut decoder = jpeg::Decoder::new(jpeg_reader);
+    // JPEG allows dimensions up to 65535, but zune-jpeg rejects anything over 16384 by default.
+    let options = DecoderOptions::default()
+        .set_max_width(u16::MAX.into())
+        .set_max_height(u16::MAX.into());
+    let mut decoder = JpegDecoder::new_with_options(ZCursor::new(jpeg_data), options);
+    decoder.decode_headers()?;
 
-    match photometric_interpretation {
-        PhotometricInterpretation::RGB => decoder.set_color_transform(jpeg::ColorTransform::RGB),
-        PhotometricInterpretation::WhiteIsZero
+    // Like libtiff, convert YCbCr to RGB and return every other colorspace as stored in the JPEG
+    // stream, without any color conversion.
+    // https://github.com/libsdl-org/libtiff/blob/d23249978a7a99ea2e0752a476611914501577de/libtiff/tif_jpeg.c#L1461-L1479
+    let input_colorspace = decoder
+        .input_colorspace()
+        .expect("input colorspace is known once headers are decoded");
+    let output_colorspace = match photometric_interpretation {
+        PhotometricInterpretation::YCbCr if input_colorspace == ColorSpace::YCbCr => {
+            ColorSpace::RGB
+        }
+        // A YCbCr tile that zune-jpeg doesn't read as YCbCr is one band of a planar image, a
+        // single Luma component.
+        PhotometricInterpretation::YCbCr
+        | PhotometricInterpretation::RGB
+        | PhotometricInterpretation::WhiteIsZero
         | PhotometricInterpretation::BlackIsZero
-        | PhotometricInterpretation::TransparencyMask => {
-            decoder.set_color_transform(jpeg::ColorTransform::None)
-        }
-        PhotometricInterpretation::CMYK => decoder.set_color_transform(jpeg::ColorTransform::CMYK),
-        PhotometricInterpretation::YCbCr => {
-            decoder.set_color_transform(jpeg::ColorTransform::YCbCr)
-        }
+        | PhotometricInterpretation::TransparencyMask
+        | PhotometricInterpretation::CMYK => input_colorspace,
         photometric_interpretation => {
             return Err(TiffError::UnsupportedError(
                 TiffUnsupportedError::UnsupportedInterpretation(photometric_interpretation),
             )
             .into());
         }
+    };
+    decoder.set_options(options.jpeg_set_out_colorspace(output_colorspace));
+
+    Ok(decoder.decode()?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SOI: &[u8] = &[0xFF, 0xD8];
+
+    #[test]
+    fn test_jpeg_tables_shorter_than_marker_is_error() {
+        let result = JPEGDecoder.decode_tile(
+            Bytes::from_static(SOI),
+            PhotometricInterpretation::YCbCr,
+            Some(&[0xFF]),
+            3,
+            8,
+            None,
+        );
+        assert!(matches!(result, Err(AsyncTiffError::General(_))));
     }
 
-    let data = decoder.decode()?;
-    Ok(data)
+    #[test]
+    fn test_jpeg_tile_shorter_than_marker_is_error() {
+        let result = JPEGDecoder.decode_tile(
+            Bytes::from_static(&[0xFF]),
+            PhotometricInterpretation::YCbCr,
+            Some(SOI),
+            3,
+            8,
+            None,
+        );
+        assert!(matches!(result, Err(AsyncTiffError::General(_))));
+    }
 }
