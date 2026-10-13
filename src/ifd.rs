@@ -147,7 +147,7 @@ pub struct ImageFileDirectory {
     pub(crate) other_tags: HashMap<Tag, TagValue>,
 
     // Other
-    pub(crate) lerc_parameters: Option<Vec<u32>>,
+    pub(crate) lerc_parameters: Option<Arc<[u32]>>,
 }
 
 impl ImageFileDirectory {
@@ -280,7 +280,7 @@ impl ImageFileDirectory {
                 Tag::GeoDoubleParams => geo_double_params = Some(value.into_f64_vec()?),
                 Tag::GdalNodata => gdal_nodata = Some(value.into_string()?),
                 Tag::GdalMetadata => gdal_metadata = Some(value.into_string()?),
-                Tag::LercParameters => lerc_parameters = Some(value.into_u32_vec()?),
+                Tag::LercParameters => lerc_parameters = Some(Arc::from(value.into_u32_vec()?)),
                 // Tags for which the tiff crate doesn't have a hard-coded enum variant
                 Tag::Unknown(DOCUMENT_NAME) => document_name = Some(value.into_string()?),
                 _ => {

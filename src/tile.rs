@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bytes::Bytes;
 
 use crate::array::Array;
@@ -35,7 +37,7 @@ pub struct Tile {
     pub(crate) jpeg_tables: Option<Bytes>,
     /// LERC parameters from the LercParameters tag: [version, compression_type, ...]
     /// compression_type: 0 = none, 1 = deflate, 2 = zstd
-    pub(crate) lerc_parameters: Option<Vec<u32>>,
+    pub(crate) lerc_parameters: Option<Arc<[u32]>>,
 }
 
 impl Tile {
@@ -124,7 +126,11 @@ impl Tile {
             }
         };
 
-        // Apply predictor on the full encoded tile width, then crop afterward.
+        // Reverse predictor on the full encoded tile width, then crop afterward.
+        let stride: usize = match &self.compressed_bytes() {
+            CompressedBytes::Chunky(_) => samples,
+            CompressedBytes::Planar(_) => 1, // band or tile interleave
+        };
         let decoded = match self.predictor {
             Predictor::None => {
                 fix_endianness(&mut decoded_tile, self.endianness, bits_per_sample);
@@ -133,12 +139,12 @@ impl Tile {
             Predictor::Horizontal => unpredict_hdiff(
                 decoded_tile,
                 self.endianness,
-                samples,
+                stride,
                 bits_per_sample,
                 tile_width,
             ),
             Predictor::FloatingPoint => {
-                unpredict_float(decoded_tile, samples, bits_per_sample, tile_width)?
+                unpredict_float(decoded_tile, stride, bits_per_sample, tile_width)?
             }
         };
 

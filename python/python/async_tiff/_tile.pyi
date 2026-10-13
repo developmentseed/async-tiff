@@ -34,6 +34,9 @@ class Tile:
         the current thread. Prefer using the asynchronous `decode` method, which will
         offload decompression to a thread pool.
 
+        The GIL is released during decompression, so other Python threads can run
+        while this tile is being decoded.
+
         Keyword Args:
             decoder_registry: the decoders to use for decompression. Defaults to None, in which case a default decoder registry is used.
 
