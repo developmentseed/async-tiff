@@ -14,7 +14,6 @@ async-trait = "0.1.89"
 bytemuck = { version = "1.24", features = ["extern_crate_alloc"] }
 byteorder = "1"
 bytes = "1.12.0"
-# zlib-rs inflates substantially faster than the default miniz_oxide backend.
 # `runtime_detection` must be listed explicitly because disabling default
 # features would otherwise turn off zlib-rs's runtime SIMD detection.
 flate2 = { version = "1.1.10", default-features = false, features = [
