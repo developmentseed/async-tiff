@@ -13,8 +13,8 @@ pub struct Array {
     ///
     /// The axis ordering depends on the PlanarConfiguration:
     ///
-    /// - PlanarConfiguration=1 (chunky): (height, width, bands)
-    /// - PlanarConfiguration=2 (planar): (bands, height, width)
+    /// - PlanarConfiguration=1 (chunky): (height, width, planes)
+    /// - PlanarConfiguration=2 (planar): (planes, height, width)
     pub(crate) shape: [usize; 3],
 
     /// The data type of the array elements.
@@ -76,8 +76,8 @@ impl Array {
     /// The shape matches the physical array data exposed, but the _interpretation_ depends on the
     /// value of `PlanarConfiguration`:
     ///
-    /// - PlanarConfiguration=1 (chunky): (height, width, bands)
-    /// - PlanarConfiguration=2 (planar): (bands, height, width)
+    /// - PlanarConfiguration=1 (chunky): (height, width, planes)
+    /// - PlanarConfiguration=2 (planar): (planes, height, width)
     pub fn shape(&self) -> [usize; 3] {
         self.shape
     }

@@ -101,22 +101,22 @@ impl Tile {
                 bits_per_sample,
                 self.lerc_parameters.as_deref(),
             )?,
-            CompressedBytes::Planar(band_bytes) => {
+            CompressedBytes::Planar(plane_bytes) => {
                 let bytes_per_sample = (bits_per_sample as usize).div_ceil(8);
                 let total_size =
-                    band_bytes.len() * tile_width * (self.height as usize) * bytes_per_sample;
+                    plane_bytes.len() * tile_width * (self.height as usize) * bytes_per_sample;
                 let mut result = Vec::with_capacity(total_size);
 
-                for band_data in band_bytes {
-                    let decoded_band = decoder.decode_tile(
-                        band_data.clone(),
+                for plane_data in plane_bytes {
+                    let decoded_plane = decoder.decode_tile(
+                        plane_data.clone(),
                         self.photometric_interpretation,
                         self.jpeg_tables.as_deref(),
                         1,
                         bits_per_sample,
                         self.lerc_parameters.as_deref(),
                     )?;
-                    result.extend_from_slice(&decoded_band);
+                    result.extend_from_slice(&decoded_plane);
                 }
 
                 debug_assert_eq!(result.len(), total_size);

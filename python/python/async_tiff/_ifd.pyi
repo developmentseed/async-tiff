@@ -164,7 +164,10 @@ class ImageFileDirectory:
             y: The row index within the ifd to read from.
 
         Returns:
-            The byte range or ranges of the tile, as `(start, end)`. The result will be a tuple[int, int] if the IFD is pixel-interleaved. If the IFD is band-interleaved, the result will be a list of byte ranges, one for each band.
+            The byte range or ranges of the tile, as `(start, end)`. The result will be
+            a tuple[int, int] if the IFD is pixel-interleaved. If the IFD is
+            band-interleaved, the result will be a list of byte ranges, one for each
+            band/plane.
         """
     @property
     def tile_count(self) -> tuple[int, int] | None:

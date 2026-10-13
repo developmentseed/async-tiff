@@ -39,7 +39,7 @@ class Array(Buffer):
 
         The interpretation depends on the PlanarConfiguration:
 
-        - PlanarConfiguration=1 (chunky): (height, width, bands)
-        - PlanarConfiguration=2 (planar): (bands, height, width)
+        - PlanarConfiguration=1 (chunky): (height, width, planes)
+        - PlanarConfiguration=2 (planar): (planes, height, width)
         """
         ...
