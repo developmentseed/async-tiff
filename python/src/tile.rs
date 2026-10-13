@@ -56,6 +56,7 @@ impl PyTile {
             .map(|t| t.compression_method().into())
     }
 
+    #[pyo3(signature = (*, decoder_registry=None))]
     fn decode_sync<'py>(
         &mut self,
         py: Python<'py>,
@@ -68,7 +69,7 @@ impl PyTile {
             .0
             .take()
             .ok_or(PyValueError::new_err("Tile has been consumed"))?;
-        let array = tile.decode(&decoder_registry)?;
+        let array = py.detach(|| tile.decode(&decoder_registry))?;
         PyArray::try_new(array)
     }
 
