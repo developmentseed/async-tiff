@@ -165,3 +165,44 @@ fn infer_shape(
         PlanarConfiguration::Planar => [samples_per_pixel, height, width],
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// An uncompressed 4x2 single-band 16-bit tile whose decoded bytes are `bytes`.
+    fn uncompressed_u16_tile(bytes: Vec<u8>, predictor: Predictor) -> Tile {
+        Tile {
+            x: 0,
+            y: 0,
+            data_type: Some(DataType::UInt16),
+            samples_per_pixel: 1,
+            bits_per_sample: 16,
+            endianness: Endianness::LittleEndian,
+            width: 4,
+            height: 2,
+            planar_configuration: PlanarConfiguration::Chunky,
+            predictor,
+            compressed_bytes: CompressedBytes::Chunky(Bytes::from(bytes)),
+            compression_method: Compression::None,
+            photometric_interpretation: PhotometricInterpretation::BlackIsZero,
+            jpeg_tables: None,
+            lerc_parameters: None,
+        }
+    }
+
+    #[test]
+    fn test_truncated_predictor_tile_is_an_error() {
+        // The full tile is 16 bytes. These lengths end partway through the second row, in the
+        // middle of a sample, as a corrupt tile can.
+        for len in [13, 15] {
+            for predictor in [Predictor::Horizontal, Predictor::FloatingPoint] {
+                let tile = uncompressed_u16_tile(vec![1; len], predictor);
+                assert!(
+                    tile.decode(&DecoderRegistry::default()).is_err(),
+                    "{len} bytes, {predictor:?}"
+                );
+            }
+        }
+    }
+}

@@ -73,47 +73,103 @@ pub(crate) fn unpredict_hdiff(
     let bytes_per_sample = (bits_per_sample as usize).div_ceil(8);
     let row_stride = tile_width * samples * bytes_per_sample;
 
+    // Swapping in its own pass vectorizes. Swapping inside the summing loop below instead
+    // measured slower on aarch64, where it lengthens the loop-carried dependency.
     fix_endianness(&mut buffer, endianness, bits_per_sample);
 
-    for row in buffer.chunks_mut(row_stride) {
-        rev_hpredict_row(row, bits_per_sample, samples);
+    match bits_per_sample {
+        0..=8 => rev_hpredict::<u8>(&mut buffer, row_stride, samples),
+        9..=16 => rev_hpredict::<u16>(&mut buffer, row_stride, samples),
+        17..=32 => rev_hpredict::<u32>(&mut buffer, row_stride, samples),
+        33..=64 => rev_hpredict::<u64>(&mut buffer, row_stride, samples),
+        _ => unreachable!("unsupported bits_per_sample {bits_per_sample}"),
     }
 
     buffer
 }
 
-/// Reverse one row of horizontal differencing, dispatched by bit depth.
-fn rev_hpredict_row(row: &mut [u8], bits_per_sample: u16, samples: usize) {
-    match bits_per_sample {
-        0..=8 => {
-            for i in samples..row.len() {
-                row[i] = row[i].wrapping_add(row[i - samples]);
-            }
-        }
-        9..=16 => {
-            for i in (samples * 2..row.len()).step_by(2) {
-                let v = u16::from_ne_bytes(row[i..][..2].try_into().unwrap());
-                let p = u16::from_ne_bytes(row[i - 2 * samples..][..2].try_into().unwrap());
-                row[i..][..2].copy_from_slice(&v.wrapping_add(p).to_ne_bytes());
-            }
-        }
-        17..=32 => {
-            for i in (samples * 4..row.len()).step_by(4) {
-                let v = u32::from_ne_bytes(row[i..][..4].try_into().unwrap());
-                let p = u32::from_ne_bytes(row[i - 4 * samples..][..4].try_into().unwrap());
-                row[i..][..4].copy_from_slice(&v.wrapping_add(p).to_ne_bytes());
-            }
-        }
-        33..=64 => {
-            for i in (samples * 8..row.len()).step_by(8) {
-                let v = u64::from_ne_bytes(row[i..][..8].try_into().unwrap());
-                let p = u64::from_ne_bytes(row[i - 8 * samples..][..8].try_into().unwrap());
-                row[i..][..8].copy_from_slice(&v.wrapping_add(p).to_ne_bytes());
-            }
-        }
-        _ => unreachable!("unsupported bits_per_sample {bits_per_sample}"),
+/// Reverse horizontal differencing on each row of native-endian `T` samples.
+fn rev_hpredict<T: Sample>(buffer: &mut [u8], row_stride: usize, samples: usize) {
+    for row in buffer.chunks_mut(row_stride) {
+        accumulate_row::<T>(T::as_samples_mut(row), samples);
     }
 }
+
+/// Reverse horizontal differencing on one row of `samples`-sample pixels.
+///
+/// Each sample becomes the wrapping sum of itself and every earlier sample of the same channel in
+/// the row. Summing in place (`row[i] += row[i - samples]`) reloads the value stored one pixel
+/// earlier, so every sample waits on a store-to-load round trip. For one to four samples per
+/// pixel, keep one running sum per channel instead: the constant `N` lets LLVM unroll the channel
+/// loop and hold all `N` sums in registers. Wider pixels are uncommon and keep the in-place loop.
+fn accumulate_row<T: Sample>(row: &mut [T::Bytes], samples: usize) {
+    match samples {
+        1 => accumulate::<T, 1>(row),
+        2 => accumulate::<T, 2>(row),
+        3 => accumulate::<T, 3>(row),
+        4 => accumulate::<T, 4>(row),
+        _ => {
+            for i in samples..row.len() {
+                let sum = T::from_ne_bytes(row[i]).wrapping_add(T::from_ne_bytes(row[i - samples]));
+                row[i] = sum.to_ne_bytes();
+            }
+        }
+    }
+}
+
+fn accumulate<T: Sample, const N: usize>(row: &mut [T::Bytes]) {
+    let mut sums = [T::ZERO; N];
+    // Only a truncated tile can end mid-pixel, and decoding rejects its length afterwards, so the
+    // partial pixel is left as is.
+    for pixel in row.as_chunks_mut::<N>().0 {
+        for (sum, sample) in sums.iter_mut().zip(pixel) {
+            *sum = sum.wrapping_add(T::from_ne_bytes(*sample));
+            *sample = sum.to_ne_bytes();
+        }
+    }
+}
+
+/// An unsigned integer sample, as summed by the horizontal predictor.
+trait Sample: Copy {
+    /// The sample as stored in a byte buffer, e.g. `[u8; 2]` for `u16`.
+    type Bytes: Copy;
+
+    const ZERO: Self;
+
+    /// View `bytes` as whole samples, ignoring any trailing partial sample.
+    fn as_samples_mut(bytes: &mut [u8]) -> &mut [Self::Bytes];
+    fn from_ne_bytes(bytes: Self::Bytes) -> Self;
+    fn to_ne_bytes(self) -> Self::Bytes;
+    fn wrapping_add(self, rhs: Self) -> Self;
+}
+
+macro_rules! impl_sample {
+    ($($ty:ty),*) => {$(
+        impl Sample for $ty {
+            type Bytes = [u8; size_of::<$ty>()];
+
+            const ZERO: Self = 0;
+
+            fn as_samples_mut(bytes: &mut [u8]) -> &mut [Self::Bytes] {
+                bytes.as_chunks_mut().0
+            }
+
+            fn from_ne_bytes(bytes: Self::Bytes) -> Self {
+                <$ty>::from_ne_bytes(bytes)
+            }
+
+            fn to_ne_bytes(self) -> Self::Bytes {
+                <$ty>::to_ne_bytes(self)
+            }
+
+            fn wrapping_add(self, rhs: Self) -> Self {
+                <$ty>::wrapping_add(self, rhs)
+            }
+        }
+    )*};
+}
+
+impl_sample!(u8, u16, u32, u64);
 
 /// Reverse floating-point predictor (Predictor=3).
 ///
