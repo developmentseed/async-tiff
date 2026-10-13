@@ -1,4 +1,4 @@
-"""Compare JPEG tiles decoded by async-tiff with rasterio, which decodes them with libjpeg-turbo.
+"""Compare JPEG tiles decoded by async-tiff with rasterio.
 
 JPEG decoders are not bit-exact with each other, so these comparisons allow a small tolerance:
 
@@ -17,6 +17,7 @@ import rasterio
 from async_tiff import TIFF
 from async_tiff.enums import PlanarConfiguration
 from async_tiff.store import LocalStore
+from packaging.version import Version
 from rasterio.windows import Window
 
 if TYPE_CHECKING:
@@ -26,6 +27,15 @@ if TYPE_CHECKING:
     from rasterio.io import DatasetReader
 
     from .conftest import LoadRasterio, LoadTIFF
+
+# rasterio 1.5 wheels decode JPEG with libjpeg-turbo, but 1.4 wheels (the newest for Python 3.11)
+# bundle IJG libjpeg 9. It upsamples YCbCr chroma by DCT scaling instead of libjpeg-turbo's
+# triangle filter, so its YCbCr output differs from libjpeg-turbo, zune-jpeg and jpeg-decoder alike
+# by up to ~90, mostly at block edges. A tolerance that loose would hide real bugs.
+requires_libjpeg_turbo = pytest.mark.skipif(
+    Version(rasterio.__version__) < Version("1.5"),
+    reason="rasterio < 1.5 wheels decode YCbCr JPEG with IJG libjpeg 9",
+)
 
 
 async def assert_tiles_match(
@@ -80,7 +90,7 @@ async def assert_tiles_match(
         ("RGB", 3, "band", 1),
         ("MINISBLACK", 1, "pixel", 1),
         ("CMYK", 4, "pixel", 1),
-        ("YCBCR", 3, "pixel", 5),
+        pytest.param("YCBCR", 3, "pixel", 5, marks=requires_libjpeg_turbo),
     ],
 )
 async def test_jpeg_matches_rasterio(
@@ -127,6 +137,7 @@ async def test_jpeg_matches_rasterio(
 
 
 @pytest.mark.asyncio
+@requires_libjpeg_turbo
 @pytest.mark.parametrize(
     ("variant", "file_name"),
     [
