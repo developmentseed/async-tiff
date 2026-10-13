@@ -68,6 +68,7 @@ class TIFF:
         x: int,
         y: int,
         z: int,
+        *,
         bands: Sequence[int] | None = None,
     ) -> Tile:
         """Fetch a single tile.
@@ -85,6 +86,7 @@ class TIFF:
         self,
         xy: Sequence[tuple[int, int]],
         z: int,
+        *,
         bands: Sequence[int] | None = None,
     ) -> list[Tile]:
         """Fetch multiple tiles concurrently.
