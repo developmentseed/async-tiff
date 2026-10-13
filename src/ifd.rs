@@ -747,9 +747,9 @@ impl ImageFileDirectory {
         x: usize,
         y: usize,
         reader: &dyn AsyncFileReader,
-        fetch_options: ReadOptions,
+        read_options: ReadOptions,
     ) -> AsyncTiffResult<Tile> {
-        let ReadOptions { bands } = fetch_options;
+        let ReadOptions { bands } = read_options;
         let byte_ranges = self
             .tile_byte_range(x, y, bands.as_deref())?
             .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
@@ -762,9 +762,9 @@ impl ImageFileDirectory {
         &self,
         xy: &[(usize, usize)],
         reader: &dyn AsyncFileReader,
-        fetch_options: ReadOptions,
+        read_options: ReadOptions,
     ) -> AsyncTiffResult<Vec<Tile>> {
-        let ReadOptions { bands } = fetch_options;
+        let ReadOptions { bands } = read_options;
         let byte_ranges = self
             .tiles_byte_ranges(xy, bands.as_deref())?
             .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
