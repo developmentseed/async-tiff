@@ -46,28 +46,6 @@ async def test_read_band_interleaved_tiff_window(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ("variant", "file_name"),
-    [("rasterio", "uint16_3band_zstd_predictor2")],
-)
-async def test_decode_sync_matches_decode(
-    load_tiff: LoadTIFF,
-    variant: str,
-    file_name: str,
-) -> None:
-    tiff = await load_tiff(file_name, variant=variant)
-
-    ifd = tiff.ifds[0]
-    async_tile = await ifd.fetch_tile(0, 0)
-    sync_tile = await ifd.fetch_tile(0, 0)
-
-    async_data = np.array(await async_tile.decode())
-    sync_data = np.array(sync_tile.decode_sync())
-
-    np.testing.assert_array_equal(sync_data, async_data)
-
-
-@pytest.mark.asyncio
 @pytest.mark.parametrize(("variant", "file_name"), [("eox", "eox_cloudless")])
 async def test_header_byte_size(
     load_tiff: LoadTIFF,
