@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
+from async_tiff.enums import PlanarConfiguration
 from rasterio.windows import Window
 
 if TYPE_CHECKING:
@@ -11,7 +12,18 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(("variant", "file_name"), [("eox", "eox_cloudless")])
+@pytest.mark.parametrize(
+    ("variant", "file_name"),
+    [
+        ("eox", "eox_cloudless"),
+        (
+            # Regression test for
+            # https://github.com/developmentseed/async-tiff/issues/346
+            "rasterio",
+            "uint16_3band_zstd_predictor2",
+        ),
+    ],
+)
 async def test_read_band_interleaved_tiff_window(
     load_tiff: LoadTIFF,
     load_rasterio: LoadRasterio,
@@ -20,7 +32,9 @@ async def test_read_band_interleaved_tiff_window(
 ) -> None:
     tiff = await load_tiff(file_name, variant=variant)
 
-    tile = await tiff.ifds[0].fetch_tile(0, 0)
+    ifd = tiff.ifds[0]
+    assert ifd.planar_configuration == PlanarConfiguration.Planar
+    tile = await ifd.fetch_tile(0, 0)
     array = await tile.decode()
     data = np.array(array)
 
