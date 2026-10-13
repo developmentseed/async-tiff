@@ -176,8 +176,8 @@ impl_sample!(u8, u16, u32, u64);
 /// Operates on the **full encoded tile width** — `tile_width` must be the nominal tile width,
 /// not the cropped valid width of an edge tile.
 ///
-/// Returns a buffer the same size as the input. The caller is responsible for cropping
-/// edge tiles afterward.
+/// Returns the input buffer, decoded in place. The caller is responsible for cropping edge tiles
+/// afterward.
 ///
 /// Per the TIFF floating-point predictor spec, no external byte-order fixup is applied.
 pub(crate) fn unpredict_float(
@@ -186,69 +186,53 @@ pub(crate) fn unpredict_float(
     bits_per_sample: u16,
     tile_width: usize,
 ) -> AsyncTiffResult<Vec<u8>> {
-    let bytes_per_sample = (bits_per_sample as usize) / 8;
-    let row_stride = tile_width * samples * bytes_per_sample;
-    let mut out = vec![0u8; buffer.len()];
-
-    for (in_row, out_row) in buffer
-        .chunks_mut(row_stride)
-        .zip(out.chunks_mut(row_stride))
-    {
-        match bits_per_sample {
-            16 => rev_predict_f16(in_row, out_row, samples),
-            32 => rev_predict_f32(in_row, out_row, samples),
-            64 => rev_predict_f64(in_row, out_row, samples),
-            _ => {
-                return Err(AsyncTiffError::General(format!(
-                    "Floating-point predictor not supported for {bits_per_sample}-bit samples"
-                )))
-            }
+    match bits_per_sample {
+        16 => rev_predict_float::<2>(&mut buffer, samples, tile_width),
+        32 => rev_predict_float::<4>(&mut buffer, samples, tile_width),
+        64 => rev_predict_float::<8>(&mut buffer, samples, tile_width),
+        _ => {
+            return Err(AsyncTiffError::General(format!(
+                "Floating-point predictor not supported for {bits_per_sample}-bit samples"
+            )))
         }
     }
 
-    Ok(out)
+    Ok(buffer)
 }
 
-fn rev_predict_f16(input: &mut [u8], output: &mut [u8], samples: usize) {
-    for i in samples..input.len() {
-        input[i] = input[i].wrapping_add(input[i - samples]);
-    }
-    for (i, chunk) in output.as_chunks_mut::<2>().0.iter_mut().enumerate() {
-        *chunk = u16::from_be_bytes([input[i], input[input.len() / 2 + i]]).to_ne_bytes();
-    }
-}
+/// Reverse the floating-point predictor on `B`-byte samples, one row at a time.
+///
+/// Un-shuffling a row reads every byte plane at once, so it reads from a copy of the row. Only
+/// that one row needs scratch space, not a second tile.
+fn rev_predict_float<const B: usize>(buffer: &mut [u8], samples: usize, tile_width: usize) {
+    let row_stride = tile_width * samples * B;
+    let mut scratch = Vec::with_capacity(row_stride);
 
-fn rev_predict_f32(input: &mut [u8], output: &mut [u8], samples: usize) {
-    for i in samples..input.len() {
-        input[i] = input[i].wrapping_add(input[i - samples]);
-    }
-    for (i, chunk) in output.as_chunks_mut::<4>().0.iter_mut().enumerate() {
-        *chunk = u32::from_be_bytes([
-            input[i],
-            input[input.len() / 4 + i],
-            input[input.len() / 4 * 2 + i],
-            input[input.len() / 4 * 3 + i],
-        ])
-        .to_ne_bytes();
+    for row in buffer.chunks_mut(row_stride) {
+        // The bytes were differenced `samples` apart across the whole row, plane boundaries
+        // included, which is horizontal differencing on one-byte samples.
+        accumulate_row::<u8>(u8::as_samples_mut(row), samples);
+
+        scratch.clear();
+        scratch.extend_from_slice(row);
+        interleave_planes(&scratch, row.as_chunks_mut::<B>().0);
     }
 }
 
-fn rev_predict_f64(input: &mut [u8], output: &mut [u8], samples: usize) {
-    for i in samples..input.len() {
-        input[i] = input[i].wrapping_add(input[i - samples]);
+/// Un-shuffle one row of the floating-point predictor.
+///
+/// The writer splits a row into `B` byte planes, most significant byte first: plane `k` holds
+/// byte `k` of every big-endian sample. Gather byte `i` of each plane back into sample `i`, in
+/// native byte order.
+fn interleave_planes<const B: usize>(row: &[u8], out: &mut [[u8; B]]) {
+    let n = out.len();
+    let mut planes: [&[u8]; B] = std::array::from_fn(|k| &row[k * n..][..n]);
+    if cfg!(target_endian = "little") {
+        planes.reverse();
     }
-    for (i, chunk) in output.as_chunks_mut::<8>().0.iter_mut().enumerate() {
-        *chunk = u64::from_be_bytes([
-            input[i],
-            input[input.len() / 8 + i],
-            input[input.len() / 8 * 2 + i],
-            input[input.len() / 8 * 3 + i],
-            input[input.len() / 8 * 4 + i],
-            input[input.len() / 8 * 5 + i],
-            input[input.len() / 8 * 6 + i],
-            input[input.len() / 8 * 7 + i],
-        ])
-        .to_ne_bytes();
+
+    for (i, sample) in out.iter_mut().enumerate() {
+        *sample = std::array::from_fn(|k| planes[k][i]);
     }
 }
 
