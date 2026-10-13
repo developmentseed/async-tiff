@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bytes::Bytes;
 
 use crate::array::Array;
@@ -35,7 +37,7 @@ pub struct Tile {
     pub(crate) jpeg_tables: Option<Bytes>,
     /// LERC parameters from the LercParameters tag: [version, compression_type, ...]
     /// compression_type: 0 = none, 1 = deflate, 2 = zstd
-    pub(crate) lerc_parameters: Option<Vec<u32>>,
+    pub(crate) lerc_parameters: Option<Arc<[u32]>>,
 }
 
 impl Tile {
