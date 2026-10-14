@@ -11,8 +11,8 @@ use zune_jpeg::zune_core::colorspace::ColorSpace;
 use zune_jpeg::zune_core::options::DecoderOptions;
 use zune_jpeg::JpegDecoder;
 
-use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffUnsupportedError};
-use crate::tags::{Compression, PhotometricInterpretation};
+use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffFormatError};
+use crate::tags::{Compression, PhotometricInterpretation, Tag};
 
 /// A registry of decoders.
 ///
@@ -366,6 +366,15 @@ fn decode_modern_jpeg(
     photometric_interpretation: PhotometricInterpretation,
     jpeg_tables: Option<&[u8]>,
 ) -> AsyncTiffResult<Vec<u8>> {
+    // image-tiff checks the length of `jpeg_tables` when it reads the IFD.
+    if jpeg_tables.is_some_and(|jpeg_tables| jpeg_tables.len() < 2 || buf.len() < 2) {
+        return Err(
+            TiffError::FormatError(TiffFormatError::InvalidTagValueType(Tag::JPEGTables)).into(),
+        );
+    }
+
+    // Construct new jpeg_reader wrapping a SmartReader.
+    //
     // JPEG compression in TIFF allows saving quantization and/or huffman tables in one central
     // location. These `jpeg_tables` are simply prepended to the remaining jpeg image data. Because
     // these `jpeg_tables` start with a `SOI` (HEX: `0xFFD8`) or __start of image__ marker which is
@@ -374,62 +383,44 @@ fn decode_modern_jpeg(
     // data is removed because it follows `jpeg_tables`. Similary, `jpeg_tables` ends with a `EOI`
     // (HEX: `0xFFD9`) or __end of image__ marker, this has to be removed as well (last two bytes
     // of `jpeg_tables`).
-    //
-    // zune-jpeg decodes from a single contiguous buffer, so the two are copied into a new one.
-    let jpeg_data = match jpeg_tables {
+    let reader = Cursor::new(buf);
+
+    let mut jpeg_reader = match jpeg_tables {
         Some(jpeg_tables) => {
-            if jpeg_tables.len() < 2 || buf.len() < 2 {
-                return Err(AsyncTiffError::General(format!(
-                    "JPEG tile ({} bytes) or JPEGTables ({} bytes) is too short to hold a JPEG marker",
-                    buf.len(),
-                    jpeg_tables.len()
-                )));
-            }
-            let tables = &jpeg_tables[..jpeg_tables.len() - 2];
-            let tile = &buf[2..];
-            let mut data = Vec::with_capacity(tables.len() + tile.len());
-            data.extend_from_slice(tables);
-            data.extend_from_slice(tile);
-            Bytes::from(data)
+            let mut reader = reader;
+            reader.read_exact(&mut [0; 2])?;
+
+            Box::new(Cursor::new(&jpeg_tables[..jpeg_tables.len() - 2]).chain(reader))
+                as Box<dyn Read>
         }
-        None => buf,
+        None => Box::new(reader),
     };
 
+    let mut jpeg_data = Vec::new();
+    jpeg_reader.read_to_end(&mut jpeg_data)?;
+
     // JPEG allows dimensions up to 65535, but zune-jpeg rejects anything over 16384 by default.
-    let options = DecoderOptions::default()
+    let mut options = DecoderOptions::default()
         .set_max_width(u16::MAX.into())
         .set_max_height(u16::MAX.into());
     let mut decoder = JpegDecoder::new_with_options(ZCursor::new(jpeg_data), options);
-    decoder.decode_headers()?;
 
-    // Like libtiff, convert YCbCr to RGB and return every other colorspace as stored in the JPEG
-    // stream, without any color conversion.
+    // Disable color conversion by setting the output colorspace to the input colorspace, except
+    // that YCbCr is converted to RGB, like libtiff does:
     // https://github.com/libsdl-org/libtiff/blob/d23249978a7a99ea2e0752a476611914501577de/libtiff/tif_jpeg.c#L1461-L1479
-    let input_colorspace = decoder
-        .input_colorspace()
-        .expect("input colorspace is known once headers are decoded");
-    let output_colorspace = match photometric_interpretation {
-        PhotometricInterpretation::YCbCr if input_colorspace == ColorSpace::YCbCr => {
-            ColorSpace::RGB
-        }
-        // A YCbCr tile that zune-jpeg doesn't read as YCbCr is one band of a planar image, a
-        // single Luma component.
-        PhotometricInterpretation::YCbCr
-        | PhotometricInterpretation::RGB
-        | PhotometricInterpretation::WhiteIsZero
-        | PhotometricInterpretation::BlackIsZero
-        | PhotometricInterpretation::TransparencyMask
-        | PhotometricInterpretation::CMYK => input_colorspace,
-        photometric_interpretation => {
-            return Err(TiffError::UnsupportedError(
-                TiffUnsupportedError::UnsupportedInterpretation(photometric_interpretation),
-            )
-            .into());
-        }
-    };
-    decoder.set_options(options.jpeg_set_out_colorspace(output_colorspace));
+    decoder.decode_headers()?;
+    if let Some(colorspace) = decoder.input_colorspace() {
+        let colorspace = match (photometric_interpretation, colorspace) {
+            (PhotometricInterpretation::YCbCr, ColorSpace::YCbCr) => ColorSpace::RGB,
+            _ => colorspace,
+        };
+        options = options.jpeg_set_out_colorspace(colorspace);
+    }
 
-    Ok(decoder.decode()?)
+    decoder.set_options(options);
+
+    let data = decoder.decode()?;
+    Ok(data)
 }
 
 #[cfg(test)]
@@ -437,6 +428,15 @@ mod tests {
     use super::*;
 
     const SOI: &[u8] = &[0xFF, 0xD8];
+
+    fn is_invalid_jpeg_tables(result: &AsyncTiffResult<Vec<u8>>) -> bool {
+        matches!(
+            result,
+            Err(AsyncTiffError::InternalTIFFError(TiffError::FormatError(
+                TiffFormatError::InvalidTagValueType(Tag::JPEGTables)
+            )))
+        )
+    }
 
     #[test]
     fn test_jpeg_tables_shorter_than_marker_is_error() {
@@ -448,7 +448,7 @@ mod tests {
             8,
             None,
         );
-        assert!(matches!(result, Err(AsyncTiffError::General(_))));
+        assert!(is_invalid_jpeg_tables(&result));
     }
 
     #[test]
@@ -461,6 +461,6 @@ mod tests {
             8,
             None,
         );
-        assert!(matches!(result, Err(AsyncTiffError::General(_))));
+        assert!(is_invalid_jpeg_tables(&result));
     }
 }
