@@ -6,9 +6,13 @@ use std::io::{Cursor, Read};
 
 use bytes::Bytes;
 use flate2::bufread::ZlibDecoder;
+use zune_jpeg::zune_core::bytestream::ZCursor;
+use zune_jpeg::zune_core::colorspace::ColorSpace;
+use zune_jpeg::zune_core::options::DecoderOptions;
+use zune_jpeg::JpegDecoder;
 
-use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffUnsupportedError};
-use crate::tags::{Compression, PhotometricInterpretation};
+use crate::error::{AsyncTiffError, AsyncTiffResult, TiffError, TiffFormatError};
+use crate::tags::{Compression, PhotometricInterpretation, Tag};
 
 /// A registry of decoders.
 ///
@@ -356,12 +360,19 @@ impl Decoder for ZstdDecoder {
     }
 }
 
-// https://github.com/image-rs/image-tiff/blob/3bfb43e83e31b0da476832067ada68a82b378b7b/src/decoder/image.rs#L389-L450
+// https://github.com/image-rs/image-tiff/blob/e41159ce058bf193718b017599e2d7d53e9ccc92/src/decoder/image.rs#L552-L604
 fn decode_modern_jpeg(
     buf: Bytes,
     photometric_interpretation: PhotometricInterpretation,
     jpeg_tables: Option<&[u8]>,
 ) -> AsyncTiffResult<Vec<u8>> {
+    // image-tiff checks the length of `jpeg_tables` when it reads the IFD.
+    if jpeg_tables.is_some_and(|jpeg_tables| jpeg_tables.len() < 2 || buf.len() < 2) {
+        return Err(
+            TiffError::FormatError(TiffFormatError::InvalidTagValueType(Tag::JPEGTables)).into(),
+        );
+    }
+
     // Construct new jpeg_reader wrapping a SmartReader.
     //
     // JPEG compression in TIFF allows saving quantization and/or huffman tables in one central
@@ -374,7 +385,7 @@ fn decode_modern_jpeg(
     // of `jpeg_tables`).
     let reader = Cursor::new(buf);
 
-    let jpeg_reader = match jpeg_tables {
+    let mut jpeg_reader = match jpeg_tables {
         Some(jpeg_tables) => {
             let mut reader = reader;
             reader.read_exact(&mut [0; 2])?;
@@ -385,27 +396,71 @@ fn decode_modern_jpeg(
         None => Box::new(reader),
     };
 
-    let mut decoder = jpeg::Decoder::new(jpeg_reader);
+    let mut jpeg_data = Vec::new();
+    jpeg_reader.read_to_end(&mut jpeg_data)?;
 
-    match photometric_interpretation {
-        PhotometricInterpretation::RGB => decoder.set_color_transform(jpeg::ColorTransform::RGB),
-        PhotometricInterpretation::WhiteIsZero
-        | PhotometricInterpretation::BlackIsZero
-        | PhotometricInterpretation::TransparencyMask => {
-            decoder.set_color_transform(jpeg::ColorTransform::None)
-        }
-        PhotometricInterpretation::CMYK => decoder.set_color_transform(jpeg::ColorTransform::CMYK),
-        PhotometricInterpretation::YCbCr => {
-            decoder.set_color_transform(jpeg::ColorTransform::YCbCr)
-        }
-        photometric_interpretation => {
-            return Err(TiffError::UnsupportedError(
-                TiffUnsupportedError::UnsupportedInterpretation(photometric_interpretation),
-            )
-            .into());
-        }
+    // JPEG allows dimensions up to 65535, but zune-jpeg rejects anything over 16384 by default.
+    let mut options = DecoderOptions::default()
+        .set_max_width(u16::MAX.into())
+        .set_max_height(u16::MAX.into());
+    let mut decoder = JpegDecoder::new_with_options(ZCursor::new(jpeg_data), options);
+
+    // Disable color conversion by setting the output colorspace to the input colorspace, except
+    // that YCbCr is converted to RGB, like libtiff does:
+    // https://github.com/libsdl-org/libtiff/blob/d23249978a7a99ea2e0752a476611914501577de/libtiff/tif_jpeg.c#L1461-L1479
+    decoder.decode_headers()?;
+    if let Some(colorspace) = decoder.input_colorspace() {
+        let colorspace = match (photometric_interpretation, colorspace) {
+            (PhotometricInterpretation::YCbCr, ColorSpace::YCbCr) => ColorSpace::RGB,
+            _ => colorspace,
+        };
+        options = options.jpeg_set_out_colorspace(colorspace);
     }
+
+    decoder.set_options(options);
 
     let data = decoder.decode()?;
     Ok(data)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SOI: &[u8] = &[0xFF, 0xD8];
+
+    fn is_invalid_jpeg_tables(result: &AsyncTiffResult<Vec<u8>>) -> bool {
+        matches!(
+            result,
+            Err(AsyncTiffError::InternalTIFFError(TiffError::FormatError(
+                TiffFormatError::InvalidTagValueType(Tag::JPEGTables)
+            )))
+        )
+    }
+
+    #[test]
+    fn test_jpeg_tables_shorter_than_marker_is_error() {
+        let result = JPEGDecoder.decode_tile(
+            Bytes::from_static(SOI),
+            PhotometricInterpretation::YCbCr,
+            Some(&[0xFF]),
+            3,
+            8,
+            None,
+        );
+        assert!(is_invalid_jpeg_tables(&result));
+    }
+
+    #[test]
+    fn test_jpeg_tile_shorter_than_marker_is_error() {
+        let result = JPEGDecoder.decode_tile(
+            Bytes::from_static(&[0xFF]),
+            PhotometricInterpretation::YCbCr,
+            Some(SOI),
+            3,
+            8,
+            None,
+        );
+        assert!(is_invalid_jpeg_tables(&result));
+    }
 }
