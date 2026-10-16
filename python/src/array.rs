@@ -13,7 +13,7 @@
 //!
 //! - **view**: A `Py_buffer` struct that describes how to interpret the memory
 //! - **format**: A string describing the element type (e.g., "<H" for little-endian uint16)
-//! - **shape**: Array dimensions (e.g., [height, width, bands] for a 3D array)
+//! - **shape**: Array dimensions (e.g., [height, width, planes] for a 3D array)
 //! - **strides**: Byte offsets between consecutive elements in each dimension
 //!
 //! ## Reference Counting
@@ -179,8 +179,8 @@ pub struct PyArray {
     /// Stored as `isize` because the buffer protocol requires `Py_ssize_t` (= `isize`).
     ///
     /// The interpretation depends on the PlanarConfiguration:
-    /// - PlanarConfiguration=1 (chunky): (height, width, bands)
-    /// - PlanarConfiguration=2 (planar): (bands, height, width)
+    /// - PlanarConfiguration=1 (chunky): (height, width, planes)
+    /// - PlanarConfiguration=2 (planar): (planes, height, width)
     shape: [isize; 3],
 
     /// Row-major (C-contiguous) strides in bytes.

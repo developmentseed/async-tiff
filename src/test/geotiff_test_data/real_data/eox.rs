@@ -17,7 +17,7 @@ async fn test_band_interleaved() {
     assert_eq!(ifd.tile_width(), Some(256));
     assert_eq!(ifd.tile_height(), Some(256));
 
-    // Fetch tile at position (0, 0) - this fetches all 3 bands automatically
+    // Fetch tile at position (0, 0) - this fetches all 3 bands/planes automatically
     let tile = ifd.fetch_tile(0, 0, &reader).await.unwrap();
 
     let array = tile.decode(&Default::default()).unwrap();
