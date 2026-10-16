@@ -3,9 +3,8 @@
 //! Steps:
 //! 1. Download Sentinel-2 True-Colour Image (TCI) file from
 //!    https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/12/S/UF/2022/6/S2B_12SUF_20220609_0_L2A/TCI.tif
-//!    to `benches/` folder, applying LZW compression with Horizontal differencing
-//!    predictor using the following command:
-//!    `gdal raster convert --co COMPRESS=LZW --co TILED=YES --co PREDICTOR=2 benches/TCI.tif benches/TCI_lzw.tif`
+//!    to `benches/data/` and re-encode it with LZW compression and the horizontal
+//!    differencing predictor by running `benches/generate_fixtures.sh`
 //! 2. Run `cargo bench`
 
 use std::path::PathBuf;
@@ -21,9 +20,9 @@ use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use object_store::path::Path;
 use object_store::{parse_url, ObjectStore};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use rayon::ThreadPoolBuilder;
+use rayon::{ThreadPool, ThreadPoolBuilder};
 use reqwest::Url;
-use tokio::runtime;
+use tokio::runtime::{self, Runtime};
 
 // Retrieve all TIFF tiles (with their compressed bytes) from the first IFD
 async fn read_tiles<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Vec<Tile>> {
@@ -53,17 +52,12 @@ async fn read_tiles<R: AsyncFileReader + Clone>(reader: R) -> AsyncTiffResult<Ve
 }
 
 // Open TIFF file, fetching compressed tile bytes in async manner
-fn open_tiff(fpath: &str) -> AsyncTiffResult<Vec<Tile>> {
+fn open_tiff(fpath: &str, runtime: &Runtime) -> AsyncTiffResult<Vec<Tile>> {
     let abs_path: PathBuf = std::path::Path::new(fpath).canonicalize()?;
     let tif_url: Url = Url::from_file_path(abs_path).expect("Failed to parse url: {abs_path}");
     let (store, path): (Box<dyn ObjectStore>, Path) = parse_url(&tif_url)?;
 
     let reader = ObjectReader::new(Arc::new(store), path);
-
-    // Initialize async runtime
-    let runtime = runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()?;
 
     // Get list of tiles in TIFF file stream (using tokio async runtime)
     let tiles: Vec<Tile> = runtime.block_on(read_tiles(reader)).unwrap();
@@ -73,15 +67,10 @@ fn open_tiff(fpath: &str) -> AsyncTiffResult<Vec<Tile>> {
 }
 
 // Do actual decoding of compressed TIFF tiles using multi-threading
-fn decode_tiff(tiles: Vec<Tile>) -> AsyncTiffResult<Vec<Array>> {
+fn decode_tiff(tiles: Vec<Tile>, pool: &ThreadPool) -> AsyncTiffResult<Vec<Array>> {
     let decoder_registry = DecoderRegistry::default();
 
     // Do actual decoding of TIFF tile data (multi-threaded using rayon)
-    let pool = ThreadPoolBuilder::new()
-        .num_threads(4)
-        .build()
-        .map_err(|err| AsyncTiffError::External(Box::new(err)))?;
-
     let tile_arrays: Vec<Array> = pool.install(|| {
         tiles
             .into_par_iter()
@@ -101,22 +90,35 @@ fn decode_tiff(tiles: Vec<Tile>) -> AsyncTiffResult<Vec<Array>> {
     Ok(tile_arrays)
 }
 
-fn read_tiff(fpath: &str) -> AsyncTiffResult<()> {
-    let compressed_tiles: Vec<Tile> = open_tiff(fpath)?;
-    let _decoded_tiles: Vec<Array> = decode_tiff(compressed_tiles)?;
+fn read_tiff(fpath: &str, runtime: &Runtime, pool: &ThreadPool) -> AsyncTiffResult<()> {
+    let compressed_tiles: Vec<Tile> = open_tiff(fpath, runtime)?;
+    let _decoded_tiles: Vec<Array> = decode_tiff(compressed_tiles, pool)?;
     Ok(())
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
+    let fpath = concat!(env!("CARGO_MANIFEST_DIR"), "/benches/data/TCI_lzw.tif");
+    assert!(
+        std::path::Path::new(fpath).exists(),
+        "missing benchmark fixture {fpath}; run benches/generate_fixtures.sh first"
+    );
+
+    // The runtime and thread pool are created once, outside the timed region.
+    let runtime = runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let pool = ThreadPoolBuilder::new().num_threads(4).build().unwrap();
+
     let mut group = c.benchmark_group("read_tiff");
 
-    let fsize: u64 = std::fs::metadata("benches/TCI_lzw.tif").unwrap().len();
+    let fsize: u64 = std::fs::metadata(fpath).unwrap().len();
     group.throughput(Throughput::BytesDecimal(fsize)); // 55MB filesize
 
     // CPU decoding using async-tiff
     group.sample_size(30);
-    group.bench_function("async-tiff", move |b| {
-        b.iter(|| read_tiff("benches/TCI_lzw.tif"))
+    group.bench_function("async-tiff", |b| {
+        b.iter(|| read_tiff(fpath, &runtime, &pool))
     });
     group.finish();
 }
