@@ -77,7 +77,8 @@ class TIFF:
             x: The column index within the ifd to read from.
             y: The row index within the ifd to read from.
             z: The IFD index to read from.
-            planes: The plane indexes to read from. If `None`, all planes will be read.
+            planes: The plane indices to read from (using 0-based indexing). If `None`,
+                all planes will be read.
 
         Returns:
             Tile response.
@@ -94,7 +95,8 @@ class TIFF:
         Args:
             xy: The (column, row) indexes within the ifd to read from.
             z: The IFD index to read from.
-            planes: The plane indexes to read from. If `None`, all planes will be read.
+            planes: The plane indices to read from (using 0-based indexing). If `None`,
+                all planes will be read.
 
         Returns:
             Tile responses.

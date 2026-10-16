@@ -788,7 +788,7 @@ impl ImageFileDirectory {
 /// Options for reading tiles from a TIFF
 #[derive(Clone, Debug, Default)]
 pub struct ReadOptions {
-    /// Plane indices to return from a tile fetch
+    /// Plane indices to return from a tile fetch (using 0-based indexing)
     ///
     /// None means all planes.
     pub planes: Option<Vec<usize>>,

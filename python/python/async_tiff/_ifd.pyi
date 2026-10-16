@@ -144,7 +144,8 @@ class ImageFileDirectory:
         Args:
             x: The column index within the ifd to read from.
             y: The row index within the ifd to read from.
-            planes: The plane indexes to read from. If `None`, all planes will be read.
+            planes: The plane indices to read from (using 0-based indexing). If `None`,
+                all planes will be read.
 
         Returns:
             Tile response.
@@ -156,7 +157,8 @@ class ImageFileDirectory:
 
         Args:
             xy: The (column, row) indexes within the ifd to read from.
-            planes: The plane indexes to read from. If `None`, all planes will be read.
+            planes: The plane indices to read from (using 0-based indexing). If `None`,
+                all planes will be read.
 
         Returns:
             Tile responses.
@@ -174,7 +176,8 @@ class ImageFileDirectory:
         Args:
             x: The column index within the ifd to read from.
             y: The row index within the ifd to read from.
-            planes: The plane indexes to read from. If `None`, all planes will be read.
+            planes: The plane indices to read from (using 0-based indexing). If `None`,
+                all planes will be read.
 
         Returns:
             The byte range or ranges of the tile, as `(start, end)`. The result will be
