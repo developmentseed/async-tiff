@@ -137,26 +137,26 @@ class ImageFileDirectory:
         x: int,
         y: int,
         *,
-        bands: Sequence[int] | None = None,
+        planes: Sequence[int] | None = None,
     ) -> Tile:
         """Fetch a single tile.
 
         Args:
             x: The column index within the ifd to read from.
             y: The row index within the ifd to read from.
-            bands: The band indexes to read from. If `None`, all bands will be read.
+            planes: The plane indexes to read from. If `None`, all planes will be read.
 
         Returns:
             Tile response.
         """
     async def fetch_tiles(
-        self, xy: Sequence[tuple[int, int]], *, bands: Sequence[int] | None = None
+        self, xy: Sequence[tuple[int, int]], *, planes: Sequence[int] | None = None
     ) -> list[Tile]:
         """Fetch multiple tiles concurrently.
 
         Args:
             xy: The (column, row) indexes within the ifd to read from.
-            bands: The band indexes to read from. If `None`, all bands will be read.
+            planes: The plane indexes to read from. If `None`, all planes will be read.
 
         Returns:
             Tile responses.
@@ -167,14 +167,14 @@ class ImageFileDirectory:
         x: int,
         y: int,
         *,
-        bands: Sequence[int] | None = None,
+        planes: Sequence[int] | None = None,
     ) -> tuple[int, int] | list[tuple[int, int]]:
         """The byte range of the tile at the given column and row indices.
 
         Args:
             x: The column index within the ifd to read from.
             y: The row index within the ifd to read from.
-            bands: The band indexes to read from. If `None`, all bands will be read.
+            planes: The plane indexes to read from. If `None`, all planes will be read.
 
         Returns:
             The byte range or ranges of the tile, as `(start, end)`. The result will be

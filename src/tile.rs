@@ -102,10 +102,10 @@ impl Tile {
                 self.lerc_parameters.as_deref(),
             )?,
             CompressedBytes::Planar(plane_bytes) => {
-                // Decode each band separately and concatenate
-                // Pre-allocate buffer: bands × width × height × bytes_per_sample
+                // Decode each component plane separately and concatenate
+                // Pre-allocate buffer: planes × width × height × bytes_per_sample
                 let bytes_per_sample = (bits_per_sample as usize).div_ceil(8);
-                let num_bands = band_bytes.len();
+                let num_planes = plane_bytes.len();
                 let total_size =
                     num_planes * tile_width * (self.height as usize) * bytes_per_sample;
                 let mut result = Vec::with_capacity(total_size);
@@ -149,15 +149,15 @@ impl Tile {
             }
         };
 
-        let num_bands = match &self.compressed_bytes {
+        let num_planes = match &self.compressed_bytes {
             CompressedBytes::Chunky(_) => self.samples_per_pixel as usize,
-            CompressedBytes::Planar(band_bytes) => band_bytes.len(),
+            CompressedBytes::Planar(plane_bytes) => plane_bytes.len(),
         };
         let shape = infer_shape(
             self.planar_configuration,
             self.width as _,
             self.height as _,
-            num_bands,
+            num_planes,
         );
         Array::try_new(decoded, shape, self.data_type)
     }

@@ -69,7 +69,7 @@ class TIFF:
         y: int,
         z: int,
         *,
-        bands: Sequence[int] | None = None,
+        planes: Sequence[int] | None = None,
     ) -> Tile:
         """Fetch a single tile.
 
@@ -77,7 +77,7 @@ class TIFF:
             x: The column index within the ifd to read from.
             y: The row index within the ifd to read from.
             z: The IFD index to read from.
-            bands: The band indexes to read from. If `None`, all bands will be read.
+            planes: The plane indexes to read from. If `None`, all planes will be read.
 
         Returns:
             Tile response.
@@ -87,14 +87,14 @@ class TIFF:
         xy: Sequence[tuple[int, int]],
         z: int,
         *,
-        bands: Sequence[int] | None = None,
+        planes: Sequence[int] | None = None,
     ) -> list[Tile]:
         """Fetch multiple tiles concurrently.
 
         Args:
             xy: The (column, row) indexes within the ifd to read from.
             z: The IFD index to read from.
-            bands: The band indexes to read from. If `None`, all bands will be read.
+            planes: The plane indexes to read from. If `None`, all planes will be read.
 
         Returns:
             Tile responses.

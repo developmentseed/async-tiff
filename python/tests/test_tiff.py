@@ -50,18 +50,18 @@ async def test_read_band_interleaved_tiff_window(
     ("variant", "file_name"),
     [("source-coop-alpha-earth", "xjejfvrbm1fbu1ecw-0000000000-0000008192")],
 )
-async def test_fetch_specific_bands(
+async def test_fetch_specific_planes(
     load_tiff: LoadTIFF,
     load_rasterio: LoadRasterio,
     variant: str,
     file_name: str,
 ) -> None:
     """
-    Ensure TIFF.fetch_tile() can retrieve specific bands from a band interleaved TIFF.
+    Ensure TIFF.fetch_tile() can retrieve specific planes from a band-interleaved TIFF.
     """
     tiff = await load_tiff(file_name, variant=variant)
 
-    tile = await tiff.fetch_tile(0, 0, z=0, bands=[0, 42, 63])  # 0-indexing
+    tile = await tiff.fetch_tile(0, 0, z=0, planes=[0, 42, 63])  # 0-indexing
     array = await tile.decode()
     data = np.array(array)
 

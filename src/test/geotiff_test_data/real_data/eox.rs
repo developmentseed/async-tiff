@@ -47,7 +47,7 @@ async fn test_band_interleaved_single_tile_with_specific_bands() {
             0,
             &reader,
             ReadOptions {
-                bands: Some(vec![0, 1]),
+                planes: Some(vec![0, 1]),
             },
         )
         .await
@@ -74,7 +74,7 @@ async fn test_band_interleaved_multi_tiles_with_specific_bands() {
             &[(0, 0), (1, 0)],
             &reader,
             ReadOptions {
-                bands: Some(vec![1, 2]),
+                planes: Some(vec![1, 2]),
             },
         )
         .await

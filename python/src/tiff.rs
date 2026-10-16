@@ -99,16 +99,16 @@ impl PyTIFF {
             .collect()
     }
 
-    #[pyo3(signature = (x, y, z, *, bands=None))]
+    #[pyo3(signature = (x, y, z, *, planes=None))]
     fn fetch_tile<'py>(
         &'py self,
         py: Python<'py>,
         x: usize,
         y: usize,
         z: usize,
-        bands: Option<Vec<usize>>,
+        planes: Option<Vec<usize>>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        let options = ReadOptions { bands };
+        let options = ReadOptions { planes };
         let reader = self.reader.clone();
         let ifd = self
             .ifds
@@ -124,15 +124,15 @@ impl PyTIFF {
             Ok(PyTile::new(tile))
         })
     }
-    #[pyo3(signature = (xy, z, *, bands=None))]
+    #[pyo3(signature = (xy, z, *, planes=None))]
     fn fetch_tiles<'py>(
         &'py self,
         py: Python<'py>,
         xy: Vec<(usize, usize)>,
         z: usize,
-        bands: Option<Vec<usize>>,
+        planes: Option<Vec<usize>>,
     ) -> PyResult<Bound<'py, PyAny>> {
-        let options = ReadOptions { bands };
+        let options = ReadOptions { planes };
         let reader = self.reader.clone();
         let ifd = self
             .ifds
