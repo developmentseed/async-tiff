@@ -111,8 +111,8 @@ impl From<CompressedBytes> for PyCompressedBytes {
     fn from(value: CompressedBytes) -> Self {
         match value {
             CompressedBytes::Chunky(bytes) => PyCompressedBytes::Chunky(bytes.into()),
-            CompressedBytes::Planar(band_bytes) => {
-                PyCompressedBytes::Planar(band_bytes.into_iter().map(|b| b.into()).collect())
+            CompressedBytes::Planar(plane_bytes) => {
+                PyCompressedBytes::Planar(plane_bytes.into_iter().map(|b| b.into()).collect())
             }
         }
     }

@@ -740,8 +740,8 @@ impl ImageFileDirectory {
 
     /// Fetch the tile located at `x` column and `y` row using the provided reader.
     ///
-    /// For planar configuration TIFFs, this automatically fetches all bands for the tile
-    /// at position (x, y) and combines them into a single Tile.
+    /// For planar configuration TIFFs, this automatically fetches all planes for the
+    /// tile at position (x, y) and combines them into a single Tile.
     pub async fn fetch_tile(
         &self,
         x: usize,
@@ -797,10 +797,10 @@ pub struct ReadOptions {
 /// A description of the byte ranges for a tile, which may differ based on whether the TIFF is in
 /// chunky or planar format.
 pub enum TileByteRange {
-    /// For chunky TIFFs, a single byte range for the tile that includes all bands.
+    /// For chunky TIFFs, a single byte range for the tile that includes all planes.
     Chunky(Range<u64>),
 
-    /// For planar TIFFs, separate byte ranges for each band of the tile.
+    /// For planar TIFFs, separate byte ranges for each component plane of the tile.
     Planar(Vec<Range<u64>>),
 }
 
@@ -884,10 +884,10 @@ impl TileByteRange {
 
 /// A description of the byte ranges for multiple tiles
 pub enum TilesByteRanges {
-    /// For chunky TIFFs, a byte range for each tile that includes all bands.
+    /// For chunky TIFFs, a byte range for each tile that includes all planes.
     Chunky(Vec<Range<u64>>),
 
-    /// For planar TIFFs, separate byte ranges for each band of each tile.
+    /// For planar TIFFs, separate byte ranges for each component plane of each tile.
     Planar(Vec<Vec<Range<u64>>>),
 }
 
@@ -902,17 +902,17 @@ impl TilesByteRanges {
                 Ok(buffers.into_iter().map(CompressedBytes::Chunky).collect())
             }
             Self::Planar(ranges) => {
-                // Record how many bands each tile has, then flatten into a single fetch
-                let band_counts: Vec<usize> = ranges.iter().map(|r| r.len()).collect();
+                // Record how many planes each tile has, then flatten into a single fetch
+                let plane_counts: Vec<usize> = ranges.iter().map(|r| r.len()).collect();
                 let flat_ranges: Vec<Range<u64>> = ranges.into_iter().flatten().collect();
                 let flat_buffers = reader.get_byte_ranges(flat_ranges).await?;
-                // Re-chunk the flat results back into per-tile band vecs
+                // Re-chunk the flat results back into per-tile plane vecs
                 let mut flat_iter = flat_buffers.into_iter();
-                band_counts
+                plane_counts
                     .into_iter()
                     .map(|n| {
-                        let band_bytes: Vec<Bytes> = flat_iter.by_ref().take(n).collect();
-                        Ok(CompressedBytes::Planar(band_bytes))
+                        let plane_bytes: Vec<Bytes> = flat_iter.by_ref().take(n).collect();
+                        Ok(CompressedBytes::Planar(plane_bytes))
                     })
                     .collect()
             }
@@ -957,7 +957,7 @@ impl TilesByteRanges {
                 let planar_ranges = ranges
                     .into_iter()
                     .map(|r| match r {
-                        TileByteRange::Planar(band_ranges) => band_ranges,
+                        TileByteRange::Planar(plane_ranges) => plane_ranges,
                         _ => unreachable!(),
                     })
                     .collect();
@@ -973,7 +973,7 @@ pub enum CompressedBytes {
     /// Single compressed chunk for chunky (pixel-interleaved) format.
     Chunky(Bytes),
 
-    /// Multiple compressed chunks, one per band, for planar (band-interleaved) format.
+    /// Multiple compressed chunks, one per plane, for planar (band-interleaved) format.
     Planar(Vec<Bytes>),
 }
 

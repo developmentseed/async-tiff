@@ -4,7 +4,6 @@ use std::error::Error;
 use std::fmt::Debug;
 use std::{fmt, io, str, string};
 
-use jpeg::UnsupportedFeature;
 use thiserror::Error;
 
 use crate::tag_value::TagValue;
@@ -34,7 +33,7 @@ pub enum AsyncTiffError {
 
     /// Error while decoding JPEG data.
     #[error(transparent)]
-    JPEGDecodingError(#[from] jpeg::Error),
+    JPEGDecodingError(#[from] zune_jpeg::errors::DecodeErrors),
 
     /// Error while decoding JPEG2000 data.
     #[cfg(feature = "jpeg2k")]
@@ -210,7 +209,6 @@ pub enum TiffUnsupportedError {
     UnsupportedPlanarConfig(Option<PlanarConfiguration>),
     UnsupportedDataType,
     UnsupportedInterpretation(PhotometricInterpretation),
-    UnsupportedJpegFeature(UnsupportedFeature),
     MisalignedTileBoundaries,
 }
 
@@ -267,9 +265,6 @@ impl fmt::Display for TiffUnsupportedError {
                     fmt,
                     "Unsupported photometric interpretation \"{interpretation:?}\"."
                 )
-            }
-            UnsupportedJpegFeature(ref unsupported_feature) => {
-                write!(fmt, "Unsupported JPEG feature {unsupported_feature:?}")
             }
             MisalignedTileBoundaries => write!(fmt, "Tile rows are not aligned to byte boundaries"),
         }
