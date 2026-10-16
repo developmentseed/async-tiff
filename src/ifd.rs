@@ -720,13 +720,22 @@ impl ImageFileDirectory {
     }
 
     /// Find the byte range(s) for the tile located at `x` column and `y` row.
-    pub fn tile_byte_range(&self, x: usize, y: usize) -> Option<TileByteRange> {
-        TileByteRange::from_ifd_tile(self, x, y)
+    pub fn tile_byte_range(
+        &self,
+        x: usize,
+        y: usize,
+        planes: Option<&[usize]>,
+    ) -> AsyncTiffResult<Option<TileByteRange>> {
+        TileByteRange::from_ifd_tile(self, x, y, planes)
     }
 
     /// Find the byte ranges for the tiles located at `x` column and `y` row.
-    pub fn tiles_byte_ranges(&self, xy: &[(usize, usize)]) -> Option<TilesByteRanges> {
-        TilesByteRanges::from_ifd_tiles(self, xy)
+    pub fn tiles_byte_ranges(
+        &self,
+        xy: &[(usize, usize)],
+        planes: Option<&[usize]>,
+    ) -> AsyncTiffResult<Option<TilesByteRanges>> {
+        TilesByteRanges::from_ifd_tiles(self, xy, planes)
     }
 
     /// Fetch the tile located at `x` column and `y` row using the provided reader.
@@ -738,9 +747,11 @@ impl ImageFileDirectory {
         x: usize,
         y: usize,
         reader: &dyn AsyncFileReader,
+        read_options: ReadOptions,
     ) -> AsyncTiffResult<Tile> {
+        let ReadOptions { planes } = read_options;
         let byte_ranges = self
-            .tile_byte_range(x, y)
+            .tile_byte_range(x, y, planes.as_deref())?
             .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
         let compressed_bytes = byte_ranges.into_fetch(reader).await?;
         Ok(compressed_bytes.into_tile(x, y, self))
@@ -751,9 +762,11 @@ impl ImageFileDirectory {
         &self,
         xy: &[(usize, usize)],
         reader: &dyn AsyncFileReader,
+        read_options: ReadOptions,
     ) -> AsyncTiffResult<Vec<Tile>> {
+        let ReadOptions { planes } = read_options;
         let byte_ranges = self
-            .tiles_byte_ranges(xy)
+            .tiles_byte_ranges(xy, planes.as_deref())?
             .ok_or(AsyncTiffError::General("Not a tiled TIFF".to_string()))?;
         let compressed_bytes = byte_ranges.into_fetch(reader).await?;
         Ok(compressed_bytes
@@ -770,6 +783,15 @@ impl ImageFileDirectory {
         let y_count = (self.image_height as f64 / self.tile_height? as f64).ceil();
         Some((x_count as usize, y_count as usize))
     }
+}
+
+/// Options for reading tiles from a TIFF
+#[derive(Clone, Debug, Default)]
+pub struct ReadOptions {
+    /// Plane indices to return from a tile fetch (using 0-based indexing)
+    ///
+    /// None means all planes.
+    pub planes: Option<Vec<usize>>,
 }
 
 /// A description of the byte ranges for a tile, which may differ based on whether the TIFF is in
@@ -792,21 +814,61 @@ impl TileByteRange {
         }
     }
 
-    fn from_ifd_tile(ifd: &ImageFileDirectory, x: usize, y: usize) -> Option<Self> {
-        let tile_offsets = ifd.tile_offsets.as_deref()?;
-        let tile_byte_counts = ifd.tile_byte_counts.as_deref()?;
-        let (tiles_per_row, tiles_per_col) = ifd.tile_count()?;
+    fn from_ifd_tile(
+        ifd: &ImageFileDirectory,
+        x: usize,
+        y: usize,
+        planes: Option<&[usize]>,
+    ) -> AsyncTiffResult<Option<Self>> {
+        let tile_offsets = if let Some(offsets) = ifd.tile_offsets.as_deref() {
+            offsets
+        } else {
+            return Ok(None);
+        };
+        let tile_byte_counts = if let Some(counts) = ifd.tile_byte_counts.as_deref() {
+            counts
+        } else {
+            return Ok(None);
+        };
+        let (tiles_per_row, tiles_per_col) = if let Some((x, y)) = ifd.tile_count() {
+            (x, y)
+        } else {
+            return Ok(None);
+        };
         match ifd.planar_configuration {
             PlanarConfiguration::Chunky => {
+                if planes.is_some() {
+                    return Err(AsyncTiffError::General(
+                        "Plane selection is not supported for chunky TIFFs".to_string(),
+                    ));
+                }
+
                 let idx = (y * tiles_per_row) + x;
                 let offset = tile_offsets[idx];
                 let byte_count = tile_byte_counts[idx];
-                Some(TileByteRange::Chunky(offset..(offset + byte_count)))
+                Ok(Some(TileByteRange::Chunky(offset..(offset + byte_count))))
             }
             PlanarConfiguration::Planar => {
-                let tiles_per_plane = tiles_per_row * tiles_per_col;
                 let num_planes = ifd.samples_per_pixel as usize;
-                let plane_ranges = (0..num_planes)
+                let planes = if let Some(planes) = planes {
+                    // Validate that the requested planes are within the valid range
+                    for &plane in planes {
+                        if plane >= num_planes {
+                            return Err(AsyncTiffError::General(format!(
+                                "Plane index {} is out of range for samples per pixel {}",
+                                plane, num_planes
+                            )));
+                        }
+                    }
+                    planes
+                } else {
+                    // If no specific planes are requested, include all planes
+                    &(0..num_planes).collect::<Vec<_>>()
+                };
+
+                let tiles_per_plane = tiles_per_row * tiles_per_col;
+                let plane_ranges = planes
+                    .iter()
                     .map(|plane| {
                         let plane_idx = (plane * tiles_per_plane) + (y * tiles_per_row) + x;
                         let offset = tile_offsets[plane_idx];
@@ -814,7 +876,7 @@ impl TileByteRange {
                         offset..(offset + byte_count)
                     })
                     .collect::<Vec<_>>();
-                Some(TileByteRange::Planar(plane_ranges))
+                Ok(Some(TileByteRange::Planar(plane_ranges)))
             }
         }
     }
@@ -857,18 +919,28 @@ impl TilesByteRanges {
         }
     }
 
-    fn from_ifd_tiles(ifd: &ImageFileDirectory, xy: &[(usize, usize)]) -> Option<Self> {
+    fn from_ifd_tiles(
+        ifd: &ImageFileDirectory,
+        xy: &[(usize, usize)],
+        planes: Option<&[usize]>,
+    ) -> AsyncTiffResult<Option<Self>> {
         if xy.is_empty() {
             return match ifd.planar_configuration {
-                PlanarConfiguration::Chunky => Some(TilesByteRanges::Chunky(vec![])),
-                PlanarConfiguration::Planar => Some(TilesByteRanges::Planar(vec![])),
+                PlanarConfiguration::Chunky => Ok(Some(TilesByteRanges::Chunky(vec![]))),
+                PlanarConfiguration::Planar => Ok(Some(TilesByteRanges::Planar(vec![]))),
             };
         }
 
         let ranges = xy
             .iter()
-            .map(|(x, y)| TileByteRange::from_ifd_tile(ifd, *x, *y))
-            .collect::<Option<Vec<_>>>()?;
+            .map(|(x, y)| TileByteRange::from_ifd_tile(ifd, *x, *y, planes))
+            .collect::<AsyncTiffResult<Option<Vec<_>>>>()?;
+
+        let ranges = if let Some(ranges) = ranges {
+            ranges
+        } else {
+            return Ok(None);
+        };
 
         match ifd.planar_configuration {
             PlanarConfiguration::Chunky => {
@@ -879,7 +951,7 @@ impl TilesByteRanges {
                         _ => unreachable!(),
                     })
                     .collect();
-                Some(TilesByteRanges::Chunky(chunky_ranges))
+                Ok(Some(TilesByteRanges::Chunky(chunky_ranges)))
             }
             PlanarConfiguration::Planar => {
                 let planar_ranges = ranges
@@ -889,7 +961,7 @@ impl TilesByteRanges {
                         _ => unreachable!(),
                     })
                     .collect();
-                Some(TilesByteRanges::Planar(planar_ranges))
+                Ok(Some(TilesByteRanges::Planar(planar_ranges)))
             }
         }
     }

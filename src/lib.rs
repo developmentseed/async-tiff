@@ -27,7 +27,7 @@ mod tile;
 
 pub use array::{Array, TypedArray};
 pub use data_type::DataType;
-pub use ifd::{CompressedBytes, ImageFileDirectory, TileByteRange, TilesByteRanges};
+pub use ifd::{CompressedBytes, ImageFileDirectory, ReadOptions, TileByteRange, TilesByteRanges};
 pub use tag_value::TagValue;
 pub use tiff::TIFF;
 pub use tile::Tile;

@@ -132,21 +132,33 @@ class ImageFileDirectory:
     def colormap(self) -> Colormap | None:
         """The colormap for palette-color images."""
         ...
-    async def fetch_tile(self, x: int, y: int) -> Tile:
+    async def fetch_tile(
+        self,
+        x: int,
+        y: int,
+        *,
+        planes: Sequence[int] | None = None,
+    ) -> Tile:
         """Fetch a single tile.
 
         Args:
             x: The column index within the ifd to read from.
             y: The row index within the ifd to read from.
+            planes: The plane indices to read from (using 0-based indexing). If `None`,
+                all planes will be read.
 
         Returns:
             Tile response.
         """
-    async def fetch_tiles(self, xy: Sequence[tuple[int, int]]) -> list[Tile]:
+    async def fetch_tiles(
+        self, xy: Sequence[tuple[int, int]], *, planes: Sequence[int] | None = None
+    ) -> list[Tile]:
         """Fetch multiple tiles concurrently.
 
         Args:
             xy: The (column, row) indexes within the ifd to read from.
+            planes: The plane indices to read from (using 0-based indexing). If `None`,
+                all planes will be read.
 
         Returns:
             Tile responses.
@@ -156,12 +168,16 @@ class ImageFileDirectory:
         self,
         x: int,
         y: int,
+        *,
+        planes: Sequence[int] | None = None,
     ) -> tuple[int, int] | list[tuple[int, int]]:
         """The byte range of the tile at the given column and row indices.
 
         Args:
             x: The column index within the ifd to read from.
             y: The row index within the ifd to read from.
+            planes: The plane indices to read from (using 0-based indexing). If `None`,
+                all planes will be read.
 
         Returns:
             The byte range or ranges of the tile, as `(start, end)`. The result will be

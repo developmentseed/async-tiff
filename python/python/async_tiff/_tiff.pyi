@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 from ._ifd import ImageFileDirectory
 from ._input import ObspecInput
@@ -63,23 +63,40 @@ class TIFF:
         Each ImageFileDirectory (IFD) represents one of the internal "sub images" of
         this file.
         """
-    async def fetch_tile(self, x: int, y: int, z: int) -> Tile:
+    async def fetch_tile(
+        self,
+        x: int,
+        y: int,
+        z: int,
+        *,
+        planes: Sequence[int] | None = None,
+    ) -> Tile:
         """Fetch a single tile.
 
         Args:
             x: The column index within the ifd to read from.
             y: The row index within the ifd to read from.
             z: The IFD index to read from.
+            planes: The plane indices to read from (using 0-based indexing). If `None`,
+                all planes will be read.
 
         Returns:
             Tile response.
         """
-    async def fetch_tiles(self, xy: Sequence[tuple[int, int]], z: int) -> list[Tile]:
+    async def fetch_tiles(
+        self,
+        xy: Sequence[tuple[int, int]],
+        z: int,
+        *,
+        planes: Sequence[int] | None = None,
+    ) -> list[Tile]:
         """Fetch multiple tiles concurrently.
 
         Args:
             xy: The (column, row) indexes within the ifd to read from.
             z: The IFD index to read from.
+            planes: The plane indices to read from (using 0-based indexing). If `None`,
+                all planes will be read.
 
         Returns:
             Tile responses.
