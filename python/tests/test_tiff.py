@@ -46,6 +46,32 @@ async def test_read_band_interleaved_tiff_window(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("variant", "file_name"),
+    [("source-coop-alpha-earth", "xjejfvrbm1fbu1ecw-0000000000-0000008192")],
+)
+async def test_fetch_specific_planes(
+    load_tiff: LoadTIFF,
+    load_rasterio: LoadRasterio,
+    variant: str,
+    file_name: str,
+) -> None:
+    """
+    Ensure TIFF.fetch_tile() can retrieve specific planes from a band-interleaved TIFF.
+    """
+    tiff = await load_tiff(file_name, variant=variant)
+
+    tile = await tiff.fetch_tile(0, 0, z=0, planes=[0, 42, 63])  # 0-indexing
+    array = await tile.decode()
+    data = np.array(array)
+
+    with load_rasterio(file_name, variant=variant) as rasterio_ds:
+        rasterio_data = rasterio_ds.read(indexes=[1, 43, 64])  # 1-indexing
+
+    np.testing.assert_array_equal(data, rasterio_data)
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(("variant", "file_name"), [("eox", "eox_cloudless")])
 async def test_header_byte_size(
     load_tiff: LoadTIFF,
