@@ -14,7 +14,12 @@ async-trait = "0.1.89"
 bytemuck = { version = "1.24", features = ["extern_crate_alloc"] }
 byteorder = "1"
 bytes = "1.12.0"
-flate2 = "1.0.20"
+# `runtime_detection` must be listed explicitly because disabling default
+# features would otherwise turn off zlib-rs's runtime SIMD detection.
+flate2 = { version = "1.1.10", default-features = false, features = [
+    "zlib-rs",
+    "runtime_detection",
+] }
 futures = "0.3.31"
 jpeg2k = { version = "0.10.1", optional = true }
 lerc = { version = "0.2.1", optional = true }
