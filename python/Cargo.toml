@@ -28,13 +28,13 @@ async-trait = "0.1.89"
 bytes = "1.10.1"
 futures = "0.3.31"
 object_store = "0.14"
-pyo3 = { version = "0.29", features = ["macros"] }
-pyo3-async-runtimes = "0.29"
-pyo3-bytes = "0.7"
-pyo3-object_store = "0.12.0"
+pyo3 = { version = "0.30", features = ["macros"] }
+pyo3-async-runtimes = "0.30"
+pyo3-bytes = "0.8"
+pyo3-object_store = "0.13.0"
 rayon = "1.12.0"
-tokio-rayon = "2.1.0"
 thiserror = "2"
+tokio-rayon = "2.1.0"
 
 # We opt-in to using rustls as the TLS provider for reqwest, which is the HTTP
 # library used by object_store.
