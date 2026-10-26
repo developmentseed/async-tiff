@@ -40,5 +40,6 @@ async def test_ifd_dict():
         "geog_angular_units": 9102,
         "geog_semi_major_axis": 6378137.0,
         "geog_inv_flattening": 298.257222101004,
+        "geog_towgs84": [0.0, 0.0, 0.0],
     }
     assert dict(gkd) == expected_gkd

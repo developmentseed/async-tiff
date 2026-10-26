@@ -22,6 +22,7 @@ pub(crate) struct PyGeoKeyDirectory {
     geog_inv_flattening: Option<f64>,
     geog_azimuth_units: Option<u16>,
     geog_prime_meridian_long: Option<f64>,
+    geog_towgs84: Option<Vec<f64>>,
 
     projected_type: Option<u16>,
     proj_citation: Option<String>,
@@ -47,6 +48,7 @@ pub(crate) struct PyGeoKeyDirectory {
     proj_scale_at_center: Option<f64>,
     proj_azimuth_angle: Option<f64>,
     proj_straight_vert_pole_long: Option<f64>,
+    proj_rectified_grid_angle: Option<f64>,
 
     vertical: Option<u16>,
     vertical_citation: Option<String>,
@@ -109,6 +111,9 @@ impl PyGeoKeyDirectory {
         }
         if self.geog_prime_meridian_long.is_some() {
             keys.push("geog_prime_meridian_long");
+        }
+        if self.geog_towgs84.is_some() {
+            keys.push("geog_towgs84");
         }
         if self.projected_type.is_some() {
             keys.push("projected_type");
@@ -182,6 +187,9 @@ impl PyGeoKeyDirectory {
         if self.proj_straight_vert_pole_long.is_some() {
             keys.push("proj_straight_vert_pole_long");
         }
+        if self.proj_rectified_grid_angle.is_some() {
+            keys.push("proj_rectified_grid_angle");
+        }
         if self.vertical.is_some() {
             keys.push("vertical");
         }
@@ -224,6 +232,7 @@ impl PyGeoKeyDirectory {
             "geog_inv_flattening" => self.geog_inv_flattening.into_bound_py_any(py),
             "geog_azimuth_units" => self.geog_azimuth_units.into_bound_py_any(py),
             "geog_prime_meridian_long" => self.geog_prime_meridian_long.into_bound_py_any(py),
+            "geog_towgs84" => self.geog_towgs84.clone().into_bound_py_any(py),
             "projected_type" => self.projected_type.into_bound_py_any(py),
             "proj_citation" => self.proj_citation.as_ref().into_bound_py_any(py),
             "projection" => self.projection.into_bound_py_any(py),
@@ -250,6 +259,7 @@ impl PyGeoKeyDirectory {
             "proj_straight_vert_pole_long" => {
                 self.proj_straight_vert_pole_long.into_bound_py_any(py)
             }
+            "proj_rectified_grid_angle" => self.proj_rectified_grid_angle.into_bound_py_any(py),
             "vertical" => self.vertical.into_bound_py_any(py),
             "vertical_citation" => self.vertical_citation.as_ref().into_bound_py_any(py),
             "vertical_datum" => self.vertical_datum.into_bound_py_any(py),
@@ -282,6 +292,7 @@ impl From<PyGeoKeyDirectory> for GeoKeyDirectory {
             geog_inv_flattening: value.geog_inv_flattening,
             geog_azimuth_units: value.geog_azimuth_units,
             geog_prime_meridian_long: value.geog_prime_meridian_long,
+            geog_towgs84: value.geog_towgs84,
             projected_type: value.projected_type,
             proj_citation: value.proj_citation,
             projection: value.projection,
@@ -306,6 +317,7 @@ impl From<PyGeoKeyDirectory> for GeoKeyDirectory {
             proj_scale_at_center: value.proj_scale_at_center,
             proj_azimuth_angle: value.proj_azimuth_angle,
             proj_straight_vert_pole_long: value.proj_straight_vert_pole_long,
+            proj_rectified_grid_angle: value.proj_rectified_grid_angle,
             vertical: value.vertical,
             vertical_citation: value.vertical_citation,
             vertical_datum: value.vertical_datum,
@@ -334,6 +346,7 @@ impl From<GeoKeyDirectory> for PyGeoKeyDirectory {
             geog_inv_flattening: value.geog_inv_flattening,
             geog_azimuth_units: value.geog_azimuth_units,
             geog_prime_meridian_long: value.geog_prime_meridian_long,
+            geog_towgs84: value.geog_towgs84,
             projected_type: value.projected_type,
             proj_citation: value.proj_citation,
             projection: value.projection,
@@ -358,6 +371,7 @@ impl From<GeoKeyDirectory> for PyGeoKeyDirectory {
             proj_scale_at_center: value.proj_scale_at_center,
             proj_azimuth_angle: value.proj_azimuth_angle,
             proj_straight_vert_pole_long: value.proj_straight_vert_pole_long,
+            proj_rectified_grid_angle: value.proj_rectified_grid_angle,
             vertical: value.vertical,
             vertical_citation: value.vertical_citation,
             vertical_datum: value.vertical_datum,

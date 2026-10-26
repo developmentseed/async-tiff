@@ -32,6 +32,7 @@ pub(crate) enum GeoKeyTag {
     GeogInvFlattening = 2059,
     GeogAzimuthUnits = 2060,
     GeogPrimeMeridianLong = 2061,
+    GeogTOWGS84 = 2062,
 
     // Projected CRS Parameter Keys
     ProjectedType = 3072,
@@ -58,6 +59,7 @@ pub(crate) enum GeoKeyTag {
     ProjScaleAtCenter = 3093,
     ProjAzimuthAngle = 3094,
     ProjStraightVertPoleLong = 3095,
+    ProjRectifiedGridAngle = 3096,
 
     // Vertical CRS Parameter Keys (4096-5119)
     Vertical = 4096,
@@ -102,6 +104,11 @@ pub struct GeoKeyDirectory {
     /// this is Greenwich).
     pub geog_prime_meridian_long: Option<f64>,
 
+    /// Datum shift parameters towards WGS 84, as written by GDAL for `+towgs84=`: three
+    /// translations, or seven values (translations, rotations, scale difference).
+    /// <https://docs.ogc.org/is/19-008r4/19-008r4.html#_requirements_class_geogtowgs84geokey>
+    pub geog_towgs84: Option<Vec<f64>>,
+
     pub projected_type: Option<u16>,
     pub proj_citation: Option<String>,
     pub projection: Option<u16>,
@@ -126,6 +133,10 @@ pub struct GeoKeyDirectory {
     pub proj_scale_at_center: Option<f64>,
     pub proj_azimuth_angle: Option<f64>,
     pub proj_straight_vert_pole_long: Option<f64>,
+
+    /// Angle from the rectified grid to the skew (oblique) grid, used by the Hotine Oblique
+    /// Mercator methods. libgeotiff defaults it to 90 when absent.
+    pub proj_rectified_grid_angle: Option<f64>,
 
     pub vertical: Option<u16>,
     pub vertical_citation: Option<String>,
@@ -154,6 +165,7 @@ impl GeoKeyDirectory {
         let mut geog_inv_flattening = None;
         let mut geog_azimuth_units = None;
         let mut geog_prime_meridian_long = None;
+        let mut geog_towgs84 = None;
 
         let mut projected_type = None;
         let mut proj_citation = None;
@@ -179,6 +191,7 @@ impl GeoKeyDirectory {
         let mut proj_scale_at_center = None;
         let mut proj_azimuth_angle = None;
         let mut proj_straight_vert_pole_long = None;
+        let mut proj_rectified_grid_angle = None;
 
         let mut vertical = None;
         let mut vertical_citation = None;
@@ -206,6 +219,7 @@ impl GeoKeyDirectory {
                 GeoKeyTag::GeogPrimeMeridianLong => {
                     geog_prime_meridian_long = Some(value.into_f64()?)
                 }
+                GeoKeyTag::GeogTOWGS84 => geog_towgs84 = Some(value.into_f64_vec()?),
                 GeoKeyTag::ProjectedType => projected_type = Some(value.into_u16()?),
                 GeoKeyTag::ProjCitation => proj_citation = Some(value.into_string()?),
                 GeoKeyTag::Projection => projection = Some(value.into_u16()?),
@@ -238,6 +252,9 @@ impl GeoKeyDirectory {
                 GeoKeyTag::ProjStraightVertPoleLong => {
                     proj_straight_vert_pole_long = Some(value.into_f64()?)
                 }
+                GeoKeyTag::ProjRectifiedGridAngle => {
+                    proj_rectified_grid_angle = Some(value.into_f64()?)
+                }
                 GeoKeyTag::Vertical => vertical = Some(value.into_u16()?),
                 GeoKeyTag::VerticalCitation => vertical_citation = Some(value.into_string()?),
                 GeoKeyTag::VerticalDatum => vertical_datum = Some(value.into_u16()?),
@@ -265,6 +282,7 @@ impl GeoKeyDirectory {
             geog_inv_flattening,
             geog_azimuth_units,
             geog_prime_meridian_long,
+            geog_towgs84,
 
             projected_type,
             proj_citation,
@@ -290,6 +308,7 @@ impl GeoKeyDirectory {
             proj_scale_at_center,
             proj_azimuth_angle,
             proj_straight_vert_pole_long,
+            proj_rectified_grid_angle,
 
             vertical,
             vertical_citation,
