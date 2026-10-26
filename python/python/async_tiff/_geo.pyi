@@ -45,6 +45,13 @@ class GeoKeyDirectory:
     @property
     def geog_prime_meridian_long(self) -> float | None: ...
     @property
+    def geog_towgs84(self) -> list[float] | None:
+        """Datum shift parameters towards WGS 84 (GeogTOWGS84GeoKey, 2062).
+
+        Three translations, or seven values (translations, rotations, scale
+        difference), as written by GDAL for `+towgs84=`.
+        """
+    @property
     def projected_type(self) -> int | None: ...
     @property
     def proj_citation(self) -> str | None: ...
@@ -92,6 +99,13 @@ class GeoKeyDirectory:
     def proj_azimuth_angle(self) -> float | None: ...
     @property
     def proj_straight_vert_pole_long(self) -> float | None: ...
+    @property
+    def proj_rectified_grid_angle(self) -> float | None:
+        """Angle from the rectified grid to the skew grid (ProjRectifiedGridAngleGeoKey, 3096).
+
+        Used by the Hotine Oblique Mercator methods; libgeotiff defaults it to 90
+        when absent.
+        """
     @property
     def vertical(self) -> int | None: ...
     @property
