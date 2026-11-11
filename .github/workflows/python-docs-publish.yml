@@ -20,19 +20,21 @@ jobs:
       run:
         working-directory: python
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         # We need to additionally fetch the gh-pages branch for mike deploy
         with:
           fetch-depth: 0
           submodules: "true"
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2.9.3
 
       - name: Install a specific version of uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v7.6.0
         with:
           enable-cache: true
           version: "0.5.x"
