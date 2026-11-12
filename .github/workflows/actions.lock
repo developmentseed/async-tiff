@@ -16,7 +16,7 @@ workflows:
         - 'swatinem/rust-cache@v2.9.3'
     '.github/workflows/python-docs-publish.yml':
         - 'actions/checkout@v7.0.1'
-        - 'astral-sh/setup-uv@v7.6.0'
+        - 'astral-sh/setup-uv@v10.3.3'
         - 'dtolnay/rust-toolchain@master'
         - 'swatinem/rust-cache@v2.9.3'
     '.github/workflows/python-wheels.yml':
@@ -24,7 +24,7 @@ workflows:
         - 'actions/download-artifact@v8.0.2'
         - 'actions/setup-python@v7.1.0'
         - 'actions/upload-artifact@v7.0.2'
-        - 'astral-sh/setup-uv@v7.6.0'
+        - 'astral-sh/setup-uv@v10.3.3'
         - 'pyo3/maturin-action@v1.51.0'
         - 'pypa/gh-action-pypi-publish@release/v1'
     '.github/workflows/rust-release.yml':
@@ -34,7 +34,7 @@ workflows:
         - 'actions/checkout@v7.0.1'
         - 'actions/setup-python@v7.1.0'
         - 'astral-sh/ruff-action@v4.1.0'
-        - 'astral-sh/setup-uv@v7.6.0'
+        - 'astral-sh/setup-uv@v10.3.3'
         - 'dtolnay/rust-toolchain@master'
         - 'swatinem/rust-cache@v2.9.3'
     '.github/workflows/test.yml':
@@ -93,9 +93,9 @@ dependencies:
         commit: 'sha1-278981a28ce3188b1e39527901f38254bf3aac89'
         owner_id: 115962839
         repo_id: 865075538
-    'astral-sh/setup-uv@v7.6.0':
-        ref: 'v7.6.0'
-        commit: 'sha1-37802adc94f370d6bfd71619e3f0bf239e1f3b78'
+    'astral-sh/setup-uv@v10.3.3':
+        ref: 'v10.3.3'
+        commit: 'sha1-68559e99cc807c1eb7e9238fd43a15bba460eec2'
         owner_id: 115962839
         repo_id: 846733598
     'codspeedhq/action@v5.6.3':

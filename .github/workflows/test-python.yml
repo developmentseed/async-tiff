@@ -23,7 +23,7 @@ jobs:
           submodules: "recursive"
 
       - name: Install a specific version of uv
-        uses: astral-sh/setup-uv@v7.6.0
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "latest"
 
@@ -86,7 +86,7 @@ jobs:
           allow-prereleases: true
 
       - name: Install a specific version of uv
-        uses: astral-sh/setup-uv@v7.6.0
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "latest"
 
