@@ -5,7 +5,7 @@ version: 'v0.0.3'
 workflows:
     '.github/workflows/bench.yml':
         - 'actions/checkout@v7.0.1'
-        - 'codspeedhq/action@v5.6.3'
+        - 'codspeedhq/action@v5.8.0'
         - 'moonrepo/setup-rust@v1.3.0'
     '.github/workflows/conventional-commits.yml':
         - 'actions/create-github-app-token@v3.3.0'
@@ -98,9 +98,9 @@ dependencies:
         commit: 'sha1-68559e99cc807c1eb7e9238fd43a15bba460eec2'
         owner_id: 115962839
         repo_id: 846733598
-    'codspeedhq/action@v5.6.3':
-        ref: 'v5.6.3'
-        commit: 'sha1-af75f77f17a054769abefaa42fe8dc2975469b5f'
+    'codspeedhq/action@v5.8.0':
+        ref: 'v5.8.0'
+        commit: 'sha1-b1f28b5eccf7cb5bfe6a2a89cb3053eb67f1150c'
         owner_id: 116658140
         repo_id: 561699778
         uses:
